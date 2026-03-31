@@ -8,9 +8,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Piano
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,24 +25,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.smaarig.glyphbarcomposer.ui.theme.GlyphBarComposerTheme
 import com.smaarig.glyphbarcomposer.ui.viewmodel.*
-import com.smaarig.glyphbarcomposer.service.GlyphCallService
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
-        // Start the background service for calls safely
-        try {
-            val serviceIntent = Intent(this, GlyphCallService::class.java)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                startForegroundService(serviceIntent)
-            } else {
-                startService(serviceIntent)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
 
         setContent {
             GlyphBarComposerTheme {
@@ -53,27 +40,21 @@ class MainActivity : ComponentActivity() {
 }
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Composer : Screen("composer", "Composer", Icons.Default.Piano)
-    object Contacts : Screen("contacts", "Contacts", Icons.Default.Person)
-    object MusicSync : Screen("music_sync", "Music", Icons.Default.MusicNote)
-    object Library : Screen("library", "Library", Icons.Default.LibraryMusic)
+    object Composer  : Screen("composer",  "Composer", Icons.Default.Piano)
+    object Contacts  : Screen("contacts",  "Contacts", Icons.Default.Contacts)
+    object MusicSync : Screen("music_sync","Music",    Icons.Default.MusicNote)
+    object Library   : Screen("library",   "Library",  Icons.Default.LibraryMusic)
 }
 
 @Composable
 fun MainApp() {
     val navController = rememberNavController()
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color(0xFF0E0E0E),
-        bottomBar = {
-            BottomNavigationBar(navController)
-        }
+        bottomBar = { BottomNavigationBar(navController) }
     ) { innerPadding ->
-        NavHostContainer(
-            navController = navController,
-            modifier = Modifier.padding(innerPadding)
-        )
+        NavHostContainer(navController, Modifier.padding(innerPadding))
     }
 }
 
@@ -83,7 +64,7 @@ fun NavHostContainer(
     modifier: Modifier = Modifier
 ) {
     val activity = LocalActivity.current as ComponentActivity
-    
+
     NavHost(
         navController = navController,
         startDestination = Screen.Composer.route,
@@ -92,10 +73,6 @@ fun NavHostContainer(
         composable(Screen.Composer.route) {
             val viewModel: ComposerViewModel = viewModel(viewModelStoreOwner = activity)
             ComposerScreen(viewModel = viewModel)
-        }
-        composable(Screen.Contacts.route) {
-            val viewModel: ContactRingtoneViewModel = viewModel(viewModelStoreOwner = activity)
-            ContactRingtoneScreen(viewModel = viewModel)
         }
         composable(Screen.MusicSync.route) {
             val viewModel: MusicSyncViewModel = viewModel(viewModelStoreOwner = activity)
@@ -110,6 +87,10 @@ fun NavHostContainer(
                 composerViewModel = composerViewModel,
                 musicSyncViewModel = musicSyncViewModel
             )
+        }
+        composable(Screen.Contacts.route) {
+            val viewModel: ContactRingtoneViewModel = viewModel(viewModelStoreOwner = activity)
+            ContactRingtoneScreen(viewModel = viewModel)
         }
     }
 }

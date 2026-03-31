@@ -4,7 +4,6 @@ import android.app.Application
 import android.provider.ContactsContract
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.data.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -20,14 +19,12 @@ data class ContactItem(val id: String, val name: String, val phoneNumber: String
 data class ContactRingtoneUiState(
     val contacts: List<ContactItem> = emptyList(),
     val isLoadingContacts: Boolean = false,
-    val selectedContact: ContactItem? = null,
-    val isResetting: Boolean = false
+    val selectedContact: ContactItem? = null
 )
 
 class ContactRingtoneViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getDatabase(application)
     private val playlistDao = db.playlistDao()
-    private val glyphController = GlyphController.getInstance(application)
 
     private val _uiState = MutableStateFlow(ContactRingtoneUiState())
     val uiState: StateFlow<ContactRingtoneUiState> = _uiState.asStateFlow()
@@ -88,16 +85,9 @@ class ContactRingtoneViewModel(application: Application) : AndroidViewModel(appl
 
     fun clearAllBindings() {
         viewModelScope.launch {
-            val bindings = playlistDao.getContactBindingsList()
-            bindings.forEach { playlistDao.deleteContactBinding(it.binding) }
-        }
-    }
-
-    fun resetGlyphHardware() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isResetting = true) }
-            glyphController.turnOffGlyphs()
-            _uiState.update { it.copy(isResetting = false) }
+            playlistDao.getContactBindingsList().forEach {
+                playlistDao.deleteContactBinding(it.binding)
+            }
         }
     }
 }
