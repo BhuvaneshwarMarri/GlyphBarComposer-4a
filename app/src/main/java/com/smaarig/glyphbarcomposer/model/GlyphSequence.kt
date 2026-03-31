@@ -1,4 +1,4 @@
-package com.smaarig.glyphbarcomposer
+package com.smaarig.glyphbarcomposer.model
 
 /**
  * Data class to store a set of Glyph channels with their intensities and a duration for playback.

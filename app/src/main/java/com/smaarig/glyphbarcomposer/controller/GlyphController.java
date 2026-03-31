@@ -1,4 +1,4 @@
-package com.smaarig.glyphbarcomposer;
+package com.smaarig.glyphbarcomposer.controller;
 
 import android.content.ComponentName;
 import android.content.Context;

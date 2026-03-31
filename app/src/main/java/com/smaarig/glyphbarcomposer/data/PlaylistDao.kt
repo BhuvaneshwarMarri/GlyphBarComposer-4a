@@ -1,4 +1,4 @@
-package com.smaarig.glyphbarcomposer
+package com.smaarig.glyphbarcomposer.data
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow

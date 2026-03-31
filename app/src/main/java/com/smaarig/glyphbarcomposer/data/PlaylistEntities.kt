@@ -1,6 +1,7 @@
-package com.smaarig.glyphbarcomposer
+package com.smaarig.glyphbarcomposer.data
 
 import androidx.room.*
+import com.smaarig.glyphbarcomposer.model.GlyphSequence
 
 @Entity(tableName = "playlists")
 data class Playlist(

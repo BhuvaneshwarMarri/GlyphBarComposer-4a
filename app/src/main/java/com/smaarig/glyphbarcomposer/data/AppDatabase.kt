@@ -1,4 +1,4 @@
-package com.smaarig.glyphbarcomposer
+package com.smaarig.glyphbarcomposer.data
 
 import android.content.Context
 import androidx.room.Database
