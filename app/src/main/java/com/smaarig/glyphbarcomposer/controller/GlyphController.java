@@ -12,7 +12,18 @@ import com.nothing.ketchum.GlyphManager;
 
 public class GlyphController {
     private static final String TAG = "GlyphController";
+    private static GlyphController sInstance;
     private GlyphManager mGlyphManager;
+
+    public static synchronized GlyphController getInstance(Context context) {
+        if (sInstance == null) {
+            sInstance = new GlyphController();
+            sInstance.init(context.getApplicationContext());
+        }
+        return sInstance;
+    }
+
+    private GlyphController() {}
 
     // ── Intensity mapping ─────────────────────────────────────────────────────
     // The Nothing Glyph SDK typically uses an 8-bit range (0–255) for intensity.

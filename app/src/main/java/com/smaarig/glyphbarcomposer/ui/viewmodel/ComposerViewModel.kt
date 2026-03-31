@@ -1,4 +1,4 @@
-package com.smaarig.glyphbarcomposer.ui
+package com.smaarig.glyphbarcomposer.ui.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -12,32 +12,31 @@ import com.smaarig.glyphbarcomposer.data.SequenceStep
 import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class GlyphUiState(
+data class ComposerUiState(
     val glyphIntensities: List<Int> = listOf(0, 0, 0, 0, 0, 0),
     val durationMs: Float = 1000f,
     val currentSequenceSteps: List<GlyphSequence> = emptyList(),
     val sequenceName: String = "",
     val isPlaying: Boolean = false,
-    val isPaused: Boolean = false
+    val isPaused: Boolean = false,
+    val activePlaylistId: Long? = null
 )
 
-class GlyphViewModel(application: Application) : AndroidViewModel(application) {
+class ComposerViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getDatabase(application)
     private val playlistDao = db.playlistDao()
-    
-    private val glyphController = GlyphController().apply { init(application) }
+    private val glyphController = GlyphController.getInstance(application)
 
-    private val _uiState = MutableStateFlow(GlyphUiState())
-    val uiState: StateFlow<GlyphUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(ComposerUiState())
+    val uiState: StateFlow<ComposerUiState> = _uiState.asStateFlow()
 
-    val allPlaylists: Flow<List<PlaylistWithSteps>> = playlistDao.getAllPlaylists()
+    val allPlaylists = playlistDao.getAllPlaylists()
 
     private var playbackJob: Job? = null
 
@@ -60,7 +59,6 @@ class GlyphViewModel(application: Application) : AndroidViewModel(application) {
             state.copy(glyphIntensities = newList)
         }
         
-        // Immediate hardware feedback
         glyphController.applyGlyphStateWithIntensities(getIntensitiesMap(), 2000)
     }
 
@@ -93,15 +91,20 @@ class GlyphViewModel(application: Application) : AndroidViewModel(application) {
     fun stopPlayback() {
         playbackJob?.cancel()
         playbackJob = null
-        _uiState.update { it.copy(isPlaying = false, isPaused = false, glyphIntensities = listOf(0, 0, 0, 0, 0, 0)) }
+        _uiState.update { it.copy(
+            isPlaying = false, 
+            isPaused = false, 
+            activePlaylistId = null,
+            glyphIntensities = listOf(0, 0, 0, 0, 0, 0)
+        ) }
         glyphController.turnOffGlyphs()
     }
 
-    fun startPlayback(steps: List<GlyphSequence>) {
+    fun startPlayback(steps: List<GlyphSequence>, playlistId: Long? = null) {
         if (steps.isEmpty()) return
         stopPlayback()
         
-        _uiState.update { it.copy(isPlaying = true) }
+        _uiState.update { it.copy(isPlaying = true, activePlaylistId = playlistId) }
         playbackJob = viewModelScope.launch {
             try {
                 while (true) {
@@ -110,7 +113,6 @@ class GlyphViewModel(application: Application) : AndroidViewModel(application) {
                             delay(100)
                         }
                         
-                        // Sync UI intensities
                         _uiState.update { state ->
                             val newList = channels.map { ch -> step.channelIntensities[ch] ?: 0 }
                             state.copy(glyphIntensities = newList)
@@ -123,7 +125,7 @@ class GlyphViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             } finally {
-                // Ensure state is reset if cancelled
+                // Cleanup handled in stopPlayback
             }
         }
     }
@@ -151,7 +153,25 @@ class GlyphViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deletePlaylist(playlist: Playlist) {
         viewModelScope.launch {
+            if (_uiState.value.activePlaylistId == playlist.id) {
+                stopPlayback()
+            }
             playlistDao.deletePlaylist(playlist)
+        }
+    }
+
+    /**
+     * Toggles playback for a saved sequence from the library.
+     */
+    fun playSequence(playlist: PlaylistWithSteps) {
+        val state = _uiState.value
+        if (state.activePlaylistId == playlist.playlist.id) {
+            togglePause()
+        } else {
+            val steps = playlist.steps.sortedBy { it.stepIndex }.map { 
+                GlyphSequence(it.channelIntensities, it.durationMs) 
+            }
+            startPlayback(steps, playlist.playlist.id)
         }
     }
 

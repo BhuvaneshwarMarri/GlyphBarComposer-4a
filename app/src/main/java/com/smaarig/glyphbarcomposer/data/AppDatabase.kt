@@ -5,9 +5,19 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Playlist::class, SequenceStep::class], version = 2, exportSchema = false)
+@Database(
+    entities = [
+        Playlist::class, 
+        SequenceStep::class, 
+        EventBinding::class, 
+        MusicSyncProject::class, 
+        MusicSyncEvent::class,
+        ContactBinding::class
+    ],
+    version = 6,
+    exportSchema = false
+)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun playlistDao(): PlaylistDao
@@ -23,16 +33,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "glyph_database"
                 )
-                    .fallbackToDestructiveMigration(true)
-                    .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
-                    .addCallback(object : RoomDatabase.Callback() {
-                        override fun onOpen(db: SupportSQLiteDatabase) {
-                            super.onOpen(db)
-                            // ✅ Required for ForeignKey CASCADE deletes to work
-                            db.execSQL("PRAGMA foreign_keys=ON")
-                        }
-                    })
-                    .build()
+                .fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }
