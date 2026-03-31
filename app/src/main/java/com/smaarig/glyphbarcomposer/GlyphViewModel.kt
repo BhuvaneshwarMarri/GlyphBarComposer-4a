@@ -19,9 +19,9 @@ class GlyphViewModel(application: Application) : AndroidViewModel(application) {
             val playlistId = playlistDao.insertPlaylist(playlist)
             val sequenceSteps = steps.mapIndexed { index, step ->
                 SequenceStep(
-                    playlistId = playlistId, // ✅ use real ID, not 0
+                    playlistId = playlistId,
                     stepIndex = index,
-                    activeChannels = step.activeChannels,
+                    channelIntensities = step.channelIntensities,
                     durationMs = step.durationMs
                 )
             }

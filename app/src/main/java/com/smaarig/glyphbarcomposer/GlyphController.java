@@ -13,11 +13,28 @@ import com.nothing.ketchum.GlyphManager;
 public class GlyphController {
     private static final String TAG = "GlyphController";
     private GlyphManager mGlyphManager;
+
+    // ── Intensity mapping ─────────────────────────────────────────────────────
+    // The Nothing Glyph SDK typically uses an 8-bit range (0–255) for intensity.
+    //
+    //   State 0 (OFF)  →     0
+    //   State 1 (LOW)  →   100   ≈ 40 %
+    //   State 2 (MED)  →   180   ≈ 70 %
+    //   State 3 (HIGH) →   255   = 100 %
+    //
+    private static int stateToSdkIntensity(int state) {
+        switch (state) {
+            case 1:  return 100;
+            case 2:  return 180;
+            case 3:  return 255;
+            default: return 0;
+        }
+    }
+
     private final GlyphManager.Callback mCallback = new GlyphManager.Callback() {
         @Override
         public void onServiceConnected(ComponentName componentName) {
             if (mGlyphManager != null) {
-                // Phone (4a) specific registration: Glyph.DEVICE_25111
                 if (Common.is25111()) {
                     mGlyphManager.register(Glyph.DEVICE_25111);
                     Log.d(TAG, "Registered for Phone (4a)");
@@ -26,9 +43,7 @@ public class GlyphController {
                 else if (Common.is23111()) mGlyphManager.register(Glyph.DEVICE_23111);
                 else if (Common.is23113()) mGlyphManager.register(Glyph.DEVICE_23113);
                 else if (Common.is24111()) mGlyphManager.register(Glyph.DEVICE_24111);
-                else {
-                    mGlyphManager.register();
-                }
+                else mGlyphManager.register();
 
                 try {
                     mGlyphManager.openSession();
@@ -56,57 +71,69 @@ public class GlyphController {
         mGlyphManager.init(mCallback);
     }
 
-    // Example 1: Light up the top LEDs of Phone (4a) (A1-A3)
-    public void lightUpPhone4aTop() {
-        if (mGlyphManager == null) return;
-        try {
-            // Build a frame specifically for Phone (4a) using its LED constants
-            GlyphFrame frame = mGlyphManager.getGlyphFrameBuilder()
-                    .buildChannel(Glyph.Code_25111.A_1)
-                    .buildChannel(Glyph.Code_25111.A_2)
-                    .buildChannel(Glyph.Code_25111.A_3)
-                    .buildPeriod(2000)
-                    .buildCycles(3)
-                    .build();
-
-            mGlyphManager.toggle(frame);
-        } catch (Exception e) {
-            Log.e(TAG, "Error in lightUpPhone4aTop: " + e.getMessage());
-        }
-    }
-
-    // Example 2: Animate a breathing effect on all A LEDs of Phone (4a)
-    public void animatePhone4aAll() {
-        if (mGlyphManager == null) return;
-        try {
-            GlyphFrame frame = mGlyphManager.getGlyphFrameBuilder()
-                    .buildChannel(Glyph.Code_25111.A_1)
-                    .buildChannel(Glyph.Code_25111.A_2)
-                    .buildChannel(Glyph.Code_25111.A_3)
-                    .buildChannel(Glyph.Code_25111.A_4)
-                    .buildChannel(Glyph.Code_25111.A_5)
-                    .buildChannel(Glyph.Code_25111.A_6)
-                    .buildInterval(10)
-                    .buildCycles(2)
-                    .buildPeriod(3000)
-                    .build();
-
-            mGlyphManager.animate(frame);
-        } catch (Exception e) {
-            Log.e(TAG, "Error in animatePhone4aAll: " + e.getMessage());
-        }
-    }
-
-    // Example 3: Turn off all active glyphs
+    /** Turn off all active glyphs. */
     public void turnOffGlyphs() {
         if (mGlyphManager == null) return;
         mGlyphManager.turnOff();
     }
 
     /**
-     * Applies a state with multiple active Glyph channels for a specific duration.
-     * @param activeChannels List of Glyph channel constants to be turned on.
-     * @param durationMs Duration in milliseconds.
+     * Applies a frame with per-channel intensities (states 0–3) and a duration.
+     *
+     * @param channelIntensities Map of Glyph channel constants → state (0 = OFF, 1–3 = LOW/MED/HIGH).
+     * @param durationMs         Duration in milliseconds.
+     */
+    public void applyGlyphStateWithIntensities(
+            java.util.Map<Integer, Integer> channelIntensities, int durationMs) {
+        if (mGlyphManager == null) {
+            Log.e(TAG, "applyGlyphStateWithIntensities: GlyphManager is null");
+            return;
+        }
+        try {
+            GlyphFrame.Builder builder = mGlyphManager.getGlyphFrameBuilder();
+            boolean anyActive = false;
+
+            for (java.util.Map.Entry<Integer, Integer> entry : channelIntensities.entrySet()) {
+                int state = entry.getValue();
+                int sdkIntensity = stateToSdkIntensity(state);
+                if (sdkIntensity > 0) {
+                    anyActive = true;
+                    // For State 3 (HIGH) or if intensity is max, use the single-argument version
+                    // as it's the most compatible across all SDK versions.
+                    if (state == 3 || sdkIntensity >= 255) {
+                        builder.buildChannel(entry.getKey());
+                    } else {
+                        builder.buildChannel(entry.getKey(), sdkIntensity);
+                    }
+                }
+            }
+
+            if (!anyActive) {
+                mGlyphManager.turnOff();
+                return;
+            }
+
+            // Ensure the session is open before toggling. 
+            // In some cases, we might need to call openSession again if it was closed.
+            try {
+                mGlyphManager.openSession();
+            } catch (Exception e) {
+                // Ignore if already open
+            }
+
+            builder.buildPeriod(durationMs);
+            mGlyphManager.toggle(builder.build());
+            Log.i(TAG, "Glyph Frame Applied: " + channelIntensities);
+        } catch (Exception e) {
+            Log.e(TAG, "Error in applyGlyphStateWithIntensities: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Legacy ON/OFF state (all active channels at full brightness).
+     *
+     * @param activeChannels List of Glyph channel constants to light up.
+     * @param durationMs     Duration in milliseconds.
      */
     public void applyGlyphState(java.util.List<Integer> activeChannels, int durationMs) {
         if (mGlyphManager == null) return;
@@ -115,25 +142,23 @@ public class GlyphController {
                 mGlyphManager.turnOff();
                 return;
             }
+            
+            try {
+                mGlyphManager.openSession();
+            } catch (Exception e) {
+                // Ignore if already open
+            }
 
             GlyphFrame.Builder builder = mGlyphManager.getGlyphFrameBuilder();
             for (Integer channel : activeChannels) {
+                // Use the most compatible single-argument version for legacy ON
                 builder.buildChannel(channel);
             }
             builder.buildPeriod(durationMs);
-            
-            GlyphFrame frame = builder.build();
-            mGlyphManager.toggle(frame);
+            mGlyphManager.toggle(builder.build());
         } catch (Exception e) {
-            Log.e(TAG, "Error in applyGlyphState with duration: " + e.getMessage());
+            Log.e(TAG, "Error in applyGlyphState: " + e.getMessage());
         }
-    }
-
-    /**
-     * Plays a single frame for a specific duration.
-     */
-    public void playSingleFrame(java.util.List<Integer> activeChannels, int durationMs) {
-        applyGlyphState(activeChannels, durationMs);
     }
 
     public void deinit() {

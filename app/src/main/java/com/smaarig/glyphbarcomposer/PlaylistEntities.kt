@@ -24,9 +24,12 @@ data class SequenceStep(
     @PrimaryKey(autoGenerate = true) val stepId: Long = 0,
     val playlistId: Long,
     val stepIndex: Int,
-    val activeChannels: List<Int>,
+    val channelIntensities: Map<Int, Int>,
     val durationMs: Int
-)
+) {
+    // Legacy support property
+    val activeChannels: List<Int> get() = channelIntensities.filter { it.value > 0 }.keys.toList()
+}
 
 data class PlaylistWithSteps(
     @Embedded val playlist: Playlist,
@@ -38,6 +41,21 @@ data class PlaylistWithSteps(
 )
 
 class Converters {
+    @TypeConverter
+    fun fromMap(map: Map<Int, Int>): String {
+        return map.entries.joinToString(",") { "${it.key}:${it.value}" }
+    }
+
+    @TypeConverter
+    fun toMap(data: String): Map<Int, Int> {
+        if (data.isEmpty()) return emptyMap()
+        return data.split(",").associate {
+            val parts = it.split(":")
+            parts[0].toInt() to parts[1].toInt()
+        }
+    }
+
+    // Keep legacy for safety if still needed
     @TypeConverter
     fun fromList(list: List<Int>): String {
         return list.joinToString(",")
