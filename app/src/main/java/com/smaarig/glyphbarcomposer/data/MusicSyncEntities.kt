@@ -27,7 +27,7 @@ data class MusicSyncEvent(
     val projectId: Long,
     val timestampMs: Long,
     val channelIntensities: Map<Int, Int>,
-    val durationMs: Int = 200 // Default quick flash for music sync
+    val durationMs: Int = 100 // Default quick flash for music sync (set to 100ms as requested)
 )
 
 data class MusicProjectWithEvents(

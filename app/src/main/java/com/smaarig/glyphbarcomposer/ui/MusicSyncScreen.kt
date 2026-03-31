@@ -38,7 +38,6 @@ import androidx.core.content.ContextCompat
 import com.smaarig.glyphbarcomposer.data.MusicSyncEvent
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicSyncUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicSyncViewModel
-import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicSyncMode
 
 // ─── Intensity palette (shared with ComposerScreen) ─────────────────────────
 private val intensityColor = listOf(
@@ -54,6 +53,10 @@ fun MusicSyncScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val visualizerData by viewModel.visualizerData.collectAsStateWithLifecycle()
+    val audioPositionMs by viewModel.audioPositionMs.collectAsStateWithLifecycle()
+    val glyphIntensities by viewModel.glyphIntensities.collectAsStateWithLifecycle()
+    
     val context = LocalContext.current
     
     var hasPermission by remember {
@@ -66,6 +69,13 @@ fun MusicSyncScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasPermission = isGranted
+        if (isGranted) viewModel.retryVisualizerSetup()
+    }
+
+    LaunchedEffect(hasPermission) {
+        if (hasPermission && uiState.isAudioPlaying) {
+            viewModel.retryVisualizerSetup()
+        }
     }
 
     val launcher = rememberLauncherForActivityResult(
@@ -127,6 +137,7 @@ fun MusicSyncScreen(
                 // ── Player card ──
                 MusicPlayerCard(
                     uiState = uiState,
+                    audioPositionMs = audioPositionMs,
                     onPlayPause = viewModel::toggleMusicPlayback,
                     onSeek = viewModel::seekMusic,
                     onChangeAudio = { launcher.launch("audio/*") }
@@ -135,35 +146,17 @@ fun MusicSyncScreen(
                 Spacer(Modifier.height(12.dp))
 
                 // Visualizer
-                FrequencyVisualizer(uiState.visualizerData)
-
-                Spacer(Modifier.height(12.dp))
-
-                // Mode toggle
-                MusicSyncModeToggle(
-                    currentMode = uiState.musicSyncMode,
-                    onModeChange = { mode ->
-                        if (mode == MusicSyncMode.AUTO_BEAT && !hasPermission) {
-                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                        }
-                        viewModel.setMusicSyncMode(mode)
-                    }
-                )
+                FrequencyVisualizer(visualizerData)
 
                 Spacer(Modifier.height(14.dp))
 
-                if (uiState.musicSyncMode == MusicSyncMode.MANUAL) {
-                    ManualModeContent(
-                        uiState = uiState,
-                        viewModel = viewModel,
-                        modifier = Modifier.weight(1f)
-                    )
-                } else {
-                    AutoBeatContent(
-                        uiState = uiState,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                ManualModeContent(
+                    uiState = uiState,
+                    audioPositionMs = audioPositionMs,
+                    glyphIntensities = glyphIntensities,
+                    viewModel = viewModel,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
 
@@ -224,6 +217,7 @@ fun MusicSyncScreen(
 @Composable
 private fun MusicPlayerCard(
     uiState: MusicSyncUiState,
+    audioPositionMs: Int,
     onPlayPause: () -> Unit,
     onSeek: (Float) -> Unit,
     onChangeAudio: () -> Unit
@@ -263,7 +257,7 @@ private fun MusicPlayerCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        "${formatTime(uiState.audioPositionMs)} / ${formatTime(uiState.audioDurationMs)}",
+                        "${formatTime(audioPositionMs)} / ${formatTime(uiState.audioDurationMs)}",
                         color = Color(0xFF888888),
                         fontSize = 12.sp
                     )
@@ -307,7 +301,7 @@ private fun MusicPlayerCard(
 
             // Seek bar
             Slider(
-                value = uiState.audioPositionMs.toFloat(),
+                value = audioPositionMs.toFloat(),
                 onValueChange = onSeek,
                 valueRange = 0f..uiState.audioDurationMs.toFloat().coerceAtLeast(1f),
                 enabled = uiState.isAnalysisComplete,
@@ -362,71 +356,6 @@ private fun FrequencyVisualizer(magnitudes: List<Float>) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mode toggle
-// ─────────────────────────────────────────────────────────────────────────────
-@Composable
-private fun MusicSyncModeToggle(
-    currentMode: MusicSyncMode,
-    onModeChange: (MusicSyncMode) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF161616))
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        ModeTab(
-            title = "Manual",
-            subtitle = "Tap to mark beats",
-            icon = Icons.Default.Edit,
-            isSelected = currentMode == MusicSyncMode.MANUAL,
-            modifier = Modifier.weight(1f),
-            onClick = { onModeChange(MusicSyncMode.MANUAL) }
-        )
-        ModeTab(
-            title = "Auto Beat",
-            subtitle = "Bass-driven sync",
-            icon = Icons.Default.AutoAwesome,
-            isSelected = currentMode == MusicSyncMode.AUTO_BEAT,
-            modifier = Modifier.weight(1f),
-            onClick = { onModeChange(MusicSyncMode.AUTO_BEAT) }
-        )
-    }
-}
-
-@Composable
-private fun ModeTab(
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    isSelected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = modifier
-            .height(52.dp)
-            .clickable { onClick() },
-        color = if (isSelected) Color.White else Color.Transparent,
-        contentColor = if (isSelected) Color.Black else Color(0xFF666666),
-        shape = RoundedCornerShape(9.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(8.dp))
-            Column {
-                Text(title, fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 14.sp)
-                Text(subtitle, fontSize = 9.sp, lineHeight = 11.sp)
-            }
-        }
-    }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Manual mode
@@ -434,6 +363,8 @@ private fun ModeTab(
 @Composable
 private fun ManualModeContent(
     uiState: MusicSyncUiState,
+    audioPositionMs: Int,
+    glyphIntensities: List<Int>,
     viewModel: MusicSyncViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -470,7 +401,7 @@ private fun ManualModeContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            uiState.glyphIntensities.forEachIndexed { index, intensity ->
+            glyphIntensities.forEachIndexed { index, intensity ->
                 GlyphBox(
                     label = "A${index + 1}",
                     intensity = intensity,
@@ -487,7 +418,7 @@ private fun ManualModeContent(
         Button(
             onClick = viewModel::addMusicEvent,
             modifier = Modifier.fillMaxWidth(),
-            enabled = uiState.glyphIntensities.any { it > 0 } && uiState.isAnalysisComplete,
+            enabled = glyphIntensities.any { it > 0 } && uiState.isAnalysisComplete,
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF00C853),
                 contentColor = Color.Black,
@@ -500,9 +431,9 @@ private fun ManualModeContent(
             Spacer(Modifier.width(8.dp))
             Text(
                 if (uiState.isAnalysisComplete)
-                    "Mark at ${formatTime(uiState.audioPositionMs)}"
+                    "Add Beat at ${formatTime(audioPositionMs)}"
                 else
-                    "Loading audio…",
+                    "Generating...",
                 fontWeight = FontWeight.Bold
             )
         }
@@ -568,8 +499,8 @@ private fun ManualModeContent(
                 ) {
                     items(uiState.musicEvents, key = { it.timestampMs }) { event ->
                         val isActive = uiState.isAudioPlaying &&
-                                uiState.audioPositionMs.toLong() >= event.timestampMs &&
-                                uiState.audioPositionMs.toLong() < event.timestampMs + 800
+                                audioPositionMs.toLong() >= event.timestampMs &&
+                                audioPositionMs.toLong() < event.timestampMs + 800
                         TimelineEventRow(
                             event = event,
                             isActive = isActive,
@@ -582,82 +513,6 @@ private fun ManualModeContent(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Auto beat mode
-// ─────────────────────────────────────────────────────────────────────────────
-@Composable
-private fun AutoBeatContent(
-    uiState: MusicSyncUiState,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF111111))
-            .border(1.dp, Color(0xFF252525), RoundedCornerShape(16.dp)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            val pulseAlpha by animateFloatAsState(
-                targetValue = if (uiState.isAudioPlaying) 1f else 0.3f,
-                animationSpec = tween(300),
-                label = "pulse"
-            )
-            Icon(
-                Icons.Default.AutoAwesome,
-                contentDescription = null,
-                tint = Color(0xFF00C853).copy(alpha = pulseAlpha),
-                modifier = Modifier.size(64.dp)
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                if (uiState.isAudioPlaying) "Syncing Glyph lights…" else "Press play to start",
-                color = if (uiState.isAudioPlaying) Color.White else Color(0xFF555555),
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Dots react to Bass (right) and Treble (left)",
-                color = Color(0xFF444444),
-                fontSize = 12.sp
-            )
-            Spacer(Modifier.height(20.dp))
-
-            // Live indicator dots showing current glyph state
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                uiState.glyphIntensities.forEachIndexed { i, intensity ->
-                    val color = if (intensity > 0) Color(0xFF00C853) else Color(0xFF252525)
-                    val targetAlpha = if (intensity == 3) 1f else if (intensity == 2) 0.7f else if (intensity == 1) 0.4f else 0.3f
-                    val animatedAlpha by animateFloatAsState(
-                        targetValue = targetAlpha,
-                        animationSpec = tween(80),
-                        label = "dotAlpha"
-                    )
-                    
-                    Box(
-                        modifier = Modifier
-                            .size(12.dp)
-                            .clip(CircleShape)
-                            .background(color.copy(alpha = animatedAlpha))
-                            .border(1.dp, color.copy(alpha = 0.1f), CircleShape)
-                    )
-                }
-            }
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "A1 – A6",
-                color = Color(0xFF333333),
-                fontSize = 10.sp,
-                letterSpacing = 1.sp
-            )
-        }
-    }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Timeline row

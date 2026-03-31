@@ -26,21 +26,13 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.hypot
 
-enum class MusicSyncMode {
-    MANUAL, AUTO_BEAT
-}
-
 data class MusicSyncUiState(
-    val glyphIntensities: List<Int> = listOf(0, 0, 0, 0, 0, 0),
     val audioUri: Uri? = null,
     val audioName: String? = null,
     val audioDurationMs: Int = 0,
-    val audioPositionMs: Int = 0,
     val isAudioPlaying: Boolean = false,
     val musicEvents: List<MusicSyncEvent> = emptyList(),
-    val musicSyncMode: MusicSyncMode = MusicSyncMode.MANUAL,
     val activeProjectId: Long? = null,
-    val visualizerData: List<Float> = List(16) { 0f },
     val isAnalyzing: Boolean = false,
     val isAnalysisComplete: Boolean = false,
     val isPlaybackStarted: Boolean = false,
@@ -57,8 +49,17 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
     private val _uiState = MutableStateFlow(MusicSyncUiState())
     val uiState: StateFlow<MusicSyncUiState> = _uiState.asStateFlow()
 
+    // Decoupled flows for high-frequency data to prevent full-screen recomposition
+    private val _visualizerData = MutableStateFlow(List(16) { 0f })
+    val visualizerData: StateFlow<List<Float>> = _visualizerData.asStateFlow()
+
+    private val _audioPositionMs = MutableStateFlow(0)
+    val audioPositionMs: StateFlow<Int> = _audioPositionMs.asStateFlow()
+
+    private val _glyphIntensities = MutableStateFlow(listOf(0, 0, 0, 0, 0, 0))
+    val glyphIntensities: StateFlow<List<Int>> = _glyphIntensities.asStateFlow()
+
     private var musicSyncJob: Job? = null
-    private var audioProgressJob: Job? = null
 
     private val channels = listOf(
         Glyph.Code_25111.A_1, Glyph.Code_25111.A_2, Glyph.Code_25111.A_3,
@@ -67,7 +68,7 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun onIntensityChange(index: Int, newIntensity: Int) {
         if (_uiState.value.isAudioPlaying) return
-        _uiState.update { it.copy(glyphIntensities = it.glyphIntensities.toMutableList().apply { this[index] = newIntensity }) }
+        _glyphIntensities.update { it.toMutableList().apply { this[index] = newIntensity } }
         glyphController.applyGlyphStateWithIntensities(getIntensitiesMap(), 2000)
     }
 
@@ -79,12 +80,12 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
             setDataSource(getApplication(), uri)
             prepare()
             _uiState.update { it.copy(
-                audioUri = uri, audioName = name, audioDurationMs = duration, audioPositionMs = 0, 
+                audioUri = uri, audioName = name, audioDurationMs = duration, 
                 isAudioPlaying = false, musicEvents = emptyList(), isAnalyzing = true, 
                 isAnalysisComplete = false, isPlaybackStarted = false, musicProjectSaved = false
             ) }
+            _audioPositionMs.value = 0
         }
-        bassHistory.clear()
         startAudioAnalysis()
     }
 
@@ -100,7 +101,7 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
                 val activeCount = 1 + random.nextInt(3)
                 val activeIndices = (0..5).shuffled().take(activeCount)
                 val intensities = activeIndices.associate { channels[it] to (2 + random.nextInt(2)) }
-                generatedEvents.add(MusicSyncEvent(projectId = 0, timestampMs = currentMs, channelIntensities = intensities, durationMs = 150))
+                generatedEvents.add(MusicSyncEvent(projectId = 0, timestampMs = currentMs, channelIntensities = intensities, durationMs = 100))
                 currentMs += (400 + random.nextInt(400))
                 if (currentMs % 5000 < 800) delay(1)
             }
@@ -109,25 +110,6 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    private fun setupVisualizer() {
-        val sessionId = mediaPlayer?.audioSessionId ?: return
-        if (sessionId == 0) return
-        try {
-            visualizer = Visualizer(sessionId).apply {
-                captureSize = Visualizer.getCaptureSizeRange()[1]
-                setDataCaptureListener(object : Visualizer.OnDataCaptureListener {
-                    override fun onWaveFormDataCapture(v: Visualizer?, data: ByteArray?, samplingRate: Int) {}
-                    override fun onFftDataCapture(v: Visualizer?, fft: ByteArray?, samplingRate: Int) {
-                        if (fft == null || !_uiState.value.isAudioPlaying) return
-                        analyzeFft(fft)
-                    }
-                }, Visualizer.getMaxCaptureRate() / 2, false, true)
-            }
-        } catch (e: Exception) { e.printStackTrace() }
-    }
-
-    private val bassHistory = mutableListOf<Float>()
-    private var lastBeatTime = 0L
 
     private fun analyzeFft(fft: ByteArray) {
         val n = fft.size
@@ -143,6 +125,9 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
             magnitudes.add((sum / groupSize).coerceIn(0f, 150f))
         }
         
+        // Update visualizer data through decoupled flow
+        _visualizerData.value = magnitudes
+        
         // Map 6 dots to specific frequency bands:
         // A1-A2 (High/Treble), A3-A4 (Mid), A5-A6 (Low/Bass)
         val dotIndices = listOf(14, 11, 8, 5, 2, 1)
@@ -151,28 +136,8 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
             if (mag > 80) 3 else if (mag > 40) 2 else if (mag > 15) 1 else 0
         }
 
-        _uiState.update { it.copy(
-            visualizerData = magnitudes,
-            glyphIntensities = if (it.musicSyncMode == MusicSyncMode.AUTO_BEAT || !it.isAudioPlaying) dotIntensities else it.glyphIntensities
-        ) }
-
-        // Sync physical glyphs in AUTO_BEAT mode
-        if (_uiState.value.isAudioPlaying && _uiState.value.musicSyncMode == MusicSyncMode.AUTO_BEAT) {
-            val intensitiesMap = channels.mapIndexed { i, ch -> ch to dotIntensities[i] }.toMap()
-            
-            // Apply current frequency analysis to glyphs (all 6 channels)
-            glyphController?.applyGlyphStateWithIntensities(intensitiesMap, 100)
-            
-            // Extra beat detection for history/averaging
-            val currentBassEnergy = magnitudes.slice(1..3).sum()
-            val avgBass = if (bassHistory.isEmpty()) 0f else bassHistory.average().toFloat()
-            val threshold = 1.4f
-            val currentTime = System.currentTimeMillis()
-            if (currentBassEnergy > (avgBass * threshold) && currentTime - lastBeatTime > 300) {
-                lastBeatTime = currentTime
-            }
-            bassHistory.add(currentBassEnergy)
-            if (bassHistory.size > 50) bassHistory.removeAt(0)
+        if (_uiState.value.isAudioPlaying || !_uiState.value.isAudioPlaying) {
+            _glyphIntensities.value = dotIntensities
         }
     }
 
@@ -186,9 +151,15 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
         } else {
             _uiState.update { it.copy(isAudioPlaying = true, isPlaybackStarted = true) }
             mp.start()
+            
+            setupVisualizer() 
+            startMusicSync()
+        }
+    }
+
+    fun retryVisualizerSetup() {
+        if (_uiState.value.isAudioPlaying && visualizer == null) {
             setupVisualizer()
-            visualizer?.enabled = true
-            if (_uiState.value.musicSyncMode == MusicSyncMode.MANUAL) startMusicSync() else startAutoProgressOnly()
         }
     }
 
@@ -200,34 +171,36 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
         } catch (e: Exception) { e.printStackTrace() }
     }
 
-    private fun startAutoProgressOnly() {
-        audioProgressJob?.cancel()
-        audioProgressJob = viewModelScope.launch {
-            while (mediaPlayer?.isPlaying == true) {
-                _uiState.update { it.copy(audioPositionMs = mediaPlayer?.currentPosition ?: 0) }
-                delay(50)
-            }
+    private fun setupVisualizer() {
+        val sessionId = mediaPlayer?.audioSessionId ?: return
+        if (sessionId == 0) return
+        
+        // Check for permission before creating visualizer
+        val permission = android.Manifest.permission.RECORD_AUDIO
+        if (androidx.core.content.ContextCompat.checkSelfPermission(getApplication(), permission) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            android.util.Log.w("MusicSyncVM", "Cannot setup visualizer: Permission denied")
+            return
         }
+
+        try {
+            releaseVisualizer()
+            visualizer = Visualizer(sessionId).apply {
+                captureSize = Visualizer.getCaptureSizeRange()[1]
+                setDataCaptureListener(object : Visualizer.OnDataCaptureListener {
+                    override fun onWaveFormDataCapture(v: Visualizer?, data: ByteArray?, samplingRate: Int) {}
+                    override fun onFftDataCapture(v: Visualizer?, fft: ByteArray?, samplingRate: Int) {
+                        if (fft == null || !_uiState.value.isAudioPlaying) return
+                        analyzeFft(fft)
+                    }
+                }, Visualizer.getMaxCaptureRate() / 2, false, true)
+                enabled = true
+            }
+            android.util.Log.d("MusicSyncVM", "Visualizer setup successful")
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
-    fun setMusicSyncMode(mode: MusicSyncMode) {
-        val wasPlaying = _uiState.value.isAudioPlaying
-        _uiState.update { it.copy(musicSyncMode = mode) }
-        
-        if (wasPlaying) {
-            // Restart the appropriate sync job without stopping audio
-            musicSyncJob?.cancel()
-            if (mode == MusicSyncMode.MANUAL) {
-                startMusicSync()
-            } else {
-                startAutoProgressOnly()
-                // Ensure visualizer is active for AUTO_BEAT mode
-                if (visualizer == null) {
-                    setupVisualizer()
-                    visualizer?.enabled = true
-                }
-            }
-        }
+    private fun startAutoProgressOnly() {
+        // No longer used, startMusicSync handles progress
     }
 
     fun deleteMusicEvent(event: MusicSyncEvent) {
@@ -240,16 +213,14 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun seekMusic(positionMs: Float) {
         mediaPlayer?.seekTo(positionMs.toInt())
-        _uiState.update { it.copy(audioPositionMs = positionMs.toInt()) }
-        bassHistory.clear()
-        lastBeatTime = 0
+        _audioPositionMs.value = positionMs.toInt()
     }
 
     fun addMusicEvent() {
-        val position = _uiState.value.audioPositionMs
+        val position = _audioPositionMs.value
         val intensities = getIntensitiesMap()
         if (intensities.values.all { it == 0 }) return
-        _uiState.update { it.copy(musicEvents = (it.musicEvents + MusicSyncEvent(projectId = 0, timestampMs = position.toLong(), channelIntensities = intensities)).sortedBy { e -> e.timestampMs }, musicProjectSaved = false) }
+        _uiState.update { it.copy(musicEvents = (it.musicEvents + MusicSyncEvent(projectId = 0, timestampMs = position.toLong(), channelIntensities = intensities, durationMs = 100)).sortedBy { e -> e.timestampMs }, musicProjectSaved = false) }
     }
 
     fun saveMusicProject() {
@@ -310,15 +281,14 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
                     audioUri = audioFile.absolutePath.toUri(), 
                     audioName = project.project.name, 
                     audioDurationMs = duration, 
-                    audioPositionMs = 0, 
                     isAudioPlaying = true, 
                     musicEvents = project.events, 
                     isAnalyzing = false, 
                     isAnalysisComplete = true, 
                     isPlaybackStarted = true, 
-                    musicSyncMode = MusicSyncMode.MANUAL, 
                     activeProjectId = project.project.id
                 ) }
+                _audioPositionMs.value = 0
                 start()
             }
             setupVisualizer()
@@ -346,48 +316,46 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun startMusicSync() {
         musicSyncJob?.cancel()
-        audioProgressJob?.cancel()
-        audioProgressJob = viewModelScope.launch {
-            while (mediaPlayer?.isPlaying == true) {
-                _uiState.update { it.copy(audioPositionMs = mediaPlayer?.currentPosition ?: 0) }
-                delay(50)
-            }
-        }
         musicSyncJob = viewModelScope.launch {
             var lastTriggeredIdx = -1
             while (mediaPlayer?.isPlaying == true) {
                 val currentPos = mediaPlayer?.currentPosition ?: 0
+                _audioPositionMs.value = currentPos
                 val events = _uiState.value.musicEvents
+                
+                // Efficiency: Only check events around the current position
                 events.forEachIndexed { index, event ->
-                    if (index > lastTriggeredIdx && currentPos >= event.timestampMs && currentPos < event.timestampMs + 500) {
+                    if (index > lastTriggeredIdx && currentPos >= event.timestampMs && currentPos < event.timestampMs + 200) {
                         glyphController.applyGlyphStateWithIntensities(event.channelIntensities, event.durationMs)
                         lastTriggeredIdx = index
-                        _uiState.update { state -> state.copy(glyphIntensities = channels.map { ch -> event.channelIntensities[ch] ?: 0 }) }
+                        val eventIntensities = channels.map { ch -> event.channelIntensities[ch] ?: 0 }
+                        _glyphIntensities.value = eventIntensities
+                        
+                        // Use a side-effect launch to reset intensities without blocking the loop
                         viewModelScope.launch {
-                            val currentEventIntensities = event.channelIntensities
-                            delay(event.durationMs.toLong() + 50)
-                            _uiState.update { state ->
-                                if (channels.withIndex().all { (i, ch) -> state.glyphIntensities[i] == (currentEventIntensities[ch] ?: 0) }) {
-                                    state.copy(glyphIntensities = listOf(0, 0, 0, 0, 0, 0))
-                                } else state
+                            delay(event.durationMs.toLong() + 20)
+                            // Only reset if the current state still matches the event we triggered
+                            if (_glyphIntensities.value == eventIntensities) {
+                                _glyphIntensities.value = listOf(0, 0, 0, 0, 0, 0)
                             }
                         }
                     }
                 }
                 if (events.isNotEmpty() && lastTriggeredIdx >= 0 && currentPos < events[lastTriggeredIdx].timestampMs) lastTriggeredIdx = -1
-                delay(10)
+                delay(16) // ~60fps check rate
             }
         }
     }
 
     private fun stopMusicSync() {
         musicSyncJob?.cancel()
-        audioProgressJob?.cancel()
         glyphController.turnOffGlyphs()
-        _uiState.update { it.copy(glyphIntensities = listOf(0, 0, 0, 0, 0, 0), visualizerData = List(16) { 0f }, activeProjectId = null) }
+        _uiState.update { it.copy(activeProjectId = null) }
+        _glyphIntensities.value = listOf(0, 0, 0, 0, 0, 0)
+        _visualizerData.value = List(16) { 0f }
     }
 
-    private fun getIntensitiesMap(): Map<Int, Int> = channels.mapIndexed { i, ch -> ch to _uiState.value.glyphIntensities[i] }.toMap()
+    private fun getIntensitiesMap(): Map<Int, Int> = channels.mapIndexed { i, ch -> ch to _glyphIntensities.value[i] }.toMap()
 
     override fun onCleared() {
         super.onCleared()
