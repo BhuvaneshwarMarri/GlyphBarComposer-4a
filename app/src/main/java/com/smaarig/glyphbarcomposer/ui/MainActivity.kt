@@ -1,7 +1,6 @@
 package com.smaarig.glyphbarcomposer.ui
 
 import android.os.Bundle
-import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
@@ -12,6 +11,7 @@ import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Piano
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -40,10 +40,10 @@ class MainActivity : ComponentActivity() {
 }
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Composer  : Screen("composer",  "Composer", Icons.Default.Piano)
-    object Contacts  : Screen("contacts",  "Contacts", Icons.Default.Contacts)
-    object MusicSync : Screen("music_sync","Music",    Icons.Default.MusicNote)
-    object Library   : Screen("library",   "Library",  Icons.Default.LibraryMusic)
+    object Composer   : Screen("composer",   "Composer", Icons.Default.Piano)
+    object PatternLab : Screen("pattern_lab", "Lab",      Icons.Default.Science)
+    object MusicSync  : Screen("music_sync", "Music",     Icons.Default.MusicNote)
+    object Library    : Screen("library",    "Library",   Icons.Default.LibraryMusic)
 }
 
 @Composable
@@ -74,6 +74,10 @@ fun NavHostContainer(
             val viewModel: ComposerViewModel = viewModel(viewModelStoreOwner = activity)
             ComposerScreen(viewModel = viewModel)
         }
+        composable(Screen.PatternLab.route) {
+            val viewModel: PatternLabViewModel = viewModel(viewModelStoreOwner = activity)
+            PatternLabScreen(viewModel = viewModel)
+        }
         composable(Screen.MusicSync.route) {
             val viewModel: MusicSyncViewModel = viewModel(viewModelStoreOwner = activity)
             MusicSyncScreen(viewModel = viewModel)
@@ -88,10 +92,6 @@ fun NavHostContainer(
                 musicSyncViewModel = musicSyncViewModel
             )
         }
-        composable(Screen.Contacts.route) {
-            val viewModel: ContactRingtoneViewModel = viewModel(viewModelStoreOwner = activity)
-            ContactRingtoneScreen(viewModel = viewModel)
-        }
     }
 }
 
@@ -99,7 +99,7 @@ fun NavHostContainer(
 fun BottomNavigationBar(navController: NavHostController) {
     val screens = listOf(
         Screen.Composer,
-        Screen.Contacts,
+        Screen.PatternLab,
         Screen.MusicSync,
         Screen.Library
     )
