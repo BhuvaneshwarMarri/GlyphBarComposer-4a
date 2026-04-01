@@ -29,7 +29,7 @@ fun PatternLabScreen(viewModel: PatternLabViewModel) {
     var showDialogB by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp).padding(top = 12.dp)) {
-        Text("Pattern Lab", style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
+        Text("PATTERN LAB", style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(16.dp))
 
         // Scrollable content area

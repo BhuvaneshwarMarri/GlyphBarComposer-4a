@@ -126,7 +126,7 @@ fun MusicSyncScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        "Music Sync",
+                        "MUSIC SYNC",
                         style = MaterialTheme.typography.headlineMedium,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
@@ -646,7 +646,7 @@ private fun EmptyMusicState(onPickFile: () -> Unit) {
             Spacer(Modifier.height(28.dp))
 
             Text(
-                "Music Sync",
+                "MUSIC SYNC",
                 color = Color.White,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
@@ -658,11 +658,6 @@ private fun EmptyMusicState(onPickFile: () -> Unit) {
                 "Sync Glyph lights to any audio file.",
                 color = Color(0xFF888888),
                 fontSize = 14.sp
-            )
-            Text(
-                "Mark beats manually or let auto mode react to bass.",
-                color = Color(0xFF555555),
-                fontSize = 12.sp
             )
 
             Spacer(Modifier.height(32.dp))
@@ -684,7 +679,7 @@ private fun EmptyMusicState(onPickFile: () -> Unit) {
             Spacer(Modifier.height(12.dp))
 
             Text(
-                "Supports MP3, AAC, FLAC, WAV",
+                "Supports MP3",
                 color = Color(0xFF3A3A3A),
                 fontSize = 11.sp
             )

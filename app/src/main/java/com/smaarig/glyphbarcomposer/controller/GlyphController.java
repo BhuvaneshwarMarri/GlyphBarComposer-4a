@@ -18,8 +18,8 @@ public class GlyphController {
     public static synchronized GlyphController getInstance(Context context) {
         if (sInstance == null) {
             sInstance = new GlyphController();
-            sInstance.init(context.getApplicationContext());
         }
+        sInstance.init(context.getApplicationContext());
         return sInstance;
     }
 
@@ -78,8 +78,10 @@ public class GlyphController {
     };
 
     public void init(Context context) {
-        mGlyphManager = GlyphManager.getInstance(context);
-        mGlyphManager.init(mCallback);
+        if (mGlyphManager == null) {
+            mGlyphManager = GlyphManager.getInstance(context);
+            mGlyphManager.init(mCallback);
+        }
     }
 
     /** Turn off all active glyphs. */
@@ -180,7 +182,13 @@ public class GlyphController {
             } catch (GlyphException e) {
                 Log.e(TAG, "Failed to close session in deinit: " + e.getMessage());
             }
-            mGlyphManager.unInit();
+            try {
+                mGlyphManager.unInit();
+                Log.d(TAG, "GlyphManager Uninitialized");
+            } catch (Exception e) {
+                Log.e(TAG, "Error in GlyphManager unInit: " + e.getMessage());
+            }
+            mGlyphManager = null;
         }
     }
 }

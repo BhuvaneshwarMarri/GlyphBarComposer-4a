@@ -176,11 +176,10 @@ private fun HeaderRow(onStop: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Composer",
+            text = "COMPOSER",
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.5.sp
+            fontWeight = FontWeight.Bold
         )
 
         IconButton(

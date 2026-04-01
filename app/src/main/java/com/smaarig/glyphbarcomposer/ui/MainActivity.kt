@@ -154,8 +154,7 @@ fun SplashScreen(onTimeout: () -> Unit) {
                 text = "GLYPHBAR COMPOSER",
                 color = Color.White,
                 style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 8.sp
+                fontWeight = FontWeight.ExtraBold
             )
             
             Spacer(modifier = Modifier.height(48.dp))

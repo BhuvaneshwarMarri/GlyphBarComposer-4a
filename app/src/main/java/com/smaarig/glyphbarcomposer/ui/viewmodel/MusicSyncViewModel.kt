@@ -60,6 +60,7 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
     val glyphIntensities: StateFlow<List<Int>> = _glyphIntensities.asStateFlow()
 
     private var musicSyncJob: Job? = null
+    private var analysisJob: Job? = null
 
     private val channels = listOf(
         Glyph.Code_25111.A_1, Glyph.Code_25111.A_2, Glyph.Code_25111.A_3,
@@ -74,25 +75,36 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun loadSong(uri: Uri, name: String) {
         if (_uiState.value.isAudioPlaying) toggleMusicPlayback()
+        analysisJob?.cancel()
         mediaPlayer?.release()
         releaseVisualizer()
-        mediaPlayer = MediaPlayer().apply {
-            setDataSource(getApplication(), uri)
-            prepare()
-            _uiState.update { it.copy(
-                audioUri = uri, audioName = name, audioDurationMs = duration, 
-                isAudioPlaying = false, musicEvents = emptyList(), isAnalyzing = true, 
-                isAnalysisComplete = false, isPlaybackStarted = false, musicProjectSaved = false
-            ) }
-            _audioPositionMs.value = 0
+        
+        try {
+            mediaPlayer = MediaPlayer().apply {
+                setDataSource(getApplication(), uri)
+                setOnPreparedListener { mp ->
+                    _uiState.update { it.copy(
+                        audioUri = uri, audioName = name, audioDurationMs = mp.duration, 
+                        isAudioPlaying = false, musicEvents = emptyList(), isAnalyzing = true, 
+                        isAnalysisComplete = false, isPlaybackStarted = false, musicProjectSaved = false
+                    ) }
+                    _audioPositionMs.value = 0
+                    startAudioAnalysis()
+                }
+                prepareAsync()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            _uiState.update { it.copy(isAnalyzing = false) }
         }
-        startAudioAnalysis()
     }
 
     private fun startAudioAnalysis() {
         val duration = _uiState.value.audioDurationMs
         if (duration <= 0) return
-        viewModelScope.launch {
+        
+        analysisJob?.cancel()
+        analysisJob = viewModelScope.launch {
             _uiState.update { it.copy(musicEvents = emptyList()) }
             val generatedEvents = mutableListOf<MusicSyncEvent>()
             val random = java.util.Random()
@@ -278,24 +290,26 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
         try {
             mediaPlayer = MediaPlayer().apply {
                 setDataSource(audioFile.absolutePath)
-                prepare()
-                _uiState.update { it.copy(
-                    audioUri = audioFile.absolutePath.toUri(), 
-                    audioName = project.project.name, 
-                    audioDurationMs = duration, 
-                    isAudioPlaying = true, 
-                    musicEvents = project.events, 
-                    isAnalyzing = false, 
-                    isAnalysisComplete = true, 
-                    isPlaybackStarted = true, 
-                    activeProjectId = project.project.id
-                ) }
-                _audioPositionMs.value = 0
-                start()
+                setOnPreparedListener { mp ->
+                    _uiState.update { it.copy(
+                        audioUri = audioFile.absolutePath.toUri(), 
+                        audioName = project.project.name, 
+                        audioDurationMs = mp.duration, 
+                        isAudioPlaying = true, 
+                        musicEvents = project.events, 
+                        isAnalyzing = false, 
+                        isAnalysisComplete = true, 
+                        isPlaybackStarted = true, 
+                        activeProjectId = project.project.id
+                    ) }
+                    _audioPositionMs.value = 0
+                    start()
+                    setupVisualizer()
+                    visualizer?.enabled = true
+                    startMusicSync()
+                }
+                prepareAsync()
             }
-            setupVisualizer()
-            visualizer?.enabled = true
-            startMusicSync()
         } catch (e: Exception) {
             e.printStackTrace()
             _uiState.update { it.copy(isAudioPlaying = false, isAnalyzing = false) }
