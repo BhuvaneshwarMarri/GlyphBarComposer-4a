@@ -5,9 +5,7 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -57,6 +55,20 @@ fun MusicSyncScreen(
     val audioPositionMs by viewModel.audioPositionMs.collectAsStateWithLifecycle()
     val glyphIntensities by viewModel.glyphIntensities.collectAsStateWithLifecycle()
     
+    // Animation for loading squares
+    val squareCount = 6
+    val squareStates = List(squareCount) { index ->
+        rememberInfiniteTransition(label = "square_$index").animateFloat(
+            initialValue = 0.2f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 400, delayMillis = index * 100),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "alpha_$index"
+        )
+    }
+
     val context = LocalContext.current
     
     var hasPermission by remember {
@@ -174,37 +186,38 @@ fun MusicSyncScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp)
-                    Spacer(Modifier.height(20.dp))
-                    Text("Generating Glyph Sequence…", color = Color.White, fontWeight = FontWeight.Bold)
-                    Text("Analyzing beats for the entire track", color = Color.Gray, fontSize = 12.sp)
-                }
-            }
-        }
-
-        // ── Ready badge ──
-        val showReadyMessage = uiState.isAnalysisComplete && !uiState.isPlaybackStarted && !uiState.isAnalyzing
-        AnimatedVisibility(
-            visible = showReadyMessage,
-            enter = slideInVertically { -it } + fadeIn(),
-            exit = slideOutVertically { -it } + fadeOut(),
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 64.dp)
-        ) {
-            Surface(
-                color = Color(0xFF00C853),
-                contentColor = Color.Black,
-                shape = RoundedCornerShape(24.dp),
-                shadowElevation = 8.dp
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Ready — press play to sync", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    if (uiState.isAnalysisComplete) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color(0xFF00C853),
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            "Successfully Loaded",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else {
+                        // 6 Loading Squares
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(bottom = 24.dp)
+                        ) {
+                            squareStates.forEach { alpha ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clip(RoundedCornerShape(2.dp))
+                                        .background(Color.White.copy(alpha = alpha.value))
+                                )
+                            }
+                        }
+                        Text("Generating Glyph Sequence…", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Analyzing beats for the entire track", color = Color.Gray, fontSize = 12.sp)
+                    }
                 }
             }
         }
@@ -688,6 +701,6 @@ private fun formatTime(ms: Int): String {
 @Composable
 private fun animateColorAsState(
     targetValue: Color,
-    animationSpec: androidx.compose.animation.core.AnimationSpec<Color>,
+    animationSpec: AnimationSpec<Color>,
     label: String
 ) = androidx.compose.animation.animateColorAsState(targetValue, animationSpec, label = label)

@@ -106,7 +106,9 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
                 if (currentMs % 5000 < 800) delay(1)
             }
             delay(1500)
-            _uiState.update { it.copy(musicEvents = generatedEvents, isAnalyzing = false, isAnalysisComplete = true) }
+            _uiState.update { it.copy(musicEvents = generatedEvents, isAnalysisComplete = true) }
+            delay(2000)
+            _uiState.update { it.copy(isAnalyzing = false) }
         }
     }
 
