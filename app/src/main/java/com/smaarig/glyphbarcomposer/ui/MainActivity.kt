@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,6 +36,7 @@ import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.LibraryViewModel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicSyncViewModel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.PatternLabViewModel
+import com.smaarig.glyphbarcomposer.controller.GlyphController
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -68,6 +70,11 @@ fun MainApp() {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color(0xFF0E0E0E),
+        topBar = {
+            if (!isSplashScreen) {
+                GlyphPreviewBar()
+            }
+        },
         bottomBar = { 
             if (!isSplashScreen) {
                 BottomNavigationBar(navController)
@@ -75,6 +82,41 @@ fun MainApp() {
         }
     ) { innerPadding ->
         NavHostContainer(navController, Modifier.padding(innerPadding))
+    }
+}
+
+@Composable
+fun GlyphPreviewBar() {
+    val context = LocalContext.current
+    val glyphController = remember { GlyphController.getInstance(context) }
+    val intensities by glyphController.currentIntensities.collectAsState()
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(top = 8.dp, bottom = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            intensities.forEach { intensity ->
+                val color = when (intensity) {
+                    1 -> Color(0xFF686868)
+                    2 -> Color(0xFFCDCDCD)
+                    3 -> Color(0xFFFFFFFF)
+                    else -> Color(0xFF1C1C1C)
+                }
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(color)
+                )
+            }
+        }
     }
 }
 
