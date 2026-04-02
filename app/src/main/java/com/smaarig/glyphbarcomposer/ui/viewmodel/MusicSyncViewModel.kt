@@ -377,6 +377,6 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
         super.onCleared()
         visualizer?.release()
         mediaPlayer?.release()
-        glyphController.deinit()
+        glyphController.turnOffGlyphs()
     }
 }

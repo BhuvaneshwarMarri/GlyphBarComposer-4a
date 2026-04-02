@@ -180,6 +180,6 @@ class ComposerViewModel(application: Application) : AndroidViewModel(application
 
     override fun onCleared() {
         super.onCleared()
-        glyphController.deinit()
+        glyphController.turnOffGlyphs()
     }
 }

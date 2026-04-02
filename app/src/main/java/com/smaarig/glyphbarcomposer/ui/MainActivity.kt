@@ -1,15 +1,21 @@
 package com.smaarig.glyphbarcomposer.ui
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MusicNote
@@ -19,12 +25,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -37,6 +45,7 @@ import com.smaarig.glyphbarcomposer.ui.viewmodel.LibraryViewModel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicSyncViewModel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.PatternLabViewModel
 import com.smaarig.glyphbarcomposer.controller.GlyphController
+import com.smaarig.glyphbarcomposer.service.BatteryService
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -90,14 +99,29 @@ fun GlyphPreviewBar() {
     val context = LocalContext.current
     val glyphController = remember { GlyphController.getInstance(context) }
     val intensities by glyphController.currentIntensities.collectAsState()
+    val isBatteryEnabled by glyphController.isBatteryFeatureEnabled.collectAsState()
 
-    Box(
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            glyphController.toggleBatteryFeature(true)
+            context.startForegroundService(Intent(context, BatteryService::class.java))
+        }
+    }
+
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(top = 8.dp, bottom = 8.dp),
-        contentAlignment = Alignment.Center
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
+        // Left spacer to balance the switch on the right
+        Box(modifier = Modifier.width(70.dp))
+
+        // Center: Glyph Squares
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -116,6 +140,47 @@ fun GlyphPreviewBar() {
                         .background(color)
                 )
             }
+        }
+
+        // Right: Battery Toggle
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End,
+            modifier = Modifier.width(70.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.BatteryChargingFull,
+                contentDescription = "Battery Sync",
+                tint = if (isBatteryEnabled) Color(0xFF00C853) else Color.Gray,
+                modifier = Modifier.size(16.dp)
+            )
+            Switch(
+                checked = isBatteryEnabled,
+                onCheckedChange = { enabled ->
+                    if (enabled) {
+                        val hasPermission = ContextCompat.checkSelfPermission(
+                            context, Manifest.permission.POST_NOTIFICATIONS
+                        ) == PackageManager.PERMISSION_GRANTED
+                        
+                        if (!hasPermission) {
+                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            return@Switch
+                        }
+                        glyphController.toggleBatteryFeature(true)
+                        context.startForegroundService(Intent(context, BatteryService::class.java))
+                    } else {
+                        glyphController.toggleBatteryFeature(false)
+                        context.stopService(Intent(context, BatteryService::class.java))
+                    }
+                },
+                modifier = Modifier.scale(0.6f),
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = Color(0xFF00C853),
+                    uncheckedThumbColor = Color.Gray,
+                    uncheckedTrackColor = Color(0xFF333333)
+                )
+            )
         }
     }
 }
