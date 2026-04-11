@@ -56,7 +56,7 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
     private val _audioPositionMs = MutableStateFlow(0)
     val audioPositionMs: StateFlow<Int> = _audioPositionMs.asStateFlow()
 
-    private val _glyphIntensities = MutableStateFlow(listOf(0, 0, 0, 0, 0, 0))
+    private val _glyphIntensities = MutableStateFlow(listOf(0, 0, 0, 0, 0, 0, 0))
     val glyphIntensities: StateFlow<List<Int>> = _glyphIntensities.asStateFlow()
 
     private var musicSyncJob: Job? = null
@@ -64,7 +64,8 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val channels = listOf(
         Glyph.Code_25111.A_1, Glyph.Code_25111.A_2, Glyph.Code_25111.A_3,
-        Glyph.Code_25111.A_4, Glyph.Code_25111.A_5, Glyph.Code_25111.A_6
+        Glyph.Code_25111.A_4, Glyph.Code_25111.A_5, Glyph.Code_25111.A_6,
+        Glyph.Code_22111.E1
     )
 
     fun onIntensityChange(index: Int, newIntensity: Int) {
@@ -142,16 +143,18 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
         // Update visualizer data through decoupled flow
         _visualizerData.value = magnitudes
         
-        // Map 6 dots to specific frequency bands:
-        // A1-A2 (High/Treble), A3-A4 (Mid), A5-A6 (Low/Bass)
-        val dotIndices = listOf(14, 11, 8, 5, 2, 1)
+        // Map 7 dots to specific frequency bands:
+        // A1-A2 (High/Treble), A3-A4 (Mid), A5-A6 (Low/Bass), RED (Deep Bass)
+        val dotIndices = listOf(14, 11, 8, 5, 2, 1, 0)
         val dotIntensities = dotIndices.map { idx ->
             val mag = magnitudes[idx]
             if (mag > 80) 3 else if (mag > 40) 2 else if (mag > 15) 1 else 0
         }
 
-        if (_uiState.value.isAudioPlaying || !_uiState.value.isAudioPlaying) {
+        if (_uiState.value.isAudioPlaying) {
             _glyphIntensities.value = dotIntensities
+            // Real-time hardware pulse for all 7 glyphs
+            glyphController.applyGlyphStateWithIntensities(getIntensitiesMap(), 100)
         }
     }
 
@@ -352,7 +355,7 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
                             delay(event.durationMs.toLong() + 20)
                             // Only reset if the current state still matches the event we triggered
                             if (_glyphIntensities.value == eventIntensities) {
-                                _glyphIntensities.value = listOf(0, 0, 0, 0, 0, 0)
+                                _glyphIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
                             }
                         }
                     }
@@ -367,7 +370,7 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
         musicSyncJob?.cancel()
         glyphController.turnOffGlyphs()
         _uiState.update { it.copy(activeProjectId = null) }
-        _glyphIntensities.value = listOf(0, 0, 0, 0, 0, 0)
+        _glyphIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
         _visualizerData.value = List(16) { 0f }
     }
 

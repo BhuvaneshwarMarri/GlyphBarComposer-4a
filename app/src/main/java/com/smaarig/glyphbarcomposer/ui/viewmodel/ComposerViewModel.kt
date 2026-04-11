@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ComposerUiState(
-    val glyphIntensities: List<Int> = listOf(0, 0, 0, 0, 0, 0),
+    val glyphIntensities: List<Int> = listOf(0, 0, 0, 0, 0, 0, 0),
     val durationMs: Float = 1000f,
     val currentSequenceSteps: List<GlyphSequence> = emptyList(),
     val sequenceName: String = "",
@@ -46,7 +46,8 @@ class ComposerViewModel(application: Application) : AndroidViewModel(application
         Glyph.Code_25111.A_3,
         Glyph.Code_25111.A_4,
         Glyph.Code_25111.A_5,
-        Glyph.Code_25111.A_6
+        Glyph.Code_25111.A_6,
+        Glyph.Code_22111.E1
     )
 
     fun onIntensityChange(index: Int, newIntensity: Int) {
@@ -95,7 +96,7 @@ class ComposerViewModel(application: Application) : AndroidViewModel(application
             isPlaying = false, 
             isPaused = false, 
             activePlaylistId = null,
-            glyphIntensities = listOf(0, 0, 0, 0, 0, 0)
+            glyphIntensities = listOf(0, 0, 0, 0, 0, 0, 0)
         ) }
         glyphController.turnOffGlyphs()
     }

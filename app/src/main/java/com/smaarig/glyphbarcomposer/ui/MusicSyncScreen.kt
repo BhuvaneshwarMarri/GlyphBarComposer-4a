@@ -29,13 +29,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.smaarig.glyphbarcomposer.data.MusicSyncEvent
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicSyncUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicSyncViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
 
 // ─── Intensity palette (shared with ComposerScreen) ─────────────────────────
 private val intensityColor = listOf(
@@ -43,20 +45,25 @@ private val intensityColor = listOf(
     Color(0xFF686868),
     Color(0xFFCDCDCD),
     Color(0xFFFFFFFF),
+    Color(0xFFC62828), // 4: Red (Low)
+    Color(0xFFEF5350), // 5: Red (Medium)
+    Color(0xFFFF1744)  // 6: Red (Full)
 )
 
 @Composable
 fun MusicSyncScreen(
     viewModel: MusicSyncViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    redViewModel: RedGlyphViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isRedOn by redViewModel.isRedOn.collectAsStateWithLifecycle()
     val visualizerData by viewModel.visualizerData.collectAsStateWithLifecycle()
     val audioPositionMs by viewModel.audioPositionMs.collectAsStateWithLifecycle()
     val glyphIntensities by viewModel.glyphIntensities.collectAsStateWithLifecycle()
     
     // Animation for loading squares
-    val squareCount = 6
+    val squareCount = 7
     val squareStates = List(squareCount) { index ->
         rememberInfiniteTransition(label = "square_$index").animateFloat(
             initialValue = 0.2f,
@@ -167,6 +174,8 @@ fun MusicSyncScreen(
                     audioPositionMs = audioPositionMs,
                     glyphIntensities = glyphIntensities,
                     viewModel = viewModel,
+                    redViewModel = redViewModel,
+                    isRedOn = isRedOn,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -201,17 +210,18 @@ fun MusicSyncScreen(
                             fontWeight = FontWeight.Bold
                         )
                     } else {
-                        // 6 Loading Squares
+                        // 7 Loading Squares
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.padding(bottom = 24.dp)
                         ) {
-                            squareStates.forEach { alpha ->
+                            squareStates.forEachIndexed { index, alpha ->
+                                val color = if (index == 6) Color(0xFFFF1744) else Color.White
                                 Box(
                                     modifier = Modifier
                                         .size(16.dp)
                                         .clip(RoundedCornerShape(2.dp))
-                                        .background(Color.White.copy(alpha = alpha.value))
+                                        .background(color.copy(alpha = alpha.value))
                                 )
                             }
                         }
@@ -379,6 +389,8 @@ private fun ManualModeContent(
     audioPositionMs: Int,
     glyphIntensities: List<Int>,
     viewModel: MusicSyncViewModel,
+    redViewModel: RedGlyphViewModel,
+    isRedOn: Boolean,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -415,12 +427,25 @@ private fun ManualModeContent(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             glyphIntensities.forEachIndexed { index, intensity ->
+                val isRedGlyph = index == 6
+                val finalIntensity = if (isRedGlyph) {
+                    if (intensity > 0 || isRedOn) 6 else 0
+                } else intensity
+
                 GlyphBox(
-                    label = "A${index + 1}",
-                    intensity = intensity,
+                    label = if (isRedGlyph) "RED" else "A${index + 1}",
+                    intensity = finalIntensity,
                     modifier = Modifier.weight(1f),
-                    onIntensityChange = { viewModel.onIntensityChange(index, it) },
-                    enabled = !uiState.isAudioPlaying
+                    onIntensityChange = { newIntensity ->
+                        if (isRedGlyph) {
+                            redViewModel.setRed(newIntensity > 0)
+                            viewModel.onIntensityChange(index, newIntensity)
+                        } else {
+                            viewModel.onIntensityChange(index, newIntensity)
+                        }
+                    },
+                    enabled = !uiState.isAudioPlaying,
+                    isRed = isRedGlyph
                 )
             }
         }
@@ -572,9 +597,10 @@ private fun TimelineEventRow(
             horizontalArrangement = Arrangement.spacedBy(3.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            repeat(6) { i ->
+            repeat(7) { i ->
                 val ch = getChannelForIndex(i)
-                val intensity = event.channelIntensities[ch] ?: 0
+                val intensityVal = event.channelIntensities[ch] ?: 0
+                val finalIntensity = if (i == 6 && intensityVal > 0) 6 else intensityVal
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Bottom
@@ -582,9 +608,9 @@ private fun TimelineEventRow(
                     Box(
                         modifier = Modifier
                             .width(8.dp)
-                            .height((4 + intensity * 4).dp)
+                            .height((4 + finalIntensity * 4).dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(intensityColor[intensity])
+                            .background(intensityColor[finalIntensity])
                     )
                 }
             }

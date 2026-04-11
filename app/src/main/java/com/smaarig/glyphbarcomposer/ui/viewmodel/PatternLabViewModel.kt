@@ -53,7 +53,8 @@ class PatternLabViewModel(application: Application) : AndroidViewModel(applicati
         Glyph.Code_25111.A_3,
         Glyph.Code_25111.A_4,
         Glyph.Code_25111.A_5,
-        Glyph.Code_25111.A_6
+        Glyph.Code_25111.A_6,
+        Glyph.Code_22111.E1
     )
 
     private val mirrorMap = mapOf(

@@ -33,11 +33,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.smaarig.glyphbarcomposer.data.Playlist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
 
 // ─── Intensity palette ──────────────────────────────────────────────────────
 private val intensityColor = listOf(
@@ -45,6 +47,9 @@ private val intensityColor = listOf(
     Color(0xFF686868),   // 1 – LOW
     Color(0xFFCDCDCD),   // 2 – MED
     Color(0xFFFFFFFF),   // 3 – HIGH
+    Color(0xFFC62828),   // 4 – RED (Low)
+    Color(0xFFEF5350),   // 5 – RED (Med)
+    Color(0xFFFF1744)    // 6 – RED (Full)
 )
 
 private val intensityBorder = listOf(
@@ -52,19 +57,24 @@ private val intensityBorder = listOf(
     Color(0xFF888888),   // 1
     Color(0xFFE0E0E0),   // 2
     Color(0xFFFFFFFF),   // 3
+    Color(0xFF5A1010),   // 4 - Red Border
+    Color(0xFF8E2A2A),   // 5 - Red Border
+    Color(0xFFF44336)    // 6 - Red Border
 )
 
 private fun labelColor(intensity: Int) =
     if (intensity >= 2) Color(0xFF111111) else Color(0xFFFFFFFF)
 
-private val statusLabel = listOf("", "LOW", "MED", "HIGH")
+private val statusLabel = listOf("", "LOW", "MED", "HIGH", "ON", "ON", "ON")
 
 @Composable
 fun ComposerScreen(
     viewModel: ComposerViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    redViewModel: RedGlyphViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isRedOn by redViewModel.isRedOn.collectAsStateWithLifecycle()
     val savedSequences by viewModel.allPlaylists.collectAsStateWithLifecycle(initialValue = emptyList())
 
     Column(
@@ -90,14 +100,25 @@ fun ComposerScreen(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             uiState.glyphIntensities.forEachIndexed { index, intensity ->
+                val isRedGlyph = index == 6
+                val finalIntensity = if (isRedGlyph) {
+                    if (intensity > 0 || isRedOn) 6 else 0
+                } else intensity
+
                 GlyphBox(
-                    label = "A${index + 1}",
-                    intensity = intensity,
+                    label = if (isRedGlyph) "RED" else "A${index + 1}",
+                    intensity = finalIntensity,
                     modifier = Modifier.weight(1f),
                     onIntensityChange = { newIntensity ->
-                        viewModel.onIntensityChange(index, newIntensity)
+                        if (isRedGlyph) {
+                            redViewModel.setRed(newIntensity > 0)
+                            viewModel.onIntensityChange(index, newIntensity)
+                        } else {
+                            viewModel.onIntensityChange(index, newIntensity)
+                        }
                     },
-                    enabled = !uiState.isPlaying
+                    enabled = !uiState.isPlaying,
+                    isRed = isRedGlyph
                 )
             }
         }
@@ -399,7 +420,8 @@ fun GlyphBox(
     intensity: Int,
     modifier: Modifier = Modifier,
     onIntensityChange: (Int) -> Unit,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    isRed: Boolean = false
 ) {
     var accumulatedDrag by remember { mutableStateOf(0f) }
 
@@ -438,6 +460,7 @@ fun GlyphBox(
                     .pointerInput(intensity) {
                         detectVerticalDragGestures(
                             onVerticalDrag = { change, dragAmount ->
+                                if (isRed) return@detectVerticalDragGestures
                                 change.consume()
                                 accumulatedDrag += dragAmount
                                 val threshold = 28f
@@ -454,7 +477,11 @@ fun GlyphBox(
                         )
                     }
                     .clickable {
-                        if (intensity > 0) onIntensityChange(0) else onIntensityChange(3)
+                        if (isRed) {
+                            if (intensity > 0) onIntensityChange(0) else onIntensityChange(3)
+                        } else {
+                            if (intensity > 0) onIntensityChange(0) else onIntensityChange(3)
+                        }
                     }
             } else Modifier),
         contentAlignment = Alignment.Center
@@ -504,13 +531,14 @@ fun StepPreviewBox(step: GlyphSequence) {
             Text("${step.durationMs}ms", fontSize = 8.sp, color = Color(0xFF777777))
             Spacer(Modifier.height(3.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                repeat(6) { i ->
-                    val intensity = step.channelIntensities[getChannelForIndex(i)] ?: 0
+                repeat(7) { i ->
+                    val intensityVal = step.channelIntensities[getChannelForIndex(i)] ?: 0
+                    val finalIntensity = if (i == 6 && intensityVal > 0) 6 else intensityVal
                     Box(
                         modifier = Modifier
                             .size(width = 5.dp, height = 10.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(intensityColor[intensity])
+                            .background(intensityColor[finalIntensity])
                     )
                 }
             }
@@ -579,13 +607,14 @@ fun SavedSequenceRow(
                         contentAlignment = Alignment.Center
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                            repeat(6) { i ->
-                                val intensity = step.channelIntensities[getChannelForIndex(i)] ?: 0
+                            repeat(7) { i ->
+                                val intensityVal = step.channelIntensities[getChannelForIndex(i)] ?: 0
+                                val finalIntensity = if (i == 6 && intensityVal > 0) 6 else intensityVal
                                 Box(
                                     modifier = Modifier
                                         .size(width = 3.dp, height = 8.dp)
                                         .clip(RoundedCornerShape(1.dp))
-                                        .background(intensityColor[intensity])
+                                        .background(intensityColor[finalIntensity])
                                 )
                             }
                         }
@@ -608,5 +637,6 @@ fun getChannelForIndex(index: Int): Int = when (index) {
     3 -> com.nothing.ketchum.Glyph.Code_25111.A_4
     4 -> com.nothing.ketchum.Glyph.Code_25111.A_5
     5 -> com.nothing.ketchum.Glyph.Code_25111.A_6
+    6 -> com.nothing.ketchum.Glyph.Code_22111.E1
     else -> 0
 }

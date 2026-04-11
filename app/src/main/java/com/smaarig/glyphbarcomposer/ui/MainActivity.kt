@@ -44,6 +44,8 @@ import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.LibraryViewModel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicSyncViewModel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.PatternLabViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.service.BatteryService
 import kotlinx.coroutines.delay
@@ -126,12 +128,23 @@ fun GlyphPreviewBar() {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            intensities.forEach { intensity ->
-                val color = when (intensity) {
-                    1 -> Color(0xFF686868)
-                    2 -> Color(0xFFCDCDCD)
-                    3 -> Color(0xFFFFFFFF)
-                    else -> Color(0xFF1C1C1C)
+            intensities.forEachIndexed { index, intensity ->
+                val isRedGlyph = index == 6
+                val color = if (isRedGlyph) {
+                    when (intensity) {
+                        1 -> Color(0xFFC62828) // Red (Low)
+                        2 -> Color(0xFFEF5350) // Red (Medium)
+                        3 -> Color(0xFFFF1744) // Red (Full)
+                        6 -> Color(0xFFFF1744) // Red (Full) - for sync compatibility
+                        else -> Color(0xFF1C1C1C)
+                    }
+                } else {
+                    when (intensity) {
+                        1 -> Color(0xFF686868)
+                        2 -> Color(0xFFCDCDCD)
+                        3 -> Color(0xFFFFFFFF)
+                        else -> Color(0xFF1C1C1C)
+                    }
                 }
                 Box(
                     modifier = Modifier
@@ -191,6 +204,7 @@ fun NavHostContainer(
     modifier: Modifier = Modifier
 ) {
     val activity = LocalActivity.current as ComponentActivity
+    val redViewModel: RedGlyphViewModel = viewModel(viewModelStoreOwner = activity)
 
     NavHost(
         navController = navController,
@@ -206,7 +220,7 @@ fun NavHostContainer(
         }
         composable(Screen.Composer.route) {
             val viewModel: ComposerViewModel = viewModel(viewModelStoreOwner = activity)
-            ComposerScreen(viewModel = viewModel)
+            ComposerScreen(viewModel = viewModel, redViewModel = redViewModel)
         }
         composable(Screen.PatternLab.route) {
             val viewModel: PatternLabViewModel = viewModel(viewModelStoreOwner = activity)
@@ -214,7 +228,7 @@ fun NavHostContainer(
         }
         composable(Screen.MusicSync.route) {
             val viewModel: MusicSyncViewModel = viewModel(viewModelStoreOwner = activity)
-            MusicSyncScreen(viewModel = viewModel)
+            MusicSyncScreen(viewModel = viewModel, redViewModel = redViewModel)
         }
         composable(Screen.Library.route) {
             val viewModel: LibraryViewModel = viewModel(viewModelStoreOwner = activity)
@@ -231,8 +245,8 @@ fun NavHostContainer(
 
 @Composable
 fun SplashScreen(onTimeout: () -> Unit) {
-    // 6 squares animation
-    val squareCount = 6
+    // 7 squares animation
+    val squareCount = 7
     val animationStates = List(squareCount) { index ->
         rememberInfiniteTransition(label = "square_$index").animateFloat(
             initialValue = 0.2f,
@@ -266,14 +280,15 @@ fun SplashScreen(onTimeout: () -> Unit) {
             
             Spacer(modifier = Modifier.height(48.dp))
             
-            // 6 Loading Squares
+            // 7 Loading Squares
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                animationStates.forEach { alpha ->
+                animationStates.forEachIndexed { index, alpha ->
+                    val color = if (index == 6) Color(0xFFFF1744) else Color.White
                     Box(
                         modifier = Modifier
                             .size(16.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(Color.White.copy(alpha = alpha.value))
+                            .background(color.copy(alpha = alpha.value))
                     )
                 }
             }
