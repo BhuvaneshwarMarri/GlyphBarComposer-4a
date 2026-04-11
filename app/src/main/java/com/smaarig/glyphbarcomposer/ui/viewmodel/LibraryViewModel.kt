@@ -10,23 +10,24 @@ import com.smaarig.glyphbarcomposer.data.Playlist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import com.smaarig.glyphbarcomposer.repository.GlyphRepository
 
-class LibraryViewModel(application: Application) : AndroidViewModel(application) {
-    private val db = AppDatabase.getDatabase(application)
-    private val playlistDao = db.playlistDao()
-
-    val allPlaylists: Flow<List<PlaylistWithSteps>> = playlistDao.getAllPlaylists()
-    val allMusicProjects: Flow<List<MusicProjectWithEvents>> = playlistDao.getAllMusicProjects()
+class LibraryViewModel(
+    application: Application,
+    private val repository: GlyphRepository
+) : AndroidViewModel(application) {
+    val allPlaylists: Flow<List<PlaylistWithSteps>> = repository.allPlaylists
+    val allMusicProjects: Flow<List<MusicProjectWithEvents>> = repository.allMusicProjects
 
     fun deletePlaylist(playlist: Playlist) {
         viewModelScope.launch {
-            playlistDao.deletePlaylist(playlist)
+            repository.deletePlaylist(playlist)
         }
     }
 
     fun deleteMusicProject(project: MusicSyncProject) {
         viewModelScope.launch {
-            playlistDao.deleteMusicProject(project)
+            repository.deleteMusicProject(project)
         }
     }
 }

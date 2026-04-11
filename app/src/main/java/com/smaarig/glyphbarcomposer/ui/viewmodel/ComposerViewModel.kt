@@ -12,11 +12,9 @@ import com.smaarig.glyphbarcomposer.data.SequenceStep
 import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.smaarig.glyphbarcomposer.repository.GlyphRepository
 
 data class ComposerUiState(
     val glyphIntensities: List<Int> = listOf(0, 0, 0, 0, 0, 0, 0),
@@ -28,15 +26,16 @@ data class ComposerUiState(
     val activePlaylistId: Long? = null
 )
 
-class ComposerViewModel(application: Application) : AndroidViewModel(application) {
-    private val db = AppDatabase.getDatabase(application)
-    private val playlistDao = db.playlistDao()
+class ComposerViewModel(
+    application: Application,
+    private val repository: GlyphRepository
+) : AndroidViewModel(application) {
     private val glyphController = GlyphController.getInstance(application)
 
     private val _uiState = MutableStateFlow(ComposerUiState())
     val uiState: StateFlow<ComposerUiState> = _uiState.asStateFlow()
 
-    val allPlaylists = playlistDao.getAllPlaylists()
+    val allPlaylists = repository.allPlaylists
 
     private var playbackJob: Job? = null
 
@@ -137,16 +136,15 @@ class ComposerViewModel(application: Application) : AndroidViewModel(application
 
         viewModelScope.launch {
             val playlist = Playlist(name = state.sequenceName)
-            val playlistId = playlistDao.insertPlaylist(playlist)
-            val sequenceSteps = state.currentSequenceSteps.mapIndexed { index, step ->
+            val playlistSteps = state.currentSequenceSteps.mapIndexed { index, step ->
                 SequenceStep(
-                    playlistId = playlistId,
+                    playlistId = 0, // Assigned by repository
                     stepIndex = index,
                     channelIntensities = step.channelIntensities,
                     durationMs = step.durationMs
                 )
             }
-            playlistDao.insertSteps(sequenceSteps)
+            repository.savePlaylist(playlist, playlistSteps)
             
             _uiState.update { it.copy(sequenceName = "", currentSequenceSteps = emptyList()) }
         }
@@ -157,7 +155,7 @@ class ComposerViewModel(application: Application) : AndroidViewModel(application
             if (_uiState.value.activePlaylistId == playlist.id) {
                 stopPlayback()
             }
-            playlistDao.deletePlaylist(playlist)
+            repository.deletePlaylist(playlist)
         }
     }
 

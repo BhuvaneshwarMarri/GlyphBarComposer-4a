@@ -14,6 +14,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.smaarig.glyphbarcomposer.repository.GlyphRepository
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -36,15 +37,16 @@ data class PatternLabUiState(
     val previewSteps: List<GlyphSequence> = emptyList()
 )
 
-class PatternLabViewModel(application: Application) : AndroidViewModel(application) {
-    private val db = AppDatabase.getDatabase(application)
-    private val playlistDao = db.playlistDao()
+class PatternLabViewModel(
+    application: Application,
+    private val repository: GlyphRepository
+) : AndroidViewModel(application) {
     private val glyphController = GlyphController.getInstance(application)
 
     private val _uiState = MutableStateFlow(PatternLabUiState())
     val uiState: StateFlow<PatternLabUiState> = _uiState.asStateFlow()
 
-    val allPlaylists = playlistDao.getAllPlaylists()
+    val allPlaylists = repository.allPlaylists
     private var playbackJob: Job? = null
 
     private val channels = listOf(
@@ -264,16 +266,15 @@ class PatternLabViewModel(application: Application) : AndroidViewModel(applicati
         if (state.resultName.isBlank() || state.previewSteps.isEmpty()) return
         viewModelScope.launch {
             val playlist = Playlist(name = state.resultName)
-            val playlistId = playlistDao.insertPlaylist(playlist)
             val sequenceSteps = state.previewSteps.mapIndexed { index, step ->
                 SequenceStep(
-                    playlistId = playlistId,
+                    playlistId = 0,
                     stepIndex = index,
                     channelIntensities = step.channelIntensities,
                     durationMs = step.durationMs
                 )
             }
-            playlistDao.insertSteps(sequenceSteps)
+            repository.savePlaylist(playlist, sequenceSteps)
             _uiState.update { it.copy(
                 resultName = "", 
                 selectedPlaylistA = null, 

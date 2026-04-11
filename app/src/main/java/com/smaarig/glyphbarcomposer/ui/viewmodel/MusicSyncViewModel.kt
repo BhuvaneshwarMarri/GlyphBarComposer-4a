@@ -15,11 +15,9 @@ import com.smaarig.glyphbarcomposer.data.MusicSyncEvent
 import com.smaarig.glyphbarcomposer.data.MusicSyncProject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.smaarig.glyphbarcomposer.repository.GlyphRepository
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -39,9 +37,10 @@ data class MusicSyncUiState(
     val musicProjectSaved: Boolean = false
 )
 
-class MusicSyncViewModel(application: Application) : AndroidViewModel(application) {
-    private val db = AppDatabase.getDatabase(application)
-    private val playlistDao = db.playlistDao()
+class MusicSyncViewModel(
+    application: Application,
+    private val repository: GlyphRepository
+) : AndroidViewModel(application) {
     private val glyphController = GlyphController.getInstance(application)
     private var mediaPlayer: MediaPlayer? = null
     private var visualizer: Visualizer? = null
@@ -270,8 +269,7 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
                 localGlyphFile.writeText(json.toString())
             } catch (e: Exception) {}
             val project = MusicSyncProject(name = name, localAudioPath = localAudioFile.absolutePath, localGlyphPath = localGlyphFile.absolutePath)
-            val projectId = playlistDao.insertMusicProject(project)
-            playlistDao.insertMusicEvents(events.map { it.copy(projectId = projectId) })
+            repository.saveMusicProject(project, events)
             _uiState.update { it.copy(musicProjectSaved = true) }
         }
     }
@@ -329,7 +327,7 @@ class MusicSyncViewModel(application: Application) : AndroidViewModel(applicatio
                 File(project.localAudioPath).delete()
                 project.localGlyphPath?.let { File(it).delete() }
             } catch (e: Exception) {}
-            playlistDao.deleteMusicProject(project)
+            repository.deleteMusicProject(project)
         }
     }
 

@@ -29,7 +29,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nothing.ketchum.Glyph
 import com.smaarig.glyphbarcomposer.data.MusicProjectWithEvents
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import com.smaarig.glyphbarcomposer.model.GlyphSequence
@@ -39,20 +38,13 @@ import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicSyncViewModel
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 private val ch = listOf(
-    Glyph.Code_25111.A_1,
-    Glyph.Code_25111.A_2,
-    Glyph.Code_25111.A_3,
-    Glyph.Code_25111.A_4,
-    Glyph.Code_25111.A_5,
-    Glyph.Code_25111.A_6,
-    Glyph.Code_22111.E1
-)
-
-private val libIntensityColor = listOf(
-    Color(0xFF1C1C1C),
-    Color(0xFF686868),
-    Color(0xFFCDCDCD),
-    Color(0xFFFFFFFF),
+    getChannelForIndex(0),
+    getChannelForIndex(1),
+    getChannelForIndex(2),
+    getChannelForIndex(3),
+    getChannelForIndex(4),
+    getChannelForIndex(5),
+    getChannelForIndex(6)
 )
 
 // ─── Preset content ─────────────────────────────────────────────────────────

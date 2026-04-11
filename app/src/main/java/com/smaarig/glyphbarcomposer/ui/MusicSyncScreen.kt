@@ -39,22 +39,11 @@ import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicSyncUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicSyncViewModel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
 
-// ─── Intensity palette (shared with ComposerScreen) ─────────────────────────
-private val intensityColor = listOf(
-    Color(0xFF1C1C1C),
-    Color(0xFF686868),
-    Color(0xFFCDCDCD),
-    Color(0xFFFFFFFF),
-    Color(0xFFC62828), // 4: Red (Low)
-    Color(0xFFEF5350), // 5: Red (Medium)
-    Color(0xFFFF1744)  // 6: Red (Full)
-)
-
 @Composable
 fun MusicSyncScreen(
     viewModel: MusicSyncViewModel,
     modifier: Modifier = Modifier,
-    redViewModel: RedGlyphViewModel = viewModel()
+    redViewModel: RedGlyphViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRedOn by redViewModel.isRedOn.collectAsStateWithLifecycle()

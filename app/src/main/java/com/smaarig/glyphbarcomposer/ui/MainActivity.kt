@@ -40,12 +40,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.smaarig.glyphbarcomposer.ui.theme.GlyphBarComposerTheme
-import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
-import com.smaarig.glyphbarcomposer.ui.viewmodel.LibraryViewModel
-import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicSyncViewModel
-import com.smaarig.glyphbarcomposer.ui.viewmodel.PatternLabViewModel
-import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.smaarig.glyphbarcomposer.GlyphApplication
+import com.smaarig.glyphbarcomposer.ui.viewmodel.*
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.service.BatteryService
 import kotlinx.coroutines.delay
@@ -130,22 +126,9 @@ fun GlyphPreviewBar() {
         ) {
             intensities.forEachIndexed { index, intensity ->
                 val isRedGlyph = index == 6
-                val color = if (isRedGlyph) {
-                    when (intensity) {
-                        1 -> Color(0xFFC62828) // Red (Low)
-                        2 -> Color(0xFFEF5350) // Red (Medium)
-                        3 -> Color(0xFFFF1744) // Red (Full)
-                        6 -> Color(0xFFFF1744) // Red (Full) - for sync compatibility
-                        else -> Color(0xFF1C1C1C)
-                    }
-                } else {
-                    when (intensity) {
-                        1 -> Color(0xFF686868)
-                        2 -> Color(0xFFCDCDCD)
-                        3 -> Color(0xFFFFFFFF)
-                        else -> Color(0xFF1C1C1C)
-                    }
-                }
+                val finalIntensity = if (isRedGlyph && intensity > 0 && intensity < 4) 6 else intensity
+                val color = intensityColor.getOrElse(finalIntensity) { Color(0xFF1C1C1C) }
+
                 Box(
                     modifier = Modifier
                         .size(16.dp)
@@ -204,7 +187,13 @@ fun NavHostContainer(
     modifier: Modifier = Modifier
 ) {
     val activity = LocalActivity.current as ComponentActivity
-    val redViewModel: RedGlyphViewModel = viewModel(viewModelStoreOwner = activity)
+    val app = activity.application as GlyphApplication
+    val factory = GlyphViewModelFactory(app, app.repository)
+    
+    val redViewModel: RedGlyphViewModel = viewModel(
+        viewModelStoreOwner = activity,
+        factory = factory
+    )
 
     NavHost(
         navController = navController,
@@ -219,21 +208,39 @@ fun NavHostContainer(
             })
         }
         composable(Screen.Composer.route) {
-            val viewModel: ComposerViewModel = viewModel(viewModelStoreOwner = activity)
+            val viewModel: ComposerViewModel = viewModel(
+                viewModelStoreOwner = activity,
+                factory = factory
+            )
             ComposerScreen(viewModel = viewModel, redViewModel = redViewModel)
         }
         composable(Screen.PatternLab.route) {
-            val viewModel: PatternLabViewModel = viewModel(viewModelStoreOwner = activity)
+            val viewModel: PatternLabViewModel = viewModel(
+                viewModelStoreOwner = activity,
+                factory = factory
+            )
             PatternLabScreen(viewModel = viewModel)
         }
         composable(Screen.MusicSync.route) {
-            val viewModel: MusicSyncViewModel = viewModel(viewModelStoreOwner = activity)
+            val viewModel: MusicSyncViewModel = viewModel(
+                viewModelStoreOwner = activity,
+                factory = factory
+            )
             MusicSyncScreen(viewModel = viewModel, redViewModel = redViewModel)
         }
         composable(Screen.Library.route) {
-            val viewModel: LibraryViewModel = viewModel(viewModelStoreOwner = activity)
-            val composerViewModel: ComposerViewModel = viewModel(viewModelStoreOwner = activity)
-            val musicSyncViewModel: MusicSyncViewModel = viewModel(viewModelStoreOwner = activity)
+            val viewModel: LibraryViewModel = viewModel(
+                viewModelStoreOwner = activity,
+                factory = factory
+            )
+            val composerViewModel: ComposerViewModel = viewModel(
+                viewModelStoreOwner = activity,
+                factory = factory
+            )
+            val musicSyncViewModel: MusicSyncViewModel = viewModel(
+                viewModelStoreOwner = activity,
+                factory = factory
+            )
             LibraryScreen(
                 viewModel = viewModel,
                 composerViewModel = composerViewModel,
