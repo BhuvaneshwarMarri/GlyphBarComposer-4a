@@ -1,18 +1,17 @@
 package com.smaarig.glyphbarcomposer.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,81 +21,73 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.Manifest
-import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.smaarig.glyphbarcomposer.data.MusicSyncEvent
+import com.smaarig.glyphbarcomposer.ui.studio.rememberStudioTimelineState
+import com.smaarig.glyphbarcomposer.ui.viewmodel.BeatAlgorithm
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicSyncUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicSyncViewModel
-import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
+
+private val TRACK_LABEL_WIDTH = 48.dp
+private val TRACK_HEIGHT = 180.dp
+private val WAVEFORM_HEIGHT = 48.dp
+private val RESIZE_HANDLE_WIDTH: Dp = 14.dp
+private val MIN_BLOCK_WIDTH: Dp = 24.dp
 
 @Composable
 fun MusicSyncScreen(
     viewModel: MusicSyncViewModel,
-    modifier: Modifier = Modifier,
-    redViewModel: RedGlyphViewModel
+    modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val isRedOn by redViewModel.isRedOn.collectAsStateWithLifecycle()
     val visualizerData by viewModel.visualizerData.collectAsStateWithLifecycle()
     val audioPositionMs by viewModel.audioPositionMs.collectAsStateWithLifecycle()
-    val glyphIntensities by viewModel.glyphIntensities.collectAsStateWithLifecycle()
-    
-    // Animation for loading squares
-    val squareCount = 7
-    val squareStates = List(squareCount) { index ->
-        rememberInfiniteTransition(label = "square_$index").animateFloat(
-            initialValue = 0.2f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 400, delayMillis = index * 100),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "alpha_$index"
-        )
-    }
+    val composerIntensities by viewModel.composerIntensities.collectAsStateWithLifecycle()
+    val liveGlyphIntensities by viewModel.liveGlyphIntensities.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
-    
     var hasPermission by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(
+                context, Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
         )
     }
-    
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        hasPermission = isGranted
-        if (isGranted) viewModel.retryVisualizerSetup()
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasPermission = granted
+        if (granted) viewModel.retryVisualizerSetup()
     }
-
     LaunchedEffect(hasPermission) {
-        if (hasPermission && uiState.isAudioPlaying) {
-            viewModel.retryVisualizerSetup()
-        }
+        if (hasPermission && uiState.isAudioPlaying) viewModel.retryVisualizerSetup()
     }
 
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+    val fileLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            if (!hasPermission) {
-                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-            }
-            val name = context.contentResolver.query(it, null, null, null, null)?.use { cursor ->
-                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                cursor.moveToFirst()
-                cursor.getString(nameIndex)
+            if (!hasPermission) permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            val name = context.contentResolver.query(it, null, null, null, null)?.use { cur ->
+                if (cur.moveToFirst()) {
+                    val idx = cur.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (idx >= 0) cur.getString(idx) else "Unknown Song"
+                } else "Unknown Song"
             } ?: "Unknown Song"
             viewModel.loadSong(it, name)
         }
@@ -104,130 +95,108 @@ fun MusicSyncScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         if (uiState.audioUri == null) {
-            // ── Empty state ──
-            EmptyMusicState(onPickFile = { launcher.launch("audio/*") })
+            EmptyState(onPickFile = { fileLauncher.launch("audio/*") })
         } else {
-            // ── Main content ──
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 12.dp, bottom = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(top = 12.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
-                // Header
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        "MUSIC SYNC",
+                        "GLYPH STUDIO",
                         style = MaterialTheme.typography.headlineMedium,
                         color = Color.White,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 2.sp
                     )
-                    // Save project button
-                    if (uiState.musicEvents.isNotEmpty()) {
-                        TextButton(
-                            onClick = viewModel::saveMusicProject,
-                            colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF00C853))
-                        ) {
-                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Save", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (uiState.musicEvents.isNotEmpty()) {
+                            TextButton(
+                                onClick = viewModel::saveMusicProject,
+                                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF00C853))
+                            ) {
+                                Icon(Icons.Default.Save, null, Modifier.size(15.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Save", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        IconButton(onClick = viewModel::clearAllMusicEvents) {
+                            Icon(Icons.Default.DeleteSweep, null, tint = Color(0xFF444444), modifier = Modifier.size(20.dp))
                         }
                     }
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
 
-                // ── Player card ──
-                MusicPlayerCard(
+                PlayerStrip(
                     uiState = uiState,
                     audioPositionMs = audioPositionMs,
                     onPlayPause = viewModel::toggleMusicPlayback,
                     onSeek = viewModel::seekMusic,
-                    onChangeAudio = { launcher.launch("audio/*") }
+                    onChangeAudio = { fileLauncher.launch("audio/*") }
                 )
+
+                Spacer(Modifier.height(10.dp))
+
+                FrequencyBar(visualizerData, modifier = Modifier.padding(horizontal = 16.dp))
 
                 Spacer(Modifier.height(12.dp))
 
-                // Visualizer
-                FrequencyVisualizer(visualizerData)
+                AlgorithmRow(
+                    selected = uiState.selectedAlgorithm,
+                    bpm = uiState.bpmOverride,
+                    isAnalyzing = uiState.isAnalyzing,
+                    isReady = uiState.isAnalysisComplete,
+                    onSelect = { viewModel.setAlgorithm(it); viewModel.reanalyze() },
+                    onBpmChange = viewModel::setBpmOverride,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(8.dp))
 
-                ManualModeContent(
+                StudioTimelineEditor(
                     uiState = uiState,
                     audioPositionMs = audioPositionMs,
-                    glyphIntensities = glyphIntensities,
                     viewModel = viewModel,
-                    redViewModel = redViewModel,
-                    isRedOn = isRedOn,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.height(240.dp).padding(horizontal = 16.dp)
+                )
+
+                DurationSelector(
+                    currentMs = uiState.defaultDurationMs,
+                    onDurationChange = viewModel::setDefaultDuration,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                )
+
+                ComposerPanel(
+                    intensities = composerIntensities,
+                    liveIntensities = liveGlyphIntensities,
+                    isPlaying = uiState.isAudioPlaying,
+                    isReady = uiState.isAnalysisComplete,
+                    isSelected = uiState.selectedEventId != null,
+                    includeRedGlyph = uiState.includeRedGlyph,
+                    onToggleRedGlyph = viewModel::toggleRedGlyph,
+                    onIntensityChange = viewModel::onComposerIntensityChange,
+                    onClear = viewModel::clearComposer,
+                    onInsert = viewModel::addMusicEvent,
+                    modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 12.dp)
                 )
             }
         }
 
-        // ── Analysis overlay ──
-        AnimatedVisibility(
-            visible = uiState.isAnalyzing,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.88f))
-                    .clickable(enabled = false) {},
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (uiState.isAnalysisComplete) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = Color(0xFF00C853),
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            "Successfully Loaded",
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    } else {
-                        // 7 Loading Squares
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(bottom = 24.dp)
-                        ) {
-                            squareStates.forEachIndexed { index, alpha ->
-                                val color = if (index == 6) Color(0xFFFF1744) else Color.White
-                                Box(
-                                    modifier = Modifier
-                                        .size(16.dp)
-                                        .clip(RoundedCornerShape(2.dp))
-                                        .background(color.copy(alpha = alpha.value))
-                                )
-                            }
-                        }
-                        Text("Generating Glyph Sequence…", color = Color.White, fontWeight = FontWeight.Bold)
-                        Text("Analyzing beats for the entire track", color = Color.Gray, fontSize = 12.sp)
-                    }
-                }
-            }
+        AnimatedVisibility(visible = uiState.isAnalyzing, enter = fadeIn(), exit = fadeOut()) {
+            AnalysisOverlay(uiState.selectedAlgorithm, uiState.isAnalysisComplete)
         }
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Player card
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
-private fun MusicPlayerCard(
+private fun PlayerStrip(
     uiState: MusicSyncUiState,
     audioPositionMs: Int,
     onPlayPause: () -> Unit,
@@ -235,83 +204,91 @@ private fun MusicPlayerCard(
     onChangeAudio: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color(0xFF161616),
-        shape = RoundedCornerShape(20.dp)
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
+        color = Color(0xFF0F0F0F),
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, Color(0xFF1A1A1A))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Album art placeholder
+                // Subtle rotation for "Vinyl" disc
+                val infiniteTransition = rememberInfiniteTransition(label = "rotation")
+                val rotation by infiniteTransition.animateFloat(
+                    initialValue = 0f, targetValue = 360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(4000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart
+                    ), label = "rotation"
+                )
+                
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF252525)),
+                        .size(52.dp)
+                        .graphicsLayer { if (uiState.isAudioPlaying) rotationZ = rotation }
+                        .clip(CircleShape)
+                        .background(Color(0xFF080808))
+                        .border(1.5.dp, Color(0xFF222222), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
+                    // Dot matrix style circles for visual flair
+                    Canvas(modifier = Modifier.size(36.dp)) {
+                        val r = size.minDimension / 2
+                        drawCircle(Color(0xFF1A1A1A), radius = r, style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
+                        drawCircle(Color(0xFF1A1A1A), radius = r * 0.6f, style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
+                        drawCircle(Color(0xFF1A1A1A), radius = r * 0.2f)
+                    }
                     Icon(
-                        Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = Color(0xFF555555),
-                        modifier = Modifier.size(24.dp)
+                        Icons.Default.MusicNote, null,
+                        tint = if (uiState.isAudioPlaying) Color(0xFF00C853) else Color(0xFF444444),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
-
-                Spacer(Modifier.width(12.dp))
-
+                
+                Spacer(Modifier.width(16.dp))
+                
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        uiState.audioName ?: "Unknown",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        uiState.audioName ?: "Select a Track",
+                        color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        letterSpacing = (-0.5).sp
                     )
                     Text(
                         "${formatTime(audioPositionMs)} / ${formatTime(uiState.audioDurationMs)}",
-                        color = Color(0xFF888888),
-                        fontSize = 12.sp
+                        color = Color(0xFF666666), fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
                     )
                 }
-
-                // Change audio button — explicitly labelled
-                OutlinedButton(
+                
+                IconButton(
                     onClick = onChangeAudio,
-                    shape = RoundedCornerShape(10.dp),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-                    modifier = Modifier.height(36.dp)
+                    modifier = Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF1A1A1A))
                 ) {
-                    Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Change", fontSize = 12.sp)
+                    Icon(Icons.Default.FolderOpen, null, tint = Color.LightGray, modifier = Modifier.size(20.dp))
                 }
-
-                Spacer(Modifier.width(4.dp))
-
-                // Play / Pause
+                
+                Spacer(Modifier.width(10.dp))
+                
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(52.dp)
                         .clip(CircleShape)
-                        .background(if (uiState.isAnalysisComplete) Color.White else Color(0xFF333333))
+                        .background(if (uiState.isAnalysisComplete) Color.White else Color(0xFF1A1A1A))
                         .clickable(enabled = uiState.isAnalysisComplete) { onPlayPause() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         if (uiState.isAudioPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = "Play/Pause",
-                        tint = if (uiState.isAnalysisComplete) Color.Black else Color(0xFF555555),
-                        modifier = Modifier.size(24.dp)
+                        "Play/Pause",
+                        tint = if (uiState.isAnalysisComplete) Color.Black else Color(0xFF333333),
+                        modifier = Modifier.size(32.dp)
                     )
                 }
             }
-
-            Spacer(Modifier.height(8.dp))
-
-            // Seek bar
+            
+            Spacer(Modifier.height(14.dp))
+            
             Slider(
                 value = audioPositionMs.toFloat(),
                 onValueChange = onSeek,
@@ -320,219 +297,107 @@ private fun MusicPlayerCard(
                 colors = SliderDefaults.colors(
                     thumbColor = Color.White,
                     activeTrackColor = Color.White,
-                    inactiveTrackColor = Color(0xFF333333)
+                    inactiveTrackColor = Color(0xFF222222)
                 ),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().height(20.dp)
             )
         }
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Visualizer
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
-private fun FrequencyVisualizer(magnitudes: List<Float>) {
+private fun FrequencyBar(magnitudes: List<Float>, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(48.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF0E0E0E)),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF0A0A0A))
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.5.dp),
         verticalAlignment = Alignment.Bottom
     ) {
-        Spacer(Modifier.width(4.dp))
-        magnitudes.forEach { magnitude ->
-            val animatedHeight by animateFloatAsState(
-                targetValue = (magnitude / 100f).coerceIn(0.04f, 1f),
-                animationSpec = tween(durationMillis = 60, easing = LinearEasing),
-                label = "barHeight"
+        magnitudes.forEachIndexed { i, m ->
+            val h by animateFloatAsState(
+                targetValue = (m / 100f).coerceIn(0.05f, 1f),
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+                label = "fq_$i"
             )
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(animatedHeight)
+                modifier = Modifier.weight(1f).fillMaxHeight(h)
                     .background(
                         brush = Brush.verticalGradient(
-                            colors = if (magnitude > 65)
-                                listOf(Color(0xFF00C853), Color(0xFF69F0AE))
-                            else
-                                listOf(Color(0xFF444444), Color(0xFF666666))
+                            if (m > 70) listOf(Color(0xFF00E676), Color(0xFF00C853))
+                            else listOf(Color(0xFF1F1F1F), Color(0xFF121212))
                         ),
-                        shape = RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp)
+                        shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
                     )
             )
         }
-        Spacer(Modifier.width(4.dp))
     }
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Manual mode
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
-private fun ManualModeContent(
-    uiState: MusicSyncUiState,
-    audioPositionMs: Int,
-    glyphIntensities: List<Int>,
-    viewModel: MusicSyncViewModel,
-    redViewModel: RedGlyphViewModel,
-    isRedOn: Boolean,
+private fun AlgorithmRow(
+    selected: BeatAlgorithm,
+    bpm: Int,
+    isAnalyzing: Boolean,
+    isReady: Boolean,
+    onSelect: (BeatAlgorithm) -> Unit,
+    onBpmChange: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val listState = rememberLazyListState()
-
-    // Auto-scroll events list to bottom when new event added
-    LaunchedEffect(uiState.musicEvents.size) {
-        if (uiState.musicEvents.isNotEmpty()) {
-            listState.animateScrollToItem(uiState.musicEvents.size - 1)
-        }
-    }
-
-    Column(modifier = modifier.fillMaxWidth()) {
-        // ── LED pad ──
+    Column(modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                "LED Pattern",
-                color = Color(0xFF888888),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                "Drag ↑↓ to set intensity, tap to toggle",
-                color = Color(0xFF555555),
-                fontSize = 10.sp
-            )
-        }
-        Spacer(Modifier.height(6.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            glyphIntensities.forEachIndexed { index, intensity ->
-                val isRedGlyph = index == 6
-                val finalIntensity = if (isRedGlyph) {
-                    if (intensity > 0 || isRedOn) 6 else 0
-                } else intensity
-
-                GlyphBox(
-                    label = if (isRedGlyph) "RED" else "A${index + 1}",
-                    intensity = finalIntensity,
-                    modifier = Modifier.weight(1f),
-                    onIntensityChange = { newIntensity ->
-                        if (isRedGlyph) {
-                            redViewModel.setRed(newIntensity > 0)
-                            viewModel.onIntensityChange(index, newIntensity)
-                        } else {
-                            viewModel.onIntensityChange(index, newIntensity)
-                        }
-                    },
-                    enabled = !uiState.isAudioPlaying,
-                    isRed = isRedGlyph
-                )
-            }
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // ── Mark beat button ──
-        Button(
-            onClick = viewModel::addMusicEvent,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = glyphIntensities.any { it > 0 } && uiState.isAnalysisComplete,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF00C853),
-                contentColor = Color.Black,
-                disabledContainerColor = Color(0xFF1A2E1A),
-                disabledContentColor = Color(0xFF3A5A3A)
-            ),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(
-                if (uiState.isAnalysisComplete)
-                    "Add Beat at ${formatTime(audioPositionMs)}"
-                else
-                    "Generating...",
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // ── Events timeline ──
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Timeline  (${uiState.musicEvents.size} events)",
-                color = Color(0xFF888888),
-                fontSize = 11.sp
-            )
-            if (uiState.musicEvents.isNotEmpty()) {
-                Text(
-                    "Clear all",
-                    color = Color(0xFF663333),
-                    fontSize = 11.sp,
-                    modifier = Modifier.clickable { viewModel.clearAllMusicEvents() }
-                )
-            }
-        }
-
-        Spacer(Modifier.height(6.dp))
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .clip(RoundedCornerShape(14.dp))
-                .background(Color(0xFF111111))
-                .border(1.dp, Color(0xFF252525), RoundedCornerShape(14.dp))
-        ) {
-            if (uiState.musicEvents.isEmpty()) {
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        Icons.Default.GraphicEq,
-                        contentDescription = null,
-                        tint = Color(0xFF2A2A2A),
-                        modifier = Modifier.size(40.dp)
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text("No events yet", color = Color(0xFF3A3A3A), fontSize = 13.sp)
-                    Text(
-                        "Play the song and mark beats above",
-                        color = Color(0xFF2A2A2A),
-                        fontSize = 11.sp
-                    )
+            Text("ALGORITHM", color = Color(0xFF444444), fontSize = 10.sp,
+                fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+            if (isAnalyzing) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    CircularProgressIndicator(modifier = Modifier.size(12.dp), color = Color(0xFF00C853), strokeWidth = 2.dp)
+                    Text("Crunching numbers…", color = Color(0xFF666666), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            BeatAlgorithm.entries.forEach { algo ->
+                val isSelected = algo == selected
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(if (isSelected) Color.White else Color(0xFF0F0F0F))
+                        .border(1.dp, if (isSelected) Color.Transparent else Color(0xFF222222), RoundedCornerShape(24.dp))
+                        .clickable { onSelect(algo) }
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
                 ) {
-                    items(uiState.musicEvents, key = { it.timestampMs }) { event ->
-                        val isActive = uiState.isAudioPlaying &&
-                                audioPositionMs.toLong() >= event.timestampMs &&
-                                audioPositionMs.toLong() < event.timestampMs + 800
-                        TimelineEventRow(
-                            event = event,
-                            isActive = isActive,
-                            onDelete = { viewModel.deleteMusicEvent(event) }
-                        )
+                    Text(algo.displayName, color = if (isSelected) Color.Black else Color(0xFF888888),
+                        fontSize = 12.sp, fontWeight = FontWeight.Black)
+                }
+            }
+            if (selected == BeatAlgorithm.BPM_GRID) {
+                Spacer(Modifier.width(4.dp))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color(0xFF0F0F0F))
+                        .border(1.dp, Color(0xFF222222), RoundedCornerShape(24.dp))
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { onBpmChange(bpm - 5) }, modifier = Modifier.size(32.dp)) {
+                        Text("−", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    }
+                    Text("$bpm BPM", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black,
+                        modifier = Modifier.padding(horizontal = 6.dp))
+                    IconButton(onClick = { onBpmChange(bpm + 5) }, modifier = Modifier.size(32.dp)) {
+                        Text("+", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
@@ -540,164 +405,774 @@ private fun ManualModeContent(
     }
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Timeline row
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
-private fun TimelineEventRow(
-    event: MusicSyncEvent,
-    isActive: Boolean,
-    onDelete: () -> Unit
+private fun StudioTimelineEditor(
+    uiState: MusicSyncUiState,
+    audioPositionMs: Int,
+    viewModel: MusicSyncViewModel,
+    modifier: Modifier = Modifier
 ) {
-    val bgColor by animateColorAsState(
-        targetValue = if (isActive) Color(0xFF003320) else Color(0xFF1A1A1A),
-        animationSpec = tween(150),
-        label = "rowBg"
-    )
-    val borderColor by animateColorAsState(
-        targetValue = if (isActive) Color(0xFF00C853) else Color.Transparent,
-        animationSpec = tween(150),
-        label = "rowBorder"
-    )
+    val timelineState = rememberStudioTimelineState()
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, borderColor, RoundedCornerShape(8.dp))
-            .background(bgColor)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Timestamp
-        Text(
-            formatTime(event.timestampMs.toInt()),
-            color = if (isActive) Color(0xFF00C853) else Color(0xFF888888),
-            fontWeight = FontWeight.Bold,
-            fontSize = 12.sp,
-            modifier = Modifier.width(40.dp)
-        )
+    LaunchedEffect(audioPositionMs, uiState.isAudioPlaying) {
+        if (!uiState.isAudioPlaying) return@LaunchedEffect
+        val px = timelineState.timeToPx(audioPositionMs.toLong())
+        val start = timelineState.horizontalScrollState.value
+        val width = timelineState.horizontalScrollState.viewportSize
+        if (px > start + width * 0.70f || px < start + width * 0.10f) {
+            timelineState.horizontalScrollState.animateScrollTo(
+                (px - width * 0.25f).toInt().coerceAtLeast(0),
+                animationSpec = tween(400, easing = FastOutSlowInEasing)
+            )
+        }
+    }
 
-        Spacer(Modifier.width(12.dp))
-
-        // LED intensity mini bars
+    Column(modifier = modifier) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
         ) {
-            repeat(7) { i ->
-                val ch = getChannelForIndex(i)
-                val intensityVal = event.channelIntensities[ch] ?: 0
-                val finalIntensity = if (i == 6 && intensityVal > 0) 6 else intensityVal
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Bottom
-                ) {
-                    Box(
+            Column {
+                Text("TIMELINE", color = Color.White, fontSize = 12.sp,
+                    fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Text("Select & Edit beats  •  Drag to reposition",
+                    color = Color(0xFF444444), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (uiState.musicEvents.isNotEmpty()) {
+                    Text(
+                        "CLEAR ALL", 
+                        color = Color(0xFFFF5252), 
+                        fontSize = 10.sp, 
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.5.sp,
                         modifier = Modifier
-                            .width(8.dp)
-                            .height((4 + finalIntensity * 4).dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(intensityColor[finalIntensity])
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0x1AEE5350))
+                            .clickable { viewModel.clearAllMusicEvents() }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
+                
+                Text(
+                    formatTime(audioPositionMs),
+                    color = Color(0xFF00C853),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-0.5).sp
+                )
             }
         }
 
-        Spacer(Modifier.weight(1f))
-
-        // Duration badge
-        Text(
-            "${event.durationMs}ms",
-            color = Color(0xFF555555),
-            fontSize = 10.sp
-        )
-
-        Spacer(Modifier.width(8.dp))
-
-        IconButton(
-            onClick = onDelete,
-            modifier = Modifier.size(28.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0xFF080808))
+                .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(20.dp))
         ) {
-            Icon(
-                Icons.Default.Delete,
-                contentDescription = "Delete",
-                tint = Color(0xFF662222),
-                modifier = Modifier.size(14.dp)
+            Row(modifier = Modifier.fillMaxSize()) {
+                // Vertical track labels
+                Row(
+                    modifier = Modifier
+                        .width(TRACK_LABEL_WIDTH)
+                        .fillMaxHeight()
+                        .background(Color(0xFF0C0C0C))
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Box(modifier = Modifier.height(WAVEFORM_HEIGHT).fillMaxWidth(),
+                            contentAlignment = Alignment.Center) {
+                            Text("WAVE", color = Color(0xFF222222), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                        }
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(TRACK_HEIGHT),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("PATTERNS", color = Color(0xFF333333), fontSize = 9.sp, fontWeight = FontWeight.Black,
+                                modifier = Modifier.graphicsLayer(rotationZ = -90f))
+                        }
+                    }
+                    VerticalDivider(color = Color(0xFF1A1A1A), thickness = 1.dp)
+                }
+
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxHeight()
+                        .horizontalScroll(timelineState.horizontalScrollState)
+                        .verticalScroll(timelineState.verticalScrollState)
+                ) {
+                    val totalWidth = timelineState.timeToDp(uiState.audioDurationMs.toLong())
+                    Box(modifier = Modifier.width(totalWidth + 160.dp).fillMaxHeight()) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Box(modifier = Modifier.fillMaxWidth().height(WAVEFORM_HEIGHT).background(Color(0xFF060606))) {
+                                WaveformRuler(uiState.waveform, uiState.audioDurationMs, timelineState, Modifier.fillMaxSize())
+                            }
+                            HorizontalDivider(color = Color(0xFF1A1A1A), thickness = 1.dp)
+                            
+                            SequenceTrack(
+                                events = uiState.musicEvents,
+                                state = timelineState,
+                                totalDurationMs = uiState.audioDurationMs,
+                                selectedEventId = uiState.selectedEventId,
+                                onSelectEvent = viewModel::selectEvent,
+                                onMoveEvent = viewModel::updateEventPosition,
+                                onResizeEvent = viewModel::updateEventStartAndDuration,
+                                onDeleteEvent = viewModel::deleteMusicEvent,
+                                modifier = Modifier.fillMaxWidth().height(TRACK_HEIGHT)
+                            )
+                        }
+
+                        // Playhead
+                        val phX = timelineState.timeToDp(audioPositionMs.toLong())
+                        Box(
+                            modifier = Modifier.offset(x = phX).width(2.dp).fillMaxHeight()
+                                .background(Color(0xFF00C853).copy(0.8f))
+                                .pointerInput(Unit) {
+                                    detectDragGestures { change, drag ->
+                                        change.consume()
+                                        viewModel.seekMusic((audioPositionMs + timelineState.dragDeltaToMs(drag.x)).toFloat())
+                                    }
+                                }
+                        ) {
+                            Box(
+                                modifier = Modifier.align(Alignment.TopCenter).size(16.dp)
+                                    .offset(y = (-2).dp).clip(CircleShape)
+                                    .background(Color(0xFF00C853))
+                                    .border(2.dp, Color.White, CircleShape)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WaveformRuler(
+    waveform: List<Float>,
+    totalDurationMs: Int,
+    state: com.smaarig.glyphbarcomposer.ui.studio.StudioTimelineState,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        val width = size.width
+        val height = size.height
+        val samples = waveform.size
+        if (samples == 0) return@Canvas
+
+        val pxPerSample = width / samples
+        waveform.forEachIndexed { i, energy ->
+            val x = i * pxPerSample
+            val barHeight = energy * height
+            drawLine(
+                color = Color(0xFF00C853).copy(alpha = 0.4f),
+                start = Offset(x, height / 2 - barHeight / 2),
+                end = Offset(x, height / 2 + barHeight / 2),
+                strokeWidth = 1f
             )
         }
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Empty state
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
-private fun EmptyMusicState(onPickFile: () -> Unit) {
+private fun SequenceTrack(
+    events: List<MusicSyncEvent>,
+    state: com.smaarig.glyphbarcomposer.ui.studio.StudioTimelineState,
+    totalDurationMs: Int,
+    selectedEventId: Long?,
+    onSelectEvent: (MusicSyncEvent?) -> Unit,
+    onMoveEvent: (MusicSyncEvent, Long) -> Unit,
+    onResizeEvent: (MusicSyncEvent, Long, Int) -> Unit,
+    onDeleteEvent: (MusicSyncEvent) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        modifier = modifier
+            .fillMaxWidth()
+            .fillMaxHeight()
+            .pointerInput(state) {
+                detectTapGestures { onSelectEvent(null) }
+            }
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF111111)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.MusicNote,
-                    contentDescription = null,
-                    tint = Color(0xFF333333),
-                    modifier = Modifier.size(52.dp)
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val msPerGrid = 500L
+            val pxPerGrid = state.timeToPx(msPerGrid)
+            val count = (totalDurationMs / msPerGrid).toInt()
+            for (i in 0..count) {
+                val x = i * pxPerGrid
+                drawLine(Color(0xFF151515), Offset(x, 0f), Offset(x, size.height), 1f)
+            }
+        }
+
+        events.forEach { event ->
+            key(event.id) {
+                SequenceBlock(
+                    event = event,
+                    state = state,
+                    isSelected = event.id == selectedEventId,
+                    onClick = { onSelectEvent(event) },
+                    onMove = { delta -> onMoveEvent(event, (event.timestampMs + delta).coerceAtLeast(0L)) },
+                    onResizeLeft = { delta ->
+                        val start = (event.timestampMs + delta).coerceAtLeast(0L)
+                        val dur = (event.timestampMs + event.durationMs - start).toInt().coerceAtLeast(50)
+                        onResizeEvent(event, start, dur)
+                    },
+                    onResizeRight = { delta ->
+                        onResizeEvent(event, event.timestampMs, (event.durationMs + delta).toInt().coerceAtLeast(50))
+                    },
+                    onDelete = { onDeleteEvent(event) }
                 )
             }
+        }
+    }
+}
 
-            Spacer(Modifier.height(28.dp))
+@Composable
+private fun SequenceBlock(
+    event: MusicSyncEvent,
+    state: com.smaarig.glyphbarcomposer.ui.studio.StudioTimelineState,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onMove: (Long) -> Unit,
+    onResizeLeft: (Long) -> Unit,
+    onResizeRight: (Long) -> Unit,
+    onDelete: () -> Unit
+) {
+    var moveDeltaMs by remember(event.id) { mutableStateOf(0L) }
+    var resizeLeftDeltaMs by remember(event.id) { mutableStateOf(0L) }
+    var resizeRightDeltaMs by remember(event.id) { mutableStateOf(0L) }
+    var isDragging by remember(event.id) { mutableStateOf(false) }
+    var isResizing by remember(event.id) { mutableStateOf(false) }
 
-            Text(
-                "MUSIC SYNC",
-                color = Color.White,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
+    val currentTimestampMs = (event.timestampMs + moveDeltaMs + resizeLeftDeltaMs).coerceAtLeast(0L)
+    val currentDurationMs = (event.durationMs + resizeRightDeltaMs - resizeLeftDeltaMs).coerceAtLeast(50)
 
-            Spacer(Modifier.height(8.dp))
+    val x = state.timeToDp(currentTimestampMs)
+    val widthDp = state.timeToDp(currentDurationMs.toLong()).coerceAtLeast(MIN_BLOCK_WIDTH)
 
-            Text(
-                "Sync Glyph lights to any audio file.",
-                color = Color(0xFF888888),
-                fontSize = 14.sp
-            )
-
-            Spacer(Modifier.height(32.dp))
-
-            Button(
-                onClick = onPickFile,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color.Black
-                ),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.height(52.dp).padding(horizontal = 8.dp)
-            ) {
-                Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(10.dp))
-                Text("Choose Audio File", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+    Box(
+        modifier = Modifier
+            .offset(x = x)
+            .width(widthDp)
+            .fillMaxHeight()
+            .padding(vertical = 4.dp)
+            .graphicsLayer {
+                if (isDragging || isResizing) {
+                    scaleX = 1.02f
+                    scaleY = 1.05f
+                }
             }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = RESIZE_HANDLE_WIDTH)
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (isSelected) Color(0xFF00C853).copy(0.2f) else Color(0xFF161616))
+                .border(
+                    width = if (isSelected) 2.dp else 1.dp,
+                    color = if (isSelected) Color(0xFF00C853) else Color(0xFF2A2A2A),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .pointerInput(event.id) {
+                    detectTapGestures(
+                        onTap = { onClick() },
+                        onLongPress = { onDelete() }
+                    )
+                }
+                .pointerInput(event.id, state) {
+                    detectDragGestures(
+                        onDragStart = { isDragging = true; onClick() },
+                        onDragEnd = {
+                            isDragging = false
+                            val totalDelta = moveDeltaMs
+                            val snappedDelta = Math.round(totalDelta / 25.0) * 25
+                            onMove(snappedDelta)
+                            moveDeltaMs = 0L
+                        },
+                        onDragCancel = { isDragging = false; moveDeltaMs = 0L }
+                    ) { change, drag ->
+                        change.consume()
+                        moveDeltaMs += state.dragDeltaToMs(drag.x)
+                    }
+                }
+        ) {
+            if (isDragging) Box(modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.05f)))
+            
+            Column(
+                modifier = Modifier.align(Alignment.Center).padding(2.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(1.5.dp)
+            ) {
+                repeat(7) { i -> PatternDot(event, i) }
+            }
+        }
 
-            Spacer(Modifier.height(12.dp))
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .width(RESIZE_HANDLE_WIDTH)
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp))
+                .background(Color.White.copy(0.05f))
+                .pointerInput(event.id, state) {
+                    detectDragGestures(
+                        onDragStart = { isResizing = true; onClick() },
+                        onDragEnd = { 
+                            isResizing = false
+                            val snapped = Math.round(resizeLeftDeltaMs / 25.0) * 25
+                            onResizeLeft(snapped)
+                            resizeLeftDeltaMs = 0L 
+                        },
+                        onDragCancel = { isResizing = false; resizeLeftDeltaMs = 0L }
+                    ) { change, drag ->
+                        change.consume()
+                        resizeLeftDeltaMs += state.dragDeltaToMs(drag.x)
+                    }
+                }
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .width(RESIZE_HANDLE_WIDTH)
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp))
+                .background(Color.White.copy(0.05f))
+                .pointerInput(event.id, state) {
+                    detectDragGestures(
+                        onDragStart = { isResizing = true; onClick() },
+                        onDragEnd = { 
+                            isResizing = false
+                            val snapped = Math.round(resizeRightDeltaMs / 25.0) * 25
+                            onResizeRight(snapped)
+                            resizeRightDeltaMs = 0L 
+                        },
+                        onDragCancel = { isResizing = false; resizeRightDeltaMs = 0L }
+                    ) { change, drag ->
+                        change.consume()
+                        resizeRightDeltaMs += state.dragDeltaToMs(drag.x)
+                    }
+                }
+        )
+    }
+}
 
-            Text(
-                "Supports MP3",
-                color = Color(0xFF3A3A3A),
-                fontSize = 11.sp
+@Composable
+private fun PatternDot(event: MusicSyncEvent, index: Int) {
+    val ch = getChannelForIndex(index)
+    val intensity = event.channelIntensities[ch] ?: 0
+    val isRed = index == 6
+    Box(
+        modifier = Modifier
+            .size(if (intensity > 0) 4.dp else 2.dp)
+            .clip(CircleShape)
+            .background(
+                if (intensity > 0) {
+                    if (isRed) Color(0xFFFF1744) else Color.White.copy(alpha = (intensity / 3f).coerceIn(0.4f, 1.0f))
+                } else Color(0xFF2A2A2A)
             )
+    )
+}
+
+@Composable
+private fun DurationSelector(
+    currentMs: Int,
+    onDurationChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val presets = listOf(100, 200, 300, 500, 800)
+    Column(modifier = modifier) {
+        Text("DEFAULT BEAT DURATION", color = Color(0xFF444444), fontSize = 10.sp,
+            fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            presets.forEach { ms ->
+                val isSelected = currentMs == ms
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isSelected) Color.White else Color(0xFF0F0F0F))
+                        .border(1.dp, if (isSelected) Color.Transparent else Color(0xFF1A1A1A), RoundedCornerShape(12.dp))
+                        .clickable { onDurationChange(ms) }
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("${ms}ms", color = if (isSelected) Color.Black else Color(0xFF666666),
+                        fontSize = 11.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ComposerPanel(
+    intensities: List<Int>,
+    liveIntensities: List<Int>,
+    isPlaying: Boolean,
+    isReady: Boolean,
+    isSelected: Boolean,
+    includeRedGlyph: Boolean,
+    onToggleRedGlyph: (Boolean) -> Unit,
+    onIntensityChange: (Int, Int) -> Unit,
+    onClear: () -> Unit,
+    onInsert: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val anyActive = intensities.any { it > 0 }
+    val canInsert = isReady && !isPlaying && anyActive
+    val isEditable = !isPlaying || isSelected
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+            .background(Color(0xFF0F0F0F))
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(listOf(Color(0xFF222222), Color.Transparent)),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+            )
+            .padding(top = 18.dp, start = 18.dp, end = 18.dp, bottom = 10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        if (isPlaying && !isSelected) "LIVE OUTPUT" else "GLYPH PAINTER",
+                        color = if (isPlaying && !isSelected) Color(0xFF00C853) else Color.White,
+                        fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp
+                    )
+                    
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (includeRedGlyph) Color(0xFFFF1744) else Color(0xFF1A1A1A))
+                            .clickable { onToggleRedGlyph(!includeRedGlyph) }
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            "RED",
+                            color = if (includeRedGlyph) Color.White else Color(0xFF444444),
+                            fontSize = 9.sp, fontWeight = FontWeight.Black
+                        )
+                    }
+                }
+                Text(
+                    if (isPlaying && !isSelected) "Glyphs responding in real-time"
+                    else "Paint pattern & click insert",
+                    color = Color(0xFF444444), fontSize = 10.sp, fontWeight = FontWeight.Bold
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (anyActive && !isPlaying) {
+                    TextButton(
+                        onClick = onClear,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = Color(0xFF666666)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text("RESET", fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+                Button(
+                    onClick = onInsert,
+                    enabled = canInsert,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White, contentColor = Color.Black,
+                        disabledContainerColor = Color(0xFF1A1A1A), disabledContentColor = Color(0xFF333333)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 0.dp),
+                    modifier = Modifier.height(42.dp)
+                ) {
+                    Icon(Icons.Default.AddCircle, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("INSERT", fontSize = 13.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        val displayIntensities = if (isPlaying && !isSelected) liveIntensities else intensities
+        GlyphComposerPanel(
+            intensities = displayIntensities,
+            onIntensityChange = onIntensityChange,
+            enabled = isEditable,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+private fun GlyphComposerPanel(
+    intensities: List<Int>,
+    onIntensityChange: (index: Int, newIntensity: Int) -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFF080808))
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        intensities.forEachIndexed { idx, intensity ->
+            val color = when (idx) {
+                0 -> Color(0xFFFFFFFF)
+                1 -> Color(0xFF82AAFF)
+                2 -> Color(0xFF89DDFF)
+                3 -> Color(0xFFC3E88D)
+                4 -> Color(0xFFFFCB6B)
+                5 -> Color(0xFFB39DDB)
+                else -> Color(0xFFFF1744)
+            }
+            if (idx < 6) {
+                IntensityFader(
+                    color = color,
+                    intensity = intensity,
+                    enabled = enabled,
+                    onIntensityChange = { onIntensityChange(idx, it) },
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                RedFader(
+                    color = color,
+                    isOn = intensity > 0,
+                    enabled = enabled,
+                    onToggle = { onIntensityChange(idx, if (it) 3 else 0) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun IntensityFader(
+    color: Color,
+    intensity: Int,
+    enabled: Boolean,
+    onIntensityChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var trackHeightPx by remember { mutableStateOf(0f) }
+    val density = LocalDensity.current
+
+    Column(
+        modifier = modifier.fillMaxHeight(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFF0F0F0F))
+                .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(8.dp))
+                .onGloballyPositioned { trackHeightPx = it.size.height.toFloat() }
+                .pointerInput(enabled) {
+                    if (!enabled) return@pointerInput
+                    detectDragGestures { change, _ ->
+                        change.consume()
+                        val y = change.position.y
+                        val fraction = 1f - (y / trackHeightPx).coerceIn(0f, 1f)
+                        val newLevel = when {
+                            fraction > 0.88f -> 3
+                            fraction > 0.55f -> 2
+                            fraction > 0.22f -> 1
+                            else -> 0
+                        }
+                        if (newLevel != intensity) onIntensityChange(newLevel)
+                    }
+                }
+        ) {
+            val fillFraction by animateFloatAsState(intensity / 3f, animationSpec = spring(stiffness = Spring.StiffnessLow))
+            
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .fillMaxHeight(fillFraction)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(color.copy(alpha = 0.5f), color)
+                        )
+                    )
+                    .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
+            )
+
+            // Minimal notches
+            repeat(3) { i ->
+                val notchY = (1f - (i + 1) / 3f)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .offset(y = (notchY * trackHeightPx / density.density).dp)
+                        .background(Color.White.copy(alpha = 0.05f))
+                )
+            }
+        }
+
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = when(intensity) { 1 -> "L"; 2 -> "M"; 3 -> "H"; else -> "•" },
+            color = if (intensity > 0) color else Color(0xFF444444),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Black
+        )
+    }
+}
+
+@Composable
+private fun RedFader(
+    color: Color,
+    isOn: Boolean,
+    enabled: Boolean,
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxHeight(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        val bgAlpha by animateFloatAsState(if (isOn) 0.3f else 0f)
+        val borderAlpha by animateFloatAsState(if (isOn) 1f else 0.1f)
+
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(color.copy(alpha = bgAlpha))
+                .border(
+                    width = 1.dp,
+                    color = color.copy(alpha = borderAlpha),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .clickable(enabled = enabled) { onToggle(!isOn) },
+            contentAlignment = Alignment.Center
+        ) {
+            if (isOn) {
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(color)
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = "RED",
+            color = if (isOn) color else Color(0xFF444444),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Black
+        )
+    }
+}
+
+@Composable
+private fun AnalysisOverlay(algo: BeatAlgorithm, complete: Boolean) {
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.95f))
+            .clickable(enabled = false) {},
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.dp)) {
+            if (complete) {
+                Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF00C853), modifier = Modifier.size(64.dp))
+                Text("ANALYSIS COMPLETE", color = Color.White, fontWeight = FontWeight.Black, fontSize = 20.sp, letterSpacing = 1.sp)
+                Text("Your track is ready for synchronization", color = Color(0xFF666666), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            } else {
+                val squares = List(7) { i ->
+                    rememberInfiniteTransition(label = "sq$i").animateFloat(
+                        initialValue = 0.1f, targetValue = 1f,
+                        animationSpec = infiniteRepeatable(tween(500, delayMillis = i * 100), RepeatMode.Reverse),
+                        label = "a$i"
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    squares.forEachIndexed { i, alpha ->
+                        Box(
+                            modifier = Modifier.size(20.dp).clip(RoundedCornerShape(4.dp))
+                                .background((if (i == 6) Color(0xFFFF1744) else Color.White).copy(alpha = alpha.value))
+                        )
+                    }
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("ANALYZING WITH ${algo.displayName.uppercase()}", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp, letterSpacing = 1.sp)
+                    Text(algo.description, color = Color(0xFF444444), fontSize = 12.sp, textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 50.dp), fontWeight = FontWeight.Bold)
+                }
+                
+                CircularProgressIndicator(modifier = Modifier.size(32.dp), color = Color(0xFF00C853), strokeWidth = 3.dp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyState(onPickFile: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().background(Color(0xFF050505)).padding(40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        val inf = rememberInfiniteTransition(label = "pulse")
+        val scale by inf.animateFloat(1f, 1.15f, infiniteRepeatable(tween(1500, easing = LinearOutSlowInEasing), RepeatMode.Reverse), label = "s")
+        val alpha by inf.animateFloat(0.3f, 1f, infiniteRepeatable(tween(1500, easing = LinearOutSlowInEasing), RepeatMode.Reverse), label = "a")
+
+        Box(
+            modifier = Modifier.size(120.dp)
+                .graphicsLayer { scaleX = scale; scaleY = scale; this.alpha = alpha }
+                .clip(CircleShape).background(Color(0xFF0F0F0F))
+                .border(1.dp, Color(0xFF222222), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            repeat(7) { i ->
+                val angle = i * (360f / 7f)
+                val r = 38.dp
+                Box(
+                    modifier = Modifier.offset(
+                        x = (r.value * kotlin.math.cos(Math.toRadians(angle.toDouble()))).dp,
+                        y = (r.value * kotlin.math.sin(Math.toRadians(angle.toDouble()))).dp
+                    ).size(8.dp).clip(CircleShape)
+                        .background(if (i == 6) Color(0xFFFF1744).copy(alpha = 0.8f) else Color.White.copy(alpha = 0.6f))
+                )
+            }
+            Icon(Icons.Default.GraphicEq, null, tint = Color.White, modifier = Modifier.size(32.dp))
+        }
+
+        Spacer(Modifier.height(48.dp))
+        Text("GLYPH STUDIO", color = Color.White, fontWeight = FontWeight.Black,
+            fontSize = 28.sp, letterSpacing = 4.sp)
+        Spacer(Modifier.height(12.dp))
+        Text("Compose reactive glyph patterns to your favorite tracks.\nHigh precision sync powered by Nothing Phone.",
+            color = Color(0xFF555555), fontSize = 13.sp, textAlign = TextAlign.Center, lineHeight = 22.sp,
+            fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(64.dp))
+        Button(
+            onClick = onPickFile,
+            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth(0.8f).height(58.dp)
+        ) {
+            Icon(Icons.Default.AudioFile, null, Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Text("PICK AUDIO FILE", fontWeight = FontWeight.Black, fontSize = 14.sp, letterSpacing = 1.sp)
         }
     }
 }
@@ -706,11 +1181,3 @@ private fun formatTime(ms: Int): String {
     val total = ms / 1000
     return "%02d:%02d".format(total / 60, total % 60)
 }
-
-// Re-export so LibraryScreen can reference animateColorAsState without import conflicts
-@Composable
-private fun animateColorAsState(
-    targetValue: Color,
-    animationSpec: AnimationSpec<Color>,
-    label: String
-) = androidx.compose.animation.animateColorAsState(targetValue, animationSpec, label = label)

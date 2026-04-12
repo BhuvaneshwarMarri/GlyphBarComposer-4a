@@ -226,7 +226,7 @@ fun NavHostContainer(
                 viewModelStoreOwner = activity,
                 factory = factory
             )
-            MusicSyncScreen(viewModel = viewModel, redViewModel = redViewModel)
+            MusicSyncScreen(viewModel = viewModel)
         }
         composable(Screen.Library.route) {
             val viewModel: LibraryViewModel = viewModel(

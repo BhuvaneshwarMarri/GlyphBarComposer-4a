@@ -204,14 +204,25 @@ fun LibraryScreen(
                 "LIBRARY",
                 style = MaterialTheme.typography.headlineMedium,
                 color = Color.White,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Black
             )
             if (composerState.isPlaying || musicSyncState.isAudioPlaying) {
-                IconButton(onClick = {
-                    composerViewModel.stopPlayback()
-                    if (musicSyncState.isAudioPlaying) musicSyncViewModel.toggleMusicPlayback()
-                }) {
-                    Icon(Icons.Default.Stop, contentDescription = "Stop", tint = Color(0xFFFF5252))
+                Button(
+                    onClick = {
+                        composerViewModel.stopPlayback()
+                        if (musicSyncState.isAudioPlaying) musicSyncViewModel.toggleMusicPlayback()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A1A)),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Stop, null,
+                        tint = Color.White, modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Stop all", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
