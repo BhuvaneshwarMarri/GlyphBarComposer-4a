@@ -5,7 +5,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -197,103 +196,121 @@ fun LibraryScreen(
 ) {
     val savedPlaylists by viewModel.allPlaylists.collectAsStateWithLifecycle(initialValue = emptyList())
     val musicProjects by viewModel.allMusicProjects.collectAsStateWithLifecycle(initialValue = emptyList())
-    
+
     val composerState by composerViewModel.uiState.collectAsStateWithLifecycle()
     val musicStudioState by musicStudioViewModel.uiState.collectAsStateWithLifecycle()
 
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("SEQUENCES", "STUDIO")
 
-    Box(modifier = modifier.fillMaxSize().background(Color.Transparent)) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Transparent)
+            .padding(horizontal = 20.dp)
+            .padding(top = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
+            Column {
+                Text(
+                    "LIBRARY",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp,
+                    fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
+                )
+                Text(
+                    "Your creations and presets",
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+            }
+
+            if (composerState.isPlaying || musicStudioState.isAudioPlaying) {
+                IconButton(
+                    onClick = {
+                        composerViewModel.stopPlayback()
+                        if (musicStudioState.isAudioPlaying) musicStudioViewModel.toggleMusicPlayback()
+                    },
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(Color(0x1AFF5252))
+                ) {
+                    Icon(Icons.Default.Stop, null, tint = Color(0xFFFF5252))
+                }
+            }
+        }
+
+        // Custom Tab Row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(RoundedCornerShape(26.dp))
+                .background(Color(0xFF111111))
+                .padding(4.dp)
+        ) {
+            tabs.forEachIndexed { index, label ->
+                val selected = selectedTab == index
+                val bg by animateColorAsState(if (selected) Color.White else Color.Transparent)
+                val textCol by animateColorAsState(if (selected) Color.Black else Color.Gray)
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(bg)
+                        .clickable { selectedTab = index },
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        "LIBRARY",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = Color.White,
+                        label,
+                        color = textCol,
                         fontWeight = FontWeight.Black,
-                        letterSpacing = 2.sp,
-                        fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
+                        fontSize = 11.sp,
+                        letterSpacing = 1.sp
                     )
-                    Text("Your creations and presets", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
-                }
-                
-                if (composerState.isPlaying || musicStudioState.isAudioPlaying) {
-                    IconButton(
-                        onClick = {
-                            composerViewModel.stopPlayback()
-                            if (musicStudioState.isAudioPlaying) musicStudioViewModel.toggleMusicPlayback()
-                        },
-                        modifier = Modifier.clip(CircleShape).background(Color(0x1AFF5252))
-                    ) {
-                        Icon(Icons.Default.Stop, null, tint = Color(0xFFFF5252))
-                    }
                 }
             }
+        }
 
-            // Custom Tab Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-                    .clip(RoundedCornerShape(26.dp))
-                    .background(Color(0xFF111111))
-                    .padding(4.dp)
-            ) {
-                tabs.forEachIndexed { index, label ->
-                    val selected = selectedTab == index
-                    val bg by animateColorAsState(if (selected) Color.White else Color.Transparent)
-                    val textCol by animateColorAsState(if (selected) Color.Black else Color.Gray)
-                    
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(22.dp))
-                            .background(bg)
-                            .clickable { selectedTab = index },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(label, color = textCol, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.sp)
-                    }
-                }
+        // Content — takes all remaining space so LazyColumn can scroll freely
+        Box(modifier = Modifier.weight(1f)) {
+            when (selectedTab) {
+                0 -> SequencesTab(
+                    isPlaying = composerState.isPlaying,
+                    isPaused = composerState.isPaused,
+                    activePlaylistId = composerState.activePlaylistId,
+                    activeSequenceName = composerState.sequenceName,
+                    savedPlaylists = savedPlaylists,
+                    composerViewModel = composerViewModel
+                )
+                1 -> StudioTab(
+                    isAudioPlaying = musicStudioState.isAudioPlaying,
+                    activeProjectId = musicStudioState.activeProjectId,
+                    projects = musicProjects,
+                    musicStudioViewModel = musicStudioViewModel
+                )
             }
-
-            // Content
-            Box(modifier = Modifier.weight(1f)) {
-                when (selectedTab) {
-                    0 -> SequencesTab(
-                        isPlaying = composerState.isPlaying,
-                        isPaused = composerState.isPaused,
-                        activePlaylistId = composerState.activePlaylistId,
-                        activeSequenceName = composerState.sequenceName,
-                        savedPlaylists = savedPlaylists,
-                        composerViewModel = composerViewModel
-                    )
-                    1 -> StudioTab(
-                        isAudioPlaying = musicStudioState.isAudioPlaying,
-                        activeProjectId = musicStudioState.activeProjectId,
-                        projects = musicProjects,
-                        musicStudioViewModel = musicStudioViewModel
-                    )
-                }
-            }
-            
-            Spacer(Modifier.height(120.dp))
         }
     }
 }
+
+// ─── Sequences Tab ───────────────────────────────────────────────────────────
+// KEY FIX: bottom contentPadding accounts for the floating nav bar so the last
+// item scrolls clear of it. The nested LazyVerticalGrid is replaced with a
+// plain chunked Row layout so there is no nested scrollable that confuses
+// Compose's height measurement.
 
 @Composable
 private fun SequencesTab(
@@ -304,14 +321,26 @@ private fun SequencesTab(
     savedPlaylists: List<PlaylistWithSteps>,
     composerViewModel: ComposerViewModel
 ) {
+    // Split presets into rows of 2 for a 2-column grid without nesting LazyVerticalGrid
+    val presetRows = presetSequences.chunked(2)
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-        contentPadding = PaddingValues(bottom = 16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        // ← This is the critical fix: bottom padding pushes content above the nav bar
+        contentPadding = PaddingValues(bottom = 140.dp)
     ) {
         if (savedPlaylists.isNotEmpty()) {
-            item { Text("SAVED SEQUENCES", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp) }
-            items(savedPlaylists) { item ->
+            item {
+                Text(
+                    "SAVED SEQUENCES",
+                    color = Color(0xFF555555),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+            }
+            items(savedPlaylists, key = { it.playlist.id }) { item ->
                 val active = activePlaylistId == item.playlist.id
                 val playing = active && !isPaused && isPlaying
                 SavedSequenceCard(
@@ -324,29 +353,47 @@ private fun SequencesTab(
             }
         }
 
-        item { Text("FACTORY PRESETS", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp) }
         item {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.heightIn(max = 2000.dp)
+            Text(
+                "FACTORY PRESETS",
+                color = Color(0xFF555555),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
+            )
+        }
+
+        // Each item is a 2-column Row — avoids nested scrollable entirely
+        items(presetRows) { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(presetSequences) { preset ->
+                row.forEach { preset ->
                     val playing = isPlaying && activeSequenceName == preset.name
                     PresetCard(
                         preset = preset,
                         isPlaying = playing,
-                        onClick = { 
+                        modifier = Modifier.weight(1f),
+                        onClick = {
                             if (playing) composerViewModel.stopPlayback()
-                            else { composerViewModel.startPlayback(preset.steps, null); composerViewModel.onSequenceNameChange(preset.name) }
+                            else {
+                                composerViewModel.startPlayback(preset.steps, null)
+                                composerViewModel.onSequenceNameChange(preset.name)
+                            }
                         }
                     )
+                }
+                // If the last row has only 1 item, fill the second cell with empty space
+                if (row.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }
     }
 }
+
+// ─── Studio Tab ──────────────────────────────────────────────────────────────
 
 @Composable
 private fun StudioTab(
@@ -356,15 +403,28 @@ private fun StudioTab(
     musicStudioViewModel: MusicStudioViewModel
 ) {
     if (projects.isEmpty()) {
-        EmptyStateView(Icons.Default.MusicNote, "No studio projects", "Create one in the Music Studio tab")
+        EmptyStateView(
+            Icons.Default.MusicNote,
+            "No studio projects",
+            "Create one in the Music Studio tab"
+        )
     } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(bottom = 16.dp)
+            // Same bottom padding so last card clears the floating nav bar
+            contentPadding = PaddingValues(bottom = 140.dp)
         ) {
-            item { Text("RECENT PROJECTS", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp) }
-            items(projects) { project ->
+            item {
+                Text(
+                    "RECENT PROJECTS",
+                    color = Color(0xFF555555),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+            }
+            items(projects, key = { it.project.id }) { project ->
                 val isLoaded = activeProjectId == project.project.id
                 val playing = isAudioPlaying && isLoaded
                 StudioProjectCard(
@@ -378,6 +438,8 @@ private fun StudioTab(
         }
     }
 }
+
+// ─── Cards ───────────────────────────────────────────────────────────────────
 
 @Composable
 private fun SavedSequenceCard(
@@ -393,20 +455,52 @@ private fun SavedSequenceCard(
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, if (isActive) Color.White else Color(0xFF222222))
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).background(Color(0xFF1A1A1A), CircleShape), contentAlignment = Alignment.Center) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .background(Color(0xFF1A1A1A), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(Icons.Default.Tune, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
-                Text(playlist.playlist.name, color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                Text("${playlist.steps.size} steps", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    playlist.playlist.name,
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 16.sp
+                )
+                Text(
+                    "${playlist.steps.size} steps",
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
-            IconButton(onClick = onPlay, modifier = Modifier.clip(CircleShape).background(if (isPlaying) Color.White else Color(0xFF1A1A1A))) {
-                Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = if (isPlaying) Color.Black else Color(0xFF00C853))
+            IconButton(
+                onClick = onPlay,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(if (isPlaying) Color.White else Color(0xFF1A1A1A))
+            ) {
+                Icon(
+                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    null,
+                    tint = if (isPlaying) Color.Black else Color(0xFF00C853)
+                )
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, null, tint = Color(0xFFFF5252).copy(0.4f), modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.Delete,
+                    null,
+                    tint = Color(0xFFFF5252).copy(0.4f),
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
@@ -416,22 +510,55 @@ private fun SavedSequenceCard(
 private fun PresetCard(
     preset: PresetSequence,
     isPlaying: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth().height(130.dp).clip(RoundedCornerShape(24.dp)).clickable { onClick() },
+        modifier = modifier
+            .height(130.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .clickable { onClick() },
         color = if (isPlaying) Color(0xFF1A1A1A) else Color(0xFF111111),
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, if (isPlaying) Color.White else Color(0xFF222222))
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Icon(preset.icon, null, tint = if (isPlaying) Color.White else Color.Gray, modifier = Modifier.size(20.dp))
-                if (isPlaying) CircularProgressIndicator(modifier = Modifier.size(14.dp), color = Color.White, strokeWidth = 2.dp)
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Icon(
+                    preset.icon,
+                    null,
+                    tint = if (isPlaying) Color.White else Color.Gray,
+                    modifier = Modifier.size(20.dp)
+                )
+                if (isPlaying) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                }
             }
             Column {
-                Text(preset.name, color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp)
-                Text(preset.description, color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    preset.name,
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 15.sp
+                )
+                Text(
+                    preset.description,
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
@@ -451,20 +578,58 @@ private fun StudioProjectCard(
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, if (isLoaded) Color(0xFF00C853) else Color(0xFF222222))
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp).background(Color(0xFF1A1A1A), CircleShape), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.GraphicEq, null, tint = if (isLoaded) Color(0xFF00C853) else Color.Gray, modifier = Modifier.size(22.dp))
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                Modifier
+                    .size(48.dp)
+                    .background(Color(0xFF1A1A1A), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.GraphicEq,
+                    null,
+                    tint = if (isLoaded) Color(0xFF00C853) else Color.Gray,
+                    modifier = Modifier.size(22.dp)
+                )
             }
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
-                Text(project.project.name, color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp, maxLines = 1)
-                Text("${project.events.size} light beats", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    project.project.name,
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 16.sp,
+                    maxLines = 1
+                )
+                Text(
+                    "${project.events.size} light beats",
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
-            IconButton(onClick = onPlay, modifier = Modifier.clip(CircleShape).background(if (isPlaying) Color.White else Color(0xFF1A1A1A))) {
-                Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = if (isPlaying) Color.Black else Color(0xFF00C853))
+            IconButton(
+                onClick = onPlay,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(if (isPlaying) Color.White else Color(0xFF1A1A1A))
+            ) {
+                Icon(
+                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    null,
+                    tint = if (isPlaying) Color.Black else Color(0xFF00C853)
+                )
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, null, tint = Color(0xFFFF5252).copy(0.4f), modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.Delete,
+                    null,
+                    tint = Color(0xFFFF5252).copy(0.4f),
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
@@ -474,7 +639,12 @@ private fun StudioProjectCard(
 private fun EmptyStateView(icon: ImageVector, title: String, sub: String) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, null, tint = Color(0xFF1A1A1A), modifier = Modifier.size(80.dp))
+            Icon(
+                icon,
+                null,
+                tint = Color(0xFF1A1A1A),
+                modifier = Modifier.size(80.dp)
+            )
             Spacer(Modifier.height(16.dp))
             Text(title, color = Color.Gray, fontWeight = FontWeight.Black, fontSize = 14.sp)
             Text(sub, color = Color(0xFF333333), fontSize = 12.sp, fontWeight = FontWeight.Bold)
