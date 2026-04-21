@@ -24,14 +24,14 @@ class GlyphRepository(private val playlistDao: PlaylistDao) {
         playlistDao.deletePlaylist(playlist)
     }
 
-    suspend fun saveMusicProject(project: MusicSyncProject, events: List<MusicSyncEvent>) {
+    suspend fun saveMusicProject(project: MusicStudioProject, events: List<MusicStudioEvent>) {
         Log.d(TAG, "Saving music project: ${project.name} with ${events.size} events")
         val id = playlistDao.insertMusicProject(project)
         val eventsWithId = events.map { it.copy(projectId = id) }
         playlistDao.insertMusicEvents(eventsWithId)
     }
 
-    suspend fun deleteMusicProject(project: MusicSyncProject) {
+    suspend fun deleteMusicProject(project: MusicStudioProject) {
         Log.d(TAG, "Deleting music project: ${project.name}")
         playlistDao.deleteMusicProject(project)
     }

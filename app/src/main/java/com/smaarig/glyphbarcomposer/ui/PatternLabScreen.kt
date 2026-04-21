@@ -1,11 +1,12 @@
 package com.smaarig.glyphbarcomposer.ui
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -13,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,17 +30,52 @@ fun PatternLabScreen(viewModel: PatternLabViewModel) {
     var showDialogA by remember { mutableStateOf(false) }
     var showDialogB by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp).padding(top = 12.dp)) {
-        Text("PATTERN LAB", style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(16.dp))
-
-        // Scrollable content area
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(bottom = 16.dp)
+    Box(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(28.dp)
         ) {
-            item {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        "PATTERN LAB",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 2.sp,
+                        fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
+                    )
+                    Text(
+                        "Mix and remix sequences",
+                        color = Color.Gray,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+                
+                if (uiState.isPlaying) {
+                    IconButton(
+                        onClick = viewModel::togglePreview,
+                        modifier = Modifier.clip(CircleShape).background(Color(0x1AFF5252))
+                    ) {
+                        Icon(Icons.Default.Stop, null, tint = Color(0xFFFF5252))
+                    }
+                }
+            }
+
+            // Scrollable area
+            Column(
+                modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
                 BaseControlCard(
                     title = "BASE A",
                     name = uiState.selectedPlaylistA?.playlist?.name,
@@ -54,9 +91,7 @@ fun PatternLabScreen(viewModel: PatternLabViewModel) {
                     onInvertChange = viewModel::onInvertAChange,
                     onMirrorChange = viewModel::onMirrorAChange
                 )
-            }
 
-            item {
                 BaseControlCard(
                     title = "BASE B",
                     name = uiState.selectedPlaylistB?.playlist?.name,
@@ -72,29 +107,29 @@ fun PatternLabScreen(viewModel: PatternLabViewModel) {
                     onInvertChange = viewModel::onInvertBChange,
                     onMirrorChange = viewModel::onMirrorBChange
                 )
-            }
 
-            // Merge Mode
-            item {
-                Column {
-                    Text("MERGE MODE", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Merge Mode
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("MERGE MODE", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         ModeButton("Sequential", !uiState.isLayered, Modifier.weight(1f)) { viewModel.onMergeModeChange(false) }
                         ModeButton("Layered", uiState.isLayered, Modifier.weight(1f)) { viewModel.onMergeModeChange(true) }
                     }
                 }
-            }
-        }
 
-        // Preview & Save
-        if (uiState.previewSteps.isNotEmpty()) {
-            SaveResultSection(
-                name = uiState.resultName,
-                onNameChange = viewModel::onResultNameChange,
-                onSave = viewModel::saveResult,
-                isPlaying = uiState.isPlaying,
-                onTogglePreview = viewModel::togglePreview
-            )
+                // Preview & Save Result
+                if (uiState.previewSteps.isNotEmpty()) {
+                    SaveResultSection(
+                        name = uiState.resultName,
+                        onNameChange = viewModel::onResultNameChange,
+                        onSave = viewModel::saveResult,
+                        isPlaying = uiState.isPlaying,
+                        onTogglePreview = viewModel::togglePreview
+                    )
+                }
+                
+                Spacer(Modifier.height(120.dp))
+            }
         }
     }
 
@@ -137,71 +172,48 @@ private fun BaseControlCard(
     onMirrorChange: (Boolean) -> Unit
 ) {
     Surface(
-        color = Color(0xFF161616),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color(0xFF2A2A2A))
+        color = Color(0xFF111111),
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, Color(0xFF222222))
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f).clickable { onPick() }) {
                     Text(title, color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Text(name ?: "Select Sequence...", color = if (name != null) Color.White else Color(0xFF555555), fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1)
+                    Text(name ?: "Select Sequence...", color = if (name != null) Color.White else Color(0xFF444444), fontWeight = FontWeight.Black, fontSize = 18.sp, maxLines = 1)
                 }
                 
-                // Toggle row
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    IconButton(onClick = { onInvertChange(!inverted) }) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    IconButton(
+                        onClick = { onInvertChange(!inverted) },
+                        modifier = Modifier.size(36.dp).clip(CircleShape).background(if (inverted) Color.White else Color(0xFF1A1A1A))
+                    ) {
                         Icon(
                             if (inverted) Icons.Default.InvertColors else Icons.Default.InvertColorsOff,
-                            contentDescription = "Invert",
-                            tint = if (inverted) Color.White else Color.Gray,
-                            modifier = Modifier.size(20.dp)
+                            null,
+                            tint = if (inverted) Color.Black else Color.Gray,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
-                    IconButton(onClick = { onMirrorChange(!mirrored) }) {
+                    IconButton(
+                        onClick = { onMirrorChange(!mirrored) },
+                        modifier = Modifier.size(36.dp).clip(CircleShape).background(if (mirrored) Color.White else Color(0xFF1A1A1A))
+                    ) {
                         Icon(
                             Icons.Default.Flip,
-                            contentDescription = "Mirror",
-                            tint = if (mirrored) Color.White else Color.Gray,
-                            modifier = Modifier.size(20.dp)
+                            null,
+                            tint = if (mirrored) Color.Black else Color.Gray,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            // Speed Slider
-            LabSliderRow(
-                label = "Speed",
-                valueText = "${"%.1f".format(speed)}x",
-                value = speed,
-                range = 0.5f..2.0f,
-                onValueChange = onSpeedChange
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            // Brightness Slider
-            LabSliderRow(
-                label = "Light",
-                valueText = "${(brightness * 100).toInt()}%",
-                value = brightness,
-                range = 0.0f..1.5f,
-                onValueChange = onBrightnessChange
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            // Repeats Slider
-            LabSliderRow(
-                label = "Repeat",
-                valueText = "${repeats}x",
-                value = repeats.toFloat(),
-                range = 1f..5f,
-                steps = 3,
-                onValueChange = { onRepeatsChange(it.toInt()) }
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LabSliderRow("Speed", "${"%.1f".format(speed)}x", speed, 0.5f..2.0f, onValueChange = onSpeedChange)
+                LabSliderRow("Light", "${(brightness * 100).toInt()}%", brightness, 0.0f..1.5f, onValueChange = onBrightnessChange)
+                LabSliderRow("Repeat", "${repeats}x", repeats.toFloat(), 1f..5f, steps = 3, onValueChange = { onRepeatsChange(it.toInt()) })
+            }
         }
     }
 }
@@ -215,10 +227,10 @@ private fun LabSliderRow(
     steps: Int = 15,
     onValueChange: (Float) -> Unit
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(modifier = Modifier.width(60.dp)) {
-            Text(label, color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Medium)
-            Text(valueText, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(modifier = Modifier.width(50.dp)) {
+            Text(label, color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text(valueText, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black)
         }
         Slider(
             value = value,
@@ -229,7 +241,7 @@ private fun LabSliderRow(
             colors = SliderDefaults.colors(
                 thumbColor = Color.White,
                 activeTrackColor = Color.White,
-                inactiveTrackColor = Color(0xFF333333)
+                inactiveTrackColor = Color(0xFF222222)
             )
         )
     }
@@ -238,13 +250,13 @@ private fun LabSliderRow(
 @Composable
 private fun ModeButton(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     Surface(
-        modifier = modifier.height(44.dp).clickable { onClick() },
-        color = if (selected) Color.White else Color(0xFF161616),
-        shape = RoundedCornerShape(8.dp),
-        border = if (!selected) BorderStroke(1.dp, Color(0xFF2A2A2A)) else null
+        modifier = modifier.height(48.dp).clickable { onClick() },
+        color = if (selected) Color.White else Color(0xFF111111),
+        shape = RoundedCornerShape(16.dp),
+        border = if (!selected) BorderStroke(1.dp, Color(0xFF222222)) else null
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(label, color = if (selected) Color.Black else Color.Gray, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text(label, color = if (selected) Color.Black else Color.Gray, fontWeight = FontWeight.Black, fontSize = 13.sp)
         }
     }
 }
@@ -257,40 +269,51 @@ private fun SaveResultSection(
     isPlaying: Boolean,
     onTogglePreview: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Button(
             onClick = onTogglePreview,
             modifier = Modifier.fillMaxWidth().height(52.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = if (isPlaying) Color(0xFFFF5252) else Color(0xFF00C853))
+            colors = ButtonDefaults.buttonColors(containerColor = if (isPlaying) Color(0xFFFF5252) else Color.White, contentColor = if (isPlaying) Color.White else Color.Black),
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Icon(if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow, contentDescription = null)
+            Icon(if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow, null)
             Spacer(Modifier.width(8.dp))
-            Text(if (isPlaying) "Stop Preview" else "Preview Lab Result", fontWeight = FontWeight.Bold)
+            Text(if (isPlaying) "STOP PREVIEW" else "PREVIEW MIX", fontWeight = FontWeight.Black)
         }
-        Spacer(Modifier.height(16.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = name,
-                onValueChange = onNameChange,
-                label = { Text("Result name") },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = Color.White,
-                    unfocusedBorderColor = Color(0xFF444444)
-                )
-            )
-            Spacer(Modifier.width(12.dp))
-            Surface(
-                modifier = Modifier.size(52.dp).clickable(enabled = name.isNotBlank()) { onSave() },
-                color = if (name.isNotBlank()) Color.White else Color(0xFF161616),
-                shape = RoundedCornerShape(12.dp),
-                contentColor = if (name.isNotBlank()) Color.Black else Color.Gray
+
+        Surface(
+            color = Color(0xFF111111),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, Color(0xFF222222))
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Save, contentDescription = "Save")
+                TextField(
+                    value = name,
+                    onValueChange = onNameChange,
+                    placeholder = { Text("Result Name", color = Color(0xFF444444), fontSize = 14.sp) },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    ),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                )
+                Button(
+                    onClick = onSave,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                    shape = RoundedCornerShape(14.dp),
+                    enabled = name.isNotBlank(),
+                    contentPadding = PaddingValues(horizontal = 20.dp)
+                ) {
+                    Text("SAVE", fontWeight = FontWeight.Black)
                 }
             }
         }
@@ -305,7 +328,7 @@ private fun PlaylistPickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select Sequence", color = Color.White) },
+        title = { Text("Select Sequence", color = Color.White, fontWeight = FontWeight.Black) },
         text = {
             if (playlists.isEmpty()) {
                 Text("No saved sequences found.", color = Color.Gray)
@@ -316,15 +339,16 @@ private fun PlaylistPickerDialog(
                             modifier = Modifier.fillMaxWidth().clickable { onSelect(p) },
                             color = Color.Transparent
                         ) {
-                            Text(p.playlist.name, modifier = Modifier.padding(16.dp), color = Color.White)
+                            Text(p.playlist.name, modifier = Modifier.padding(16.dp), color = Color.White, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel", color = Color.White) }
+            TextButton(onClick = onDismiss) { Text("CANCEL", color = Color.White, fontWeight = FontWeight.Black) }
         },
-        containerColor = Color(0xFF161616)
+        containerColor = Color(0xFF111111),
+        shape = RoundedCornerShape(28.dp)
     )
 }

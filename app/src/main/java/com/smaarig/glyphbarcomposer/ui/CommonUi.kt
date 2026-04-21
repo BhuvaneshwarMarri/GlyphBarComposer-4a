@@ -87,8 +87,8 @@ fun GlyphBox(
         modifier = modifier
             .aspectRatio(1f)
             .scale(scale)
-            .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, if (intensity > 0) borderColor else Color(0xFF222222), RoundedCornerShape(12.dp))
             .background(fillColor)
             .then(if (enabled) {
                 Modifier

@@ -15,8 +15,8 @@ class GlyphViewModelFactory(
             modelClass.isAssignableFrom(ComposerViewModel::class.java) -> {
                 ComposerViewModel(application, repository) as T
             }
-            modelClass.isAssignableFrom(MusicSyncViewModel::class.java) -> {
-                MusicSyncViewModel(application, repository) as T
+            modelClass.isAssignableFrom(MusicStudioViewModel::class.java) -> {
+                MusicStudioViewModel(application, repository) as T
             }
             modelClass.isAssignableFrom(LibraryViewModel::class.java) -> {
                 LibraryViewModel(application, repository) as T

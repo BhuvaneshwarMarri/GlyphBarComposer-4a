@@ -10,9 +10,8 @@ import androidx.lifecycle.viewModelScope
 import com.nothing.ketchum.Glyph
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.data.MusicProjectWithEvents
-import com.smaarig.glyphbarcomposer.data.MusicSyncEvent
-import com.smaarig.glyphbarcomposer.data.MusicSyncProject
-import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
+import com.smaarig.glyphbarcomposer.data.MusicStudioEvent
+import com.smaarig.glyphbarcomposer.data.MusicStudioProject
 import com.smaarig.glyphbarcomposer.repository.GlyphRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -21,7 +20,6 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.math.abs
 import kotlin.math.hypot
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -41,12 +39,12 @@ enum class BeatAlgorithm(val displayName: String, val description: String) {
 // UI State
 // ─────────────────────────────────────────────────────────────────────────────
 
-data class MusicSyncUiState(
+data class MusicStudioUiState(
     val audioUri: Uri? = null,
     val audioName: String? = null,
     val audioDurationMs: Int = 0,
     val isAudioPlaying: Boolean = false,
-    val musicEvents: List<MusicSyncEvent> = emptyList(),
+    val musicEvents: List<MusicStudioEvent> = emptyList(),
     val activeProjectId: Long? = null,
     val isAnalyzing: Boolean = false,
     val isAnalysisComplete: Boolean = false,
@@ -63,7 +61,7 @@ data class MusicSyncUiState(
 // ViewModel
 // ─────────────────────────────────────────────────────────────────────────────
 
-class MusicSyncViewModel(
+class MusicStudioViewModel(
     application: Application,
     val repository: GlyphRepository
 ) : AndroidViewModel(application) {
@@ -72,8 +70,8 @@ class MusicSyncViewModel(
     private var mediaPlayer: MediaPlayer? = null
     private var visualizer: Visualizer? = null
 
-    private val _uiState = MutableStateFlow(MusicSyncUiState())
-    val uiState: StateFlow<MusicSyncUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(MusicStudioUiState())
+    val uiState: StateFlow<MusicStudioUiState> = _uiState.asStateFlow()
 
     private val _visualizerData = MutableStateFlow(List(16) { 0f })
     val visualizerData: StateFlow<List<Float>> = _visualizerData.asStateFlow()
@@ -87,7 +85,7 @@ class MusicSyncViewModel(
     private val _liveGlyphIntensities = MutableStateFlow(listOf(0, 0, 0, 0, 0, 0, 0))
     val liveGlyphIntensities: StateFlow<List<Int>> = _liveGlyphIntensities.asStateFlow()
 
-    private var musicSyncJob: Job? = null
+    private var musicStudioJob: Job? = null
     private var analysisJob: Job? = null
 
     private val eventIdCounter = AtomicLong(System.currentTimeMillis())
@@ -134,7 +132,7 @@ class MusicSyncViewModel(
         }
     }
 
-    fun selectEvent(event: MusicSyncEvent?) {
+    fun selectEvent(event: MusicStudioEvent?) {
         _uiState.update { it.copy(selectedEventId = event?.id) }
         if (event != null) {
             val intensities = channels.map { event.channelIntensities[it] ?: 0 }
@@ -245,8 +243,8 @@ class MusicSyncViewModel(
 
     private fun mkMap(vararg pairs: Pair<Int, Int>) = pairs.filter { it.second > 0 }.toMap()
 
-    private fun analyzePeakDetection(waveform: List<Float>): List<MusicSyncEvent> {
-        val events = mutableListOf<MusicSyncEvent>()
+    private fun analyzePeakDetection(waveform: List<Float>): List<MusicStudioEvent> {
+        val events = mutableListOf<MusicStudioEvent>()
         val minGapSamples = 3
         var lastPeakIdx = -minGapSamples
         val includeRed = _uiState.value.includeRedGlyph
@@ -264,15 +262,15 @@ class MusicSyncViewModel(
                 val numChannels = if (v > 0.85f) 5 else if (v > 0.7f) 3 else 1
                 for (j in 0 until numChannels) intensities[channels[j]] = if (v > 0.8f) 3 else if (v > 0.6f) 2 else 1
                 if (includeRed && v > 0.75f) intensities[channels[6]] = if (v > 0.9f) 3 else 2
-                events.add(MusicSyncEvent(nextEventId(), 0, ts, intensities, dynamicDur))
+                events.add(MusicStudioEvent(nextEventId(), 0, ts, intensities, dynamicDur))
                 lastPeakIdx = i
             }
         }
         return events
     }
 
-    private fun analyzeSpectralFlux(waveform: List<Float>): List<MusicSyncEvent> {
-        val events = mutableListOf<MusicSyncEvent>()
+    private fun analyzeSpectralFlux(waveform: List<Float>): List<MusicStudioEvent> {
+        val events = mutableListOf<MusicStudioEvent>()
         var prev = 0f
         var lastMs = -400L
         val includeRed = _uiState.value.includeRedGlyph
@@ -291,7 +289,7 @@ class MusicSyncViewModel(
                 } else {
                     intensities[channels[0]] = 2; intensities[channels[1]] = 2
                 }
-                events.add(MusicSyncEvent(nextEventId(), 0, ts, intensities, dynamicDur))
+                events.add(MusicStudioEvent(nextEventId(), 0, ts, intensities, dynamicDur))
                 lastMs = ts
             }
             prev = waveform[i]
@@ -299,8 +297,8 @@ class MusicSyncViewModel(
         return events
     }
 
-    private fun analyzeBpmGrid(duration: Int, bpm: Int): List<MusicSyncEvent> {
-        val events = mutableListOf<MusicSyncEvent>()
+    private fun analyzeBpmGrid(duration: Int, bpm: Int): List<MusicStudioEvent> {
+        val events = mutableListOf<MusicStudioEvent>()
         val msPerBeat = (60_000.0 / bpm).toLong()
         var ts = 0L
         var beat = 0
@@ -311,15 +309,15 @@ class MusicSyncViewModel(
                 else -> mkMap(channels[0] to 2, channels[1] to 2)
             }
             val dur = (msPerBeat * 0.4f).toInt().coerceAtLeast(100)
-            events.add(MusicSyncEvent(nextEventId(), 0, ts, intensities, dur))
+            events.add(MusicStudioEvent(nextEventId(), 0, ts, intensities, dur))
             ts += msPerBeat
             beat++
         }
         return events
     }
 
-    private fun analyzeAdaptiveThreshold(waveform: List<Float>): List<MusicSyncEvent> {
-        val events = mutableListOf<MusicSyncEvent>()
+    private fun analyzeAdaptiveThreshold(waveform: List<Float>): List<MusicStudioEvent> {
+        val events = mutableListOf<MusicStudioEvent>()
         val winSize = 20
         var lastMs = -300L
         val includeRed = _uiState.value.includeRedGlyph
@@ -337,14 +335,14 @@ class MusicSyncViewModel(
             val intensities = mutableMapOf<Int, Int>()
             for (j in 0 until numCh) intensities[channels[j]] = if (rel > 0.7f) 3 else if (rel > 0.4f) 2 else 1
             if (includeRed && rel > 0.85f) intensities[channels[6]] = 3
-            events.add(MusicSyncEvent(nextEventId(), 0, ts, intensities, dynamicDur))
+            events.add(MusicStudioEvent(nextEventId(), 0, ts, intensities, dynamicDur))
             lastMs = ts
         }
         return events
     }
 
-    private fun analyzeMultiBand(waveform: List<Float>): List<MusicSyncEvent> {
-        val events = mutableListOf<MusicSyncEvent>()
+    private fun analyzeMultiBand(waveform: List<Float>): List<MusicStudioEvent> {
+        val events = mutableListOf<MusicStudioEvent>()
         var lastMs = -400L
         val includeRed = _uiState.value.includeRedGlyph
 
@@ -363,7 +361,7 @@ class MusicSyncViewModel(
                 if (intensity > 0) intensities[channels[band]] = intensity
             }
             if (includeRed && v > 0.80f) intensities[channels[6]] = base
-            events.add(MusicSyncEvent(nextEventId(), 0, ts, intensities, dynamicDur))
+            events.add(MusicStudioEvent(nextEventId(), 0, ts, intensities, dynamicDur))
             lastMs = ts
         }
         return events
@@ -375,12 +373,12 @@ class MusicSyncViewModel(
             mp.pause()
             releaseVisualizer()
             _uiState.update { it.copy(isAudioPlaying = false) }
-            stopMusicSync()
+            stopMusicStudio()
         } else {
             _uiState.update { it.copy(isAudioPlaying = true) }
             mp.start()
             setupVisualizer()
-            startMusicSync()
+            startMusicStudio()
         }
     }
 
@@ -389,12 +387,12 @@ class MusicSyncViewModel(
         mediaPlayer?.seekTo(clamped)
         _audioPositionMs.value = clamped
         energyHistory.forEach { it.clear() }
-        if (_uiState.value.isAudioPlaying) startMusicSync()
+        if (_uiState.value.isAudioPlaying) startMusicStudio()
     }
 
-    private fun startMusicSync() {
-        musicSyncJob?.cancel()
-        musicSyncJob = viewModelScope.launch {
+    private fun startMusicStudio() {
+        musicStudioJob?.cancel()
+        musicStudioJob = viewModelScope.launch {
             var lastPos = (_audioPositionMs.value - 1).coerceAtLeast(0)
             var prevActiveIds = setOf<Long>()
 
@@ -437,8 +435,8 @@ class MusicSyncViewModel(
         }
     }
 
-    private fun stopMusicSync() {
-        musicSyncJob?.cancel()
+    private fun stopMusicStudio() {
+        musicStudioJob?.cancel()
         glyphController.turnOffGlyphs()
         _uiState.update { it.copy(activeProjectId = null) }
         _liveGlyphIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
@@ -454,7 +452,7 @@ class MusicSyncViewModel(
         
         val finalMap = if (intensityMap.isEmpty()) mapOf(channels[0] to 2) else intensityMap
 
-        val newEvent = MusicSyncEvent(
+        val newEvent = MusicStudioEvent(
             id = nextEventId(),
             projectId = 0,
             timestampMs = position,
@@ -470,11 +468,11 @@ class MusicSyncViewModel(
         }
     }
 
-    fun deleteMusicEvent(event: MusicSyncEvent) {
+    fun deleteMusicEvent(event: MusicStudioEvent) {
         _uiState.update { state -> state.copy(musicEvents = state.musicEvents.filter { it.id != event.id }) }
     }
 
-    fun updateEventPosition(event: MusicSyncEvent, newTimeMs: Long) {
+    fun updateEventPosition(event: MusicStudioEvent, newTimeMs: Long) {
         _uiState.update { state ->
             val maxMs = (state.audioDurationMs - event.durationMs).coerceAtLeast(0).toLong()
             state.copy(musicEvents = state.musicEvents.map {
@@ -483,7 +481,7 @@ class MusicSyncViewModel(
         }
     }
 
-    fun updateEventStartAndDuration(event: MusicSyncEvent, newTimestampMs: Long, newDurationMs: Int) {
+    fun updateEventStartAndDuration(event: MusicStudioEvent, newTimestampMs: Long, newDurationMs: Int) {
         _uiState.update { state ->
             val maxTs = (state.audioDurationMs - 50).toLong().coerceAtLeast(0L)
             val finalTs = newTimestampMs.coerceIn(0L, maxTs)
@@ -545,20 +543,20 @@ class MusicSyncViewModel(
         val state = _uiState.value
         val uri = state.audioUri ?: return
         viewModelScope.launch {
-            val dir = File(getApplication<Application>().getExternalFilesDir(null), "MusicSync").apply { mkdirs() }
+            val dir = File(getApplication<Application>().getExternalFilesDir(null), "MusicStudio").apply { mkdirs() }
             val file = File(dir, "audio_${System.currentTimeMillis()}.mp3")
             try {
                 getApplication<Application>().contentResolver.openInputStream(uri)?.use { ins ->
                     FileOutputStream(file).use { out -> ins.copyTo(out) }
                 }
             } catch (e: Exception) { return@launch }
-            repository.saveMusicProject(MusicSyncProject(0, state.audioName ?: "Untitled", file.absolutePath, null), state.musicEvents)
+            repository.saveMusicProject(MusicStudioProject(0, state.audioName ?: "Untitled", file.absolutePath, null), state.musicEvents)
             _uiState.update { it.copy(musicProjectSaved = true) }
         }
     }
 
     fun playMusicProject(project: MusicProjectWithEvents) {
-        stopMusicSync(); mediaPlayer?.release(); releaseVisualizer()
+        stopMusicStudio(); mediaPlayer?.release(); releaseVisualizer()
         val f = File(project.project.localAudioPath)
         if (!f.exists()) return
         try {
@@ -567,16 +565,16 @@ class MusicSyncViewModel(
                 setOnPreparedListener { mp ->
                     _uiState.update { it.copy(audioUri = f.absolutePath.toUri(), audioName = project.project.name, audioDurationMs = mp.duration, isAudioPlaying = true, musicEvents = project.events, activeProjectId = project.project.id) }
                     _audioPositionMs.value = 0
-                    start(); setupVisualizer(); startMusicSync()
+                    start(); setupVisualizer(); startMusicStudio()
                 }
                 prepareAsync()
             }
         } catch (e: Exception) { e.printStackTrace() }
     }
 
-    fun deleteMusicProject(project: MusicSyncProject) {
+    fun deleteMusicProject(project: MusicStudioProject) {
         viewModelScope.launch {
-            if (_uiState.value.activeProjectId == project.id) { mediaPlayer?.stop(); stopMusicSync() }
+            if (_uiState.value.activeProjectId == project.id) { mediaPlayer?.stop(); stopMusicStudio() }
             try { File(project.localAudioPath).delete() } catch (e: Exception) {}
             repository.deleteMusicProject(project)
         }

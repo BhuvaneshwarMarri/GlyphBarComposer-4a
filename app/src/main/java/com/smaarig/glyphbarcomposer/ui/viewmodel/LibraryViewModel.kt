@@ -5,7 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.smaarig.glyphbarcomposer.data.AppDatabase
 import com.smaarig.glyphbarcomposer.data.MusicProjectWithEvents
-import com.smaarig.glyphbarcomposer.data.MusicSyncProject
+import com.smaarig.glyphbarcomposer.data.MusicStudioProject
 import com.smaarig.glyphbarcomposer.data.Playlist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import kotlinx.coroutines.flow.Flow
@@ -25,7 +25,7 @@ class LibraryViewModel(
         }
     }
 
-    fun deleteMusicProject(project: MusicSyncProject) {
+    fun deleteMusicProject(project: MusicStudioProject) {
         viewModelScope.launch {
             repository.deleteMusicProject(project)
         }

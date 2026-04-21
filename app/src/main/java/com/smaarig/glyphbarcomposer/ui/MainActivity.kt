@@ -10,9 +10,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
@@ -62,7 +67,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object SplashScreen : Screen("splash", "Splash", Icons.Default.GraphicEq)
     object Composer : Screen("composer", "Composer", Icons.Default.MusicNote)
     object PatternLab : Screen("pattern_lab", "Patterns", Icons.Default.Pattern)
-    object MusicSync : Screen("music_sync", "Music Sync", Icons.Default.GraphicEq)
+    object MusicStudio : Screen("music_studio", "Music Studio", Icons.Default.GraphicEq)
     object Library : Screen("library", "Library", Icons.Default.LibraryMusic)
 }
 
@@ -76,19 +81,32 @@ fun MainApp() {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color(0xFF0E0E0E),
+        containerColor = Color(0xFF0A0A0A), // Revert to solid background for Scaffold
         topBar = {
             if (!isSplashScreen) {
                 GlyphPreviewBar()
             }
         },
-        bottomBar = { 
+        bottomBar = {
             if (!isSplashScreen) {
-                BottomNavigationBar(navController)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Transparent)
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp, vertical = 20.dp)
+                ) {
+                    ModernBottomNavigationBar(navController)
+                }
             }
         }
     ) { innerPadding ->
-        NavHostContainer(navController, Modifier.padding(innerPadding))
+        NavHostContainer(
+            navController, 
+            Modifier
+                .fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding())
+        )
     }
 }
 
@@ -221,12 +239,12 @@ fun NavHostContainer(
             )
             PatternLabScreen(viewModel = viewModel)
         }
-        composable(Screen.MusicSync.route) {
-            val viewModel: MusicSyncViewModel = viewModel(
+        composable(Screen.MusicStudio.route) {
+            val viewModel: MusicStudioViewModel = viewModel(
                 viewModelStoreOwner = activity,
                 factory = factory
             )
-            MusicSyncScreen(viewModel = viewModel)
+            MusicStudioScreen(viewModel = viewModel)
         }
         composable(Screen.Library.route) {
             val viewModel: LibraryViewModel = viewModel(
@@ -237,14 +255,14 @@ fun NavHostContainer(
                 viewModelStoreOwner = activity,
                 factory = factory
             )
-            val musicSyncViewModel: MusicSyncViewModel = viewModel(
+            val musicStudioViewModel: MusicStudioViewModel = viewModel(
                 viewModelStoreOwner = activity,
                 factory = factory
             )
             LibraryScreen(
                 viewModel = viewModel,
                 composerViewModel = composerViewModel,
-                musicSyncViewModel = musicSyncViewModel
+                musicStudioViewModel = musicStudioViewModel
             )
         }
     }
@@ -313,42 +331,65 @@ fun SplashScreen(onTimeout: () -> Unit) {
 }
 
 @Composable
-fun BottomNavigationBar(navController: NavHostController) {
+fun ModernBottomNavigationBar(navController: NavHostController) {
     val screens = listOf(
         Screen.Composer,
         Screen.PatternLab,
-        Screen.MusicSync,
+        Screen.MusicStudio,
         Screen.Library
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    NavigationBar(
-        containerColor = Color(0xFF161616),
-        contentColor = Color.White
+    Surface(
+        modifier = Modifier
+            .height(72.dp) // Slightly taller
+            .fillMaxWidth(),
+        color = Color(0xFF111111).copy(alpha = 0.85f),
+        shape = RoundedCornerShape(36.dp),
+        border = BorderStroke(1.dp, Color(0xFF222222))
     ) {
-        screens.forEach { screen ->
-            NavigationBarItem(
-                label = { Text(screen.label) },
-                icon = { Icon(screen.icon, contentDescription = null) },
-                selected = currentRoute == screen.route,
-                onClick = {
-                    if (currentRoute != screen.route) {
-                        navController.navigate(screen.route) {
-                            popUpTo(navController.graph.startDestinationId)
-                            launchSingleTop = true
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            screens.forEach { screen ->
+                val selected = currentRoute == screen.route
+                val animatedScale by animateFloatAsState(if (selected) 1.15f else 1f)
+                val animatedColor by animateColorAsState(if (selected) Color.White else Color.Gray)
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .clickable {
+                            if (currentRoute != screen.route) {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.startDestinationId)
+                                    launchSingleTop = true
+                                }
+                            }
                         }
-                    }
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color.White,
-                    selectedTextColor = Color.White,
-                    indicatorColor = Color(0xFF333333),
-                    unselectedIconColor = Color.Gray,
-                    unselectedTextColor = Color.Gray
-                )
-            )
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = screen.icon,
+                        contentDescription = null,
+                        tint = animatedColor,
+                        modifier = Modifier.size(24.dp).scale(animatedScale)
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = screen.label.uppercase(),
+                        color = animatedColor,
+                        fontSize = 8.sp,
+                        fontWeight = if (selected) FontWeight.Black else FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+            }
         }
     }
 }

@@ -50,8 +50,9 @@ class GlyphController private constructor() {
                 .collect { (enabled, charging, level, busy) ->
                     Log.d(TAG, "Battery Update: enabled=$enabled, charging=$charging, level=$level, busy=$busy")
                     if (enabled && charging && !busy) {
+                        // Start battery visualization (it will auto-stop after 3s in the function)
                         startBatteryVisualization(level)
-                    } else if (batteryJob != null) {
+                    } else if (!charging && batteryJob != null) {
                         stopBatteryVisualization()
                     }
                 }
@@ -66,51 +67,51 @@ class GlyphController private constructor() {
         Log.d(TAG, "updateBatteryProgress: level=$level, charging=$charging")
     }
 
-    private fun startBatteryVisualization(level: Int) {
+    fun showBatteryPeek(durationMs: Long = 3000) {
+        if (!_isBatteryFeatureEnabled.value) return
+        startBatteryVisualization(_batteryLevel.value, durationMs)
+    }
+
+    private fun startBatteryVisualization(level: Int, autoOffDelay: Long = 3000) {
         batteryJob?.cancel()
         batteryJob = controllerScope.launch {
-            while (isActive) {
-                if (!_isHardwareBusy.value) {
-                    // Smooth progress (18 steps: 6 segments * 3 intensities)
-                    val progressIndex = (level * 18 / 100).coerceIn(0, 18)
-                    val fullSegments = progressIndex / 3
-                    val partialIntensity = progressIndex % 3
-                    
-                    val reversedChannels = channels.take(6).reversed() // [A6, A5, A4, A3, A2, A1]
-                    val intensities = mutableMapOf<Int, Int>()
-                    
-                    reversedChannels.forEachIndexed { index, ch ->
-                        intensities[ch] = when {
-                            index < fullSegments -> 3
-                            index == fullSegments && partialIntensity > 0 -> partialIntensity
-                            else -> 0
-                        }
-                    }
-
-                    // Red glyph (7th channel) represents 15% charging
-                    val redGlyph = channels[6]
-                    intensities[redGlyph] = if (level <= 15) 3 else 0
-                    
-                    // Directly update preview and hardware
-                    val previewList = channels.map { ch -> intensities[ch] ?: 0 }
-                    _currentIntensities.value = previewList
-                    
-                    try {
-                        mGlyphManager?.openSession()
-                        val sdkIntensities = channels.map { ch -> stateToSdkIntensity(intensities[ch] ?: 0) }
-                        
-                        // Using setFrameColors for full hardware sync during battery visualization
-                        val frameColors = IntArray(7) { i ->
-                            if (i < sdkIntensities.size) sdkIntensities[i] else 0
-                        }
-                        mGlyphManager?.setFrameColors(frameColors)
-                        
-                        Log.d(TAG, "Battery Frame via setFrameColors: ${frameColors.contentToString()}")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error in battery visualization: ${e.message}")
+            if (!_isHardwareBusy.value) {
+                // Smooth progress (18 steps: 6 segments * 3 intensities)
+                val progressIndex = (level * 18 / 100).coerceIn(0, 18)
+                val fullSegments = progressIndex / 3
+                val partialIntensity = progressIndex % 3
+                
+                val reversedChannels = channels.take(6).reversed() // [A6, A5, A4, A3, A2, A1]
+                val intensities = mutableMapOf<Int, Int>()
+                
+                reversedChannels.forEachIndexed { index, ch ->
+                    intensities[ch] = when {
+                        index < fullSegments -> 3
+                        index == fullSegments && partialIntensity > 0 -> partialIntensity
+                        else -> 0
                     }
                 }
-                delay(2000) // Update every 2 seconds
+
+                // Red glyph (7th channel) represents 15% charging
+                val redGlyph = channels[6]
+                intensities[redGlyph] = if (level <= 15) 3 else 0
+                
+                // Update preview and hardware
+                val previewList = channels.map { ch -> intensities[ch] ?: 0 }
+                _currentIntensities.value = previewList
+                
+                try {
+                    mGlyphManager?.openSession()
+                    val sdkIntensities = channels.map { ch -> stateToSdkIntensity(intensities[ch] ?: 0) }
+                    val frameColors = IntArray(7) { i -> if (i < sdkIntensities.size) sdkIntensities[i] else 0 }
+                    mGlyphManager?.setFrameColors(frameColors)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in battery visualization: ${e.message}")
+                }
+
+                // Auto-off after specific delay (default 3s)
+                delay(autoOffDelay)
+                stopBatteryVisualization()
             }
         }
     }
