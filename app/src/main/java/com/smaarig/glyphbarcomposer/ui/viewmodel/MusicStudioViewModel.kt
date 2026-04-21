@@ -407,7 +407,8 @@ class MusicStudioViewModel(
                 }
 
                 val events     = _uiState.value.musicEvents
-                val nowActive  = events.filter { e -> pos >= e.timestampMs && pos < e.timestampMs + e.durationMs }
+                // Increased lookahead/windowing for smoother playback sync
+                val nowActive  = events.filter { e -> pos >= e.timestampMs - 20 && pos < e.timestampMs + e.durationMs - 10 }
                 val nowIds     = nowActive.map { it.id }.toSet()
 
                 if (nowIds != prevActiveIds) {

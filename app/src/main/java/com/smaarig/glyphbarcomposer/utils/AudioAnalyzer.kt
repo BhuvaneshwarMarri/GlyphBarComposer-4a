@@ -195,8 +195,8 @@ object AudioAnalyzer {
      *
      * The key improvement vs the original:
      *  • Uses FFT-derived per-band RMS rather than a flat amplitude average
-     *  • Intensity per lit channel scales with the band's own energy share
-     *  • Smooth envelope follower prevents flickering
+     *  • Intensity per lit channel is binary (HIGH or OFF) for max impact
+     *  • High-speed envelope follower for zero-lag feeling
      *  • Red LED tracks percussive transients (drum kick/snare)
      */
     fun analyzeVolumeHeight(
@@ -208,21 +208,16 @@ object AudioAnalyzer {
         val result = mutableListOf<Map<Int, Int>>()
         val hannWindow = buildHannWindow(FFT_SIZE)
 
-        // Envelope follower - more aggressive for volume bar
+        // Ultra-aggressive envelope follower for zero lag
         var envelope = 0f
-        val ATTACK  = 0.75f
-        val RELEASE = 0.88f
+        val ATTACK  = 0.95f   // Instant attack
+        val RELEASE = 0.70f   // Faster release to match beat drops
         var peakEnvelope = 0.01f
-        val PEAK_DECAY = 0.999f
-
-        // Per-band energy for the actual intensity coloring
-        val bandSmooth = FloatArray(6)
-        val B_ATTACK  = 0.65f
-        val B_RELEASE = 0.82f
+        val PEAK_DECAY = 0.995f
 
         // Red: sub-bass peak-hold
         var redEnvelope = 0f
-        val RED_DECAY = 0.85f
+        val RED_DECAY = 0.80f
 
         windows.forEach { window ->
             val fft = performFFT(window, hannWindow)
@@ -238,36 +233,22 @@ object AudioAnalyzer {
             peakEnvelope = maxOf(envelope, peakEnvelope * PEAK_DECAY).coerceAtLeast(0.005f)
             val normEnergy = (envelope / peakEnvelope).coerceIn(0f, 1f)
 
-            // Smooth per-band energies
-            for (b in 0..5) {
-                val e = bandEnergy(fft, b)
-                bandSmooth[b] = if (e > bandSmooth[b]) e * B_ATTACK + bandSmooth[b] * (1f - B_ATTACK)
-                else e * (1f - B_RELEASE) + bandSmooth[b] * B_RELEASE
-            }
-
             // How many channels light up — grows linearly with loudness
-            val numLit = (normEnergy * 6.5f).toInt().coerceIn(0, 6)
+            // Shift threshold slightly to make it more "binary" and punchy
+            val punchyEnergy = if (normEnergy > 0.1f) (normEnergy - 0.1f) / 0.9f else 0f
+            val numLit = (punchyEnergy * 6.9f).toInt().coerceIn(0, 6)
 
             val map = mutableMapOf<Int, Int>()
             for (b in 0 until numLit) {
-                // Intensity based on that band's own contribution
-                val bandPeak = bandSmooth.max().coerceAtLeast(0.001f)
-                val bandRel  = (bandSmooth[b] / bandPeak).coerceIn(0f, 1f)
-                val level = when {
-                    bandRel > 0.75f -> 3
-                    bandRel > 0.40f -> 2
-                    else -> 1
-                }
-                // REVERSED: 0 lights up channels[5], 1 lights up channels[4]... 5 lights up channels[0]
-                // This makes it grow from bottom to top.
-                map[channels[5 - b]] = level
+                // USER REQUEST: Only use high light state (3) and 0 state
+                map[channels[5 - b]] = 3
             }
 
-            // Red: sub-bass envelope
+            // Red: sub-bass envelope - also quantized to 3 or 0
             val subBass = bandEnergyHz(fft, 20f, 150f)
             redEnvelope = maxOf(subBass, redEnvelope * RED_DECAY)
-            if (redEnvelope > 0.04f && normEnergy > 0.40f) {
-                map[channels[6]] = if (redEnvelope > 0.12f) 3 else if (redEnvelope > 0.07f) 2 else 1
+            if (redEnvelope > 0.06f && normEnergy > 0.35f) {
+                map[channels[6]] = 3
             }
 
             result += map
