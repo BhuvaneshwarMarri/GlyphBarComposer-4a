@@ -154,8 +154,13 @@ class MusicStudioViewModel(
                 state.copy(
                     musicEvents = state.musicEvents.map { event ->
                         event.copy(channelIntensities = event.channelIntensities.toMutableMap().apply { remove(channels[6]) })
-                    }
+                    }.filter { it.channelIntensities.isNotEmpty() }
                 )
+            }
+        } else {
+            // If turning RED on and we have a song, re-analyze to generate the red patterns
+            if (_uiState.value.audioUri != null) {
+                reanalyze()
             }
         }
     }

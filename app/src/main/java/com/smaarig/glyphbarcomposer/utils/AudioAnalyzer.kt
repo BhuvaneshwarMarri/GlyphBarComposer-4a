@@ -208,30 +208,34 @@ object AudioAnalyzer {
         val result = mutableListOf<Map<Int, Int>>()
         val hannWindow = buildHannWindow(FFT_SIZE)
 
-        // Envelope follower
+        // Envelope follower - more aggressive for volume bar
         var envelope = 0f
-        val ATTACK  = 0.60f
-        val RELEASE = 0.92f
+        val ATTACK  = 0.75f
+        val RELEASE = 0.88f
         var peakEnvelope = 0.01f
-        val PEAK_DECAY = 0.9985f
+        val PEAK_DECAY = 0.999f
 
         // Per-band energy for the actual intensity coloring
         val bandSmooth = FloatArray(6)
-        val B_ATTACK  = 0.55f
-        val B_RELEASE = 0.88f
+        val B_ATTACK  = 0.65f
+        val B_RELEASE = 0.82f
 
         // Red: sub-bass peak-hold
         var redEnvelope = 0f
-        val RED_DECAY = 0.88f
+        val RED_DECAY = 0.85f
 
         windows.forEach { window ->
             val fft = performFFT(window, hannWindow)
 
-            // Overall loudness
-            val rms = sqrt(window.map { it.toFloat().pow(2) }.average().toFloat()) / 32768f
+            // Overall loudness via RMS
+            var sumSq = 0f
+            for (s in window) { val f = s.toFloat() / 32768f; sumSq += f * f }
+            val rms = sqrt(sumSq / window.size.coerceAtLeast(1))
+            
             envelope = if (rms > envelope) rms * ATTACK + envelope * (1f - ATTACK)
             else rms * (1f - RELEASE) + envelope * RELEASE
-            peakEnvelope = maxOf(envelope, peakEnvelope * PEAK_DECAY).coerceAtLeast(0.01f)
+            
+            peakEnvelope = maxOf(envelope, peakEnvelope * PEAK_DECAY).coerceAtLeast(0.005f)
             val normEnergy = (envelope / peakEnvelope).coerceIn(0f, 1f)
 
             // Smooth per-band energies
@@ -242,7 +246,7 @@ object AudioAnalyzer {
             }
 
             // How many channels light up — grows linearly with loudness
-            val numLit = (normEnergy * 6f).toInt().coerceIn(0, 6)
+            val numLit = (normEnergy * 6.5f).toInt().coerceIn(0, 6)
 
             val map = mutableMapOf<Int, Int>()
             for (b in 0 until numLit) {
@@ -254,13 +258,15 @@ object AudioAnalyzer {
                     bandRel > 0.40f -> 2
                     else -> 1
                 }
-                map[channels[b]] = level
+                // REVERSED: 0 lights up channels[5], 1 lights up channels[4]... 5 lights up channels[0]
+                // This makes it grow from bottom to top.
+                map[channels[5 - b]] = level
             }
 
             // Red: sub-bass envelope
             val subBass = bandEnergyHz(fft, 20f, 150f)
             redEnvelope = maxOf(subBass, redEnvelope * RED_DECAY)
-            if (redEnvelope > 0.04f && normEnergy > 0.45f) {
+            if (redEnvelope > 0.04f && normEnergy > 0.40f) {
                 map[channels[6]] = if (redEnvelope > 0.12f) 3 else if (redEnvelope > 0.07f) 2 else 1
             }
 
@@ -472,6 +478,11 @@ object AudioAnalyzer {
                 extractor.selectTrack(trackIndex)
                 val format = extractor.getTrackFormat(trackIndex)
                 val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
+                
+                // Get actual sample rate for precise 50ms windowing
+                val sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE, 44100)
+                val windowSizeSamples = (sampleRate * 0.050).toInt()
+                
                 if (mime.startsWith("audio/")) {
                     codec = MediaCodec.createDecoderByType(mime)
                     codec.configure(format, null, null, 0)
@@ -481,9 +492,6 @@ object AudioAnalyzer {
                     var extDone = false
                     var decDone = false
                     val pcm = mutableListOf<Short>()
-                    var windowStartUs = 0L
-                    val WINDOW_US = 50_000L      // 50 ms per window
-                    val MIN_WINDOW_SAMPLES = FFT_SIZE
 
                     while (!decDone) {
                         if (!extDone) {
@@ -505,18 +513,18 @@ object AudioAnalyzer {
                             codec.getOutputBuffer(outIdx)?.let { buf ->
                                 while (buf.remaining() >= 2) pcm.add(buf.short)
                             }
-                            if (info.presentationTimeUs >= windowStartUs + WINDOW_US) {
-                                if (pcm.size >= MIN_WINDOW_SAMPLES) {
-                                    windows.add(pcm.take(MIN_WINDOW_SAMPLES).toShortArray())
-                                    // 75% overlap for smoother transitions
-                                    val overlap = (MIN_WINDOW_SAMPLES * 0.25).toInt()
-                                    val keep = pcm.takeLast(overlap)
-                                    pcm.clear(); pcm.addAll(keep)
-                                } else {
-                                    windows.add(ShortArray(MIN_WINDOW_SAMPLES))
-                                }
-                                windowStartUs = info.presentationTimeUs
+                            
+                            // Emit as many 50ms windows as we have buffered
+                            while (pcm.size >= windowSizeSamples) {
+                                val window = ShortArray(windowSizeSamples)
+                                for (i in 0 until windowSizeSamples) window[i] = pcm[i]
+                                windows.add(window)
+                                
+                                // Proper non-overlapping or controlled overlapping sequence
+                                // Here we consume exactly 50ms to keep sync with timeline
+                                repeat(windowSizeSamples) { pcm.removeAt(0) }
                             }
+
                             codec.releaseOutputBuffer(outIdx, false)
                             if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) decDone = true
                         }
@@ -547,7 +555,13 @@ object AudioAnalyzer {
     /** In-place iterative radix-2 FFT; returns magnitude spectrum [0..N/2). */
     private fun performFFT(samples: ShortArray, window: FloatArray): FloatArray {
         val n = FFT_SIZE
-        val re = FloatArray(n) { i -> if (i < samples.size) (samples[i].toFloat() / 32768f) * window[i] else 0f }
+        
+        // Use the middle of the window if it's larger than FFT_SIZE
+        val offset = if (samples.size > n) (samples.size - n) / 2 else 0
+        
+        val re = FloatArray(n) { i -> 
+            if (i + offset < samples.size) (samples[i + offset].toFloat() / 32768f) * window[i] else 0f 
+        }
         val im = FloatArray(n)
         val m  = log2(n.toDouble()).toInt()
 

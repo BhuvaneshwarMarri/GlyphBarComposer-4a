@@ -171,8 +171,10 @@ fun MusicStudioScreen(
                                 selected = uiState.selectedAlgorithm,
                                 bpm = uiState.bpmOverride,
                                 isAnalyzing = uiState.isAnalyzing,
+                                includeRedGlyph = uiState.includeRedGlyph,
                                 onSelect = { viewModel.setAlgorithm(it); viewModel.reanalyze() },
-                                onBpmChange = viewModel::setBpmOverride
+                                onBpmChange = viewModel::setBpmOverride,
+                                onToggleRedGlyph = viewModel::toggleRedGlyph
                             )
                         }
                     }
@@ -199,9 +201,7 @@ fun MusicStudioScreen(
                         isPlaying = uiState.isAudioPlaying,
                         isReady = uiState.isAnalysisComplete,
                         isSelected = uiState.selectedEventId != null,
-                        includeRedGlyph = uiState.includeRedGlyph,
                         defaultDuration = uiState.defaultDurationMs,
-                        onToggleRedGlyph = viewModel::toggleRedGlyph,
                         onIntensityChange = viewModel::onComposerIntensityChange,
                         onDurationChange = viewModel::setDefaultDuration,
                         onClear = viewModel::clearComposer,
@@ -362,8 +362,10 @@ private fun AlgorithmRow(
     selected: BeatAlgorithm,
     bpm: Int,
     isAnalyzing: Boolean,
+    includeRedGlyph: Boolean,
     onSelect: (BeatAlgorithm) -> Unit,
-    onBpmChange: (Int) -> Unit
+    onBpmChange: (Int) -> Unit,
+    onToggleRedGlyph: (Boolean) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
@@ -372,8 +374,25 @@ private fun AlgorithmRow(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("DETECTION METHOD", color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Black)
-            if (isAnalyzing) {
-                CircularProgressIndicator(modifier = Modifier.size(12.dp), color = Color(0xFF00C853), strokeWidth = 2.dp)
+            
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (isAnalyzing) {
+                    CircularProgressIndicator(modifier = Modifier.size(12.dp), color = Color(0xFF00C853), strokeWidth = 2.dp)
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (includeRedGlyph) Color(0xFFFF1744) else Color(0xFF1A1A1A))
+                        .clickable { onToggleRedGlyph(!includeRedGlyph) }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        "RED GLYPH",
+                        color = if (includeRedGlyph) Color.White else Color(0xFF555555),
+                        fontSize = 9.sp, fontWeight = FontWeight.Black
+                    )
+                }
             }
         }
         Row(
@@ -756,9 +775,7 @@ private fun ComposerPanel(
     isPlaying: Boolean,
     isReady: Boolean,
     isSelected: Boolean,
-    includeRedGlyph: Boolean,
     defaultDuration: Int,
-    onToggleRedGlyph: (Boolean) -> Unit,
     onIntensityChange: (Int, Int) -> Unit,
     onDurationChange: (Int) -> Unit,
     onClear: () -> Unit,
@@ -793,19 +810,6 @@ private fun ComposerPanel(
                 }
                 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (includeRedGlyph) Color(0xFFFF1744) else Color(0xFF1A1A1A))
-                            .clickable { onToggleRedGlyph(!includeRedGlyph) }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            "RED",
-                            color = if (includeRedGlyph) Color.White else Color(0xFF555555),
-                            fontSize = 9.sp, fontWeight = FontWeight.Black
-                        )
-                    }
                     if (anyActive && !isPlaying) {
                         IconButton(onClick = onClear, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.Refresh, null, tint = Color.Gray, modifier = Modifier.size(18.dp))
