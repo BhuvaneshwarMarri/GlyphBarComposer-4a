@@ -66,6 +66,45 @@ fun MusicStudioScreen(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val context = LocalContext.current
+    var showSaveDialog by remember { mutableStateOf(false) }
+
+    if (showSaveDialog) {
+        var projectName by remember { mutableStateOf(uiState.audioName?.substringBeforeLast(".") ?: "") }
+        AlertDialog(
+            onDismissRequest = { showSaveDialog = false },
+            title = { Text("Save Project", color = Color.White, fontWeight = FontWeight.Black) },
+            text = {
+                TextField(
+                    value = projectName,
+                    onValueChange = { projectName = it },
+                    placeholder = { Text("Project Name", color = Color.Gray) },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFF1A1A1A),
+                        unfocusedContainerColor = Color(0xFF1A1A1A),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.saveMusicProject(projectName)
+                    showSaveDialog = false
+                }) {
+                    Text("SAVE", color = Color(0xFF00C853), fontWeight = FontWeight.Black)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveDialog = false }) {
+                    Text("CANCEL", color = Color.Gray)
+                }
+            },
+            containerColor = Color(0xFF111111),
+            shape = RoundedCornerShape(28.dp)
+        )
+    }
+
     var hasPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -121,7 +160,7 @@ fun MusicStudioScreen(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        StudioHeader(uiState, viewModel)
+                        StudioHeader(uiState, viewModel, onSaveClick = { showSaveDialog = true })
                         
                         StudioPlayerCard(
                             uiState = uiState,
@@ -168,7 +207,7 @@ fun MusicStudioScreen(
                         .padding(horizontal = 20.dp, vertical = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(28.dp)
                 ) {
-                    StudioHeader(uiState, viewModel)
+                    StudioHeader(uiState, viewModel, onSaveClick = { showSaveDialog = true })
 
                     StudioPlayerCard(
                         uiState = uiState,
@@ -207,7 +246,11 @@ fun MusicStudioScreen(
 }
 
 @Composable
-private fun StudioHeader(uiState: MusicStudioUiState, viewModel: MusicStudioViewModel) {
+private fun StudioHeader(
+    uiState: MusicStudioUiState, 
+    viewModel: MusicStudioViewModel,
+    onSaveClick: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -233,7 +276,7 @@ private fun StudioHeader(uiState: MusicStudioUiState, viewModel: MusicStudioView
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (uiState.musicEvents.isNotEmpty()) {
                 IconButton(
-                    onClick = viewModel::saveMusicProject,
+                    onClick = { if (!uiState.showSaveSuccess && !uiState.isSaving) onSaveClick() },
                     modifier = Modifier.clip(CircleShape).background(
                         if (uiState.showSaveSuccess) Color(0xFF00C853) else Color(0x1A00C853)
                     )

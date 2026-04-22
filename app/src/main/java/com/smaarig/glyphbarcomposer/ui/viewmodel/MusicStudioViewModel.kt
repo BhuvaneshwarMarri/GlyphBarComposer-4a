@@ -533,7 +533,7 @@ class MusicStudioViewModel(
     // Save / Load
     // ─────────────────────────────────────────────────────────────────────────
 
-    fun saveMusicProject() {
+    fun saveMusicProject(projectName: String) {
         val state = _uiState.value
         val uri = state.audioUri ?: return
         if (state.isSaving) return
@@ -552,7 +552,7 @@ class MusicStudioViewModel(
                 return@launch
             }
             repository.saveMusicProject(
-                MusicStudioProject(0, state.audioName ?: "Untitled", file.absolutePath, null),
+                MusicStudioProject(0, projectName.ifBlank { state.audioName ?: "Untitled" }, file.absolutePath, null),
                 state.musicEvents
             )
             _uiState.update { it.copy(isSaving = false, musicProjectSaved = true, showSaveSuccess = true) }
