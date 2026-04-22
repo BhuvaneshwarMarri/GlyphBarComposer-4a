@@ -510,9 +510,9 @@ class MusicStudioViewModel(
                     if (mag > maxMag) maxMag = mag
                 }
             }
-            // Log-scale so quiet passages stay visible; output is 0–255
+            // Log-scale so quiet passages stay visible with higher contrast
             val logMag = if (maxMag > 1f)
-                (Math.log10(maxMag.toDouble()) / Math.log10(362.0) * 255f).toFloat()
+                (Math.log10(maxMag.toDouble()) / Math.log10(362.0) * 260f).toFloat()
             else 0f
             logMag.coerceIn(0f, 255f)
         }

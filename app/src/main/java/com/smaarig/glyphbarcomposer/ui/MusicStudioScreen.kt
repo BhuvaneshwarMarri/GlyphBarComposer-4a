@@ -319,8 +319,6 @@ private fun AnalyzerCard(uiState: MusicStudioUiState, visualizerData: List<Float
             border = BorderStroke(1.dp, Color(0xFF222222))
         ) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                FrequencyBar(visualizerData)
-                
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -555,54 +553,6 @@ private fun StudioPlayerCard(
     }
 }
 
-@Composable
-private fun FrequencyBar(magnitudes: List<Float>, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(72.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF080808))
-            .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(20.dp))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.Bottom
-    ) {
-        magnitudes.forEachIndexed { i, m ->
-            var lastM by remember { mutableFloatStateOf(0f) }
-            val isRising = m > lastM
-            
-            val h by animateFloatAsState(
-                targetValue = (m / 255f).coerceIn(0.04f, 1f),
-                animationSpec = if (isRising) {
-                    tween(80, easing = FastOutLinearInEasing)
-                } else {
-                    spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow)
-                },
-                label = "fq_$i"
-            )
-            
-            SideEffect { lastM = m }
-            
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(h)
-                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = when {
-                                m > 200f -> listOf(Color(0xFFFF1744), Color(0xFFFF5252)) // Red/Clipping
-                                m > 150f -> listOf(Color(0xFFFFFF00), Color(0xFFFFEA00)) // Yellow/Peak
-                                m > 40f -> listOf(Color(0xFFFFD600), Color(0xFFFFC400))  // Yellow/Normal
-                                else -> listOf(Color(0xFF1A1A1A), Color(0xFF0F0F0F))     // Dim/Idle
-                            }
-                        )
-                    )
-            )
-        }
-    }
-}
 
 
 @Composable
