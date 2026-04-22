@@ -71,69 +71,76 @@ fun MainApp() {
     )
 
     if (orientation == AppOrientation.Landscape && !isSplashScreen) {
-        // Landscape: consume ALL safeDrawing insets once on the root Row.
-        // Nothing inside should re-consume them.
+        // Landscape: fixed TopBar, sidebar NavigationRail
         Row(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFF0A0A0A))
-                .windowInsetsPadding(WindowInsets.safeDrawing)
+                // Apply horizontal insets (for notches) and bottom insets
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
         ) {
             ModernNavigationRail(navController, screens)
 
-            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                NavHostContainer(navController, Modifier.fillMaxSize())
-
-                // GlyphPreviewBar floats at the top of content
+            Scaffold(
+                modifier = Modifier.weight(1f),
+                containerColor = Color.Transparent,
+                topBar = {
+                    Surface(
+                        color = Color(0xFF0A0A0A),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                    ) {
+                        GlyphPreviewBar()
+                    }
+                }
+            ) { innerPadding ->
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.TopCenter)
+                        .fillMaxSize()
+                        .padding(innerPadding)
                 ) {
-                    GlyphPreviewBar()
+                    NavHostContainer(navController, Modifier.fillMaxSize())
                 }
             }
         }
     } else {
-        // Portrait: content goes full-screen (no innerPadding clipping),
-        // navbar and top bar float as overlays inside a Box.
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFF0A0A0A))
-        ) {
-            // Content layer — fills the whole screen including behind bars
-            NavHostContainer(navController, Modifier.fillMaxSize())
-
-            if (!isSplashScreen) {
-                // Top bar floats over content — transparent background
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.TopCenter)
-                        .windowInsetsPadding(
-                            WindowInsets.safeDrawing.only(
-                                WindowInsetsSides.Top + WindowInsetsSides.Horizontal
-                            )
-                        )
-                ) {
-                    GlyphPreviewBar()
+        // Portrait: fixed TopBar, hovering Bottom NavBar
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color(0xFF0A0A0A),
+            topBar = {
+                if (!isSplashScreen) {
+                    Surface(
+                        color = Color(0xFF0A0A0A),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                    ) {
+                        GlyphPreviewBar()
+                    }
                 }
+            }
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                // Content layer — fills the whole screen including behind hovering bars
+                NavHostContainer(navController, Modifier.fillMaxSize())
 
-                // Bottom navbar floats over content — pill with shadow, no solid backdrop
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        // Consume bottom + horizontal insets once, here
-                        .windowInsetsPadding(
-                            WindowInsets.safeDrawing.only(
-                                WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal
-                            )
-                        )
-                        .padding(horizontal = 24.dp, vertical = 16.dp)
-                ) {
-                    ModernBottomNavigationBar(navController, screens)
+                if (!isSplashScreen) {
+                    // Bottom navbar floats over content — pill with shadow
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+                            .padding(horizontal = 24.dp, vertical = 20.dp)
+                    ) {
+                        ModernBottomNavigationBar(navController, screens)
+                    }
                 }
             }
         }
