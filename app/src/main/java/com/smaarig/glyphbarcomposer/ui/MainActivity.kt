@@ -71,69 +71,70 @@ fun MainApp() {
     )
 
     if (orientation == AppOrientation.Landscape && !isSplashScreen) {
-        Row(modifier = Modifier.fillMaxSize()) {
+        // Landscape: consume ALL safeDrawing insets once on the root Row.
+        // Nothing inside should re-consume them.
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF0A0A0A))
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+        ) {
             ModernNavigationRail(navController, screens)
-            Scaffold(
-                modifier = Modifier.weight(1f),
-                containerColor = Color(0xFF0A0A0A),
-                topBar = {
-                    Surface(
-                        color = Color(0xFF0A0A0A),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column {
-                            Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
-                            GlyphPreviewBar()
-                        }
-                    }
-                }
-            ) { innerPadding ->
+
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                NavHostContainer(navController, Modifier.fillMaxSize())
+
+                // GlyphPreviewBar floats at the top of content
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
                 ) {
-                    NavHostContainer(navController, Modifier.fillMaxSize())
+                    GlyphPreviewBar()
                 }
             }
         }
     } else {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = Color(0xFF0A0A0A),
-            topBar = {
-                if (!isSplashScreen) {
-                    Surface(
-                        color = Color(0xFF0A0A0A),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column {
-                            Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
-                            GlyphPreviewBar()
-                        }
-                    }
+        // Portrait: content goes full-screen (no innerPadding clipping),
+        // navbar and top bar float as overlays inside a Box.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF0A0A0A))
+        ) {
+            // Content layer — fills the whole screen including behind bars
+            NavHostContainer(navController, Modifier.fillMaxSize())
+
+            if (!isSplashScreen) {
+                // Top bar floats over content — transparent background
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
+                        .windowInsetsPadding(
+                            WindowInsets.safeDrawing.only(
+                                WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+                            )
+                        )
+                ) {
+                    GlyphPreviewBar()
                 }
-            },
-            bottomBar = {
-                if (!isSplashScreen) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color.Transparent)
-                            .windowInsetsPadding(WindowInsets.navigationBars)
-                            .padding(horizontal = 24.dp, vertical = 20.dp)
-                    ) {
-                        ModernBottomNavigationBar(navController, screens)
-                    }
+
+                // Bottom navbar floats over content — pill with shadow, no solid backdrop
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        // Consume bottom + horizontal insets once, here
+                        .windowInsetsPadding(
+                            WindowInsets.safeDrawing.only(
+                                WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal
+                            )
+                        )
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                ) {
+                    ModernBottomNavigationBar(navController, screens)
                 }
-            }
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                NavHostContainer(navController, Modifier.fillMaxSize())
             }
         }
     }
@@ -147,7 +148,7 @@ fun NavHostContainer(
     val activity = LocalActivity.current as ComponentActivity
     val app = activity.application as GlyphApplication
     val factory = GlyphViewModelFactory(app, app.repository)
-    
+
     val redViewModel: RedGlyphViewModel = viewModel(
         viewModelStoreOwner = activity,
         factory = factory
@@ -241,9 +242,9 @@ fun SplashScreen(onTimeout: () -> Unit) {
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.ExtraBold
             )
-            
+
             Spacer(modifier = Modifier.height(48.dp))
-            
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 animationStates.forEachIndexed { index, alpha ->
                     val color = if (index == 6) Color(0xFFFF1744) else Color.White
@@ -255,9 +256,9 @@ fun SplashScreen(onTimeout: () -> Unit) {
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             Text(
                 text = "Syncing your experience...",
                 color = Color.Gray,

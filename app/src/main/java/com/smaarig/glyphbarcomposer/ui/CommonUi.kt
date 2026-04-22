@@ -243,7 +243,7 @@ fun GlyphPreviewBar(modifier: Modifier = Modifier) {
                         val hasPermission = ContextCompat.checkSelfPermission(
                             context, Manifest.permission.POST_NOTIFICATIONS
                         ) == PackageManager.PERMISSION_GRANTED
-                        
+
                         if (!hasPermission) {
                             permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                             return@Switch
@@ -272,23 +272,35 @@ fun ModernBottomNavigationBar(navController: NavHostController, screens: List<Sc
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    // Pure pill — no inset consumption, no outer padding.
+    // The call site (MainActivity bottomBar) owns spacing and insets.
     Surface(
         modifier = Modifier
-            .height(64.dp)
-            .fillMaxWidth(),
-        color = Color(0xFF111111).copy(alpha = 0.85f),
+            .fillMaxWidth()
+            .wrapContentHeight(),
+        color = Color(0xFF111111).copy(alpha = 0.92f),
         shape = RoundedCornerShape(36.dp),
-        border = BorderStroke(1.dp, Color(0xFF222222))
+        border = BorderStroke(1.dp, Color(0xFF2A2A2A)),
+        shadowElevation = 24.dp,
+        tonalElevation = 0.dp
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
             screens.forEach { screen ->
                 val selected = currentRoute == screen.route
-                val animatedScale by animateFloatAsState(if (selected) 1.15f else 1f)
-                val animatedColor by animateColorAsState(if (selected) Color.White else Color.Gray)
+                val animatedScale by animateFloatAsState(
+                    targetValue = if (selected) 1.15f else 1f,
+                    label = "navScale"
+                )
+                val animatedColor by animateColorAsState(
+                    targetValue = if (selected) Color.White else Color.Gray,
+                    label = "navColor"
+                )
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -333,11 +345,11 @@ fun ModernNavigationRail(navController: NavHostController, screens: List<Screen>
         containerColor = Color(0xFF111111),
         header = {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(Modifier.height(24.dp))
-                // Minimalist App Logo
                 Box(
                     Modifier
                         .size(36.dp)
@@ -351,16 +363,24 @@ fun ModernNavigationRail(navController: NavHostController, screens: List<Screen>
                 Spacer(Modifier.height(24.dp))
             }
         },
-        modifier = Modifier.width(80.dp)
+        // No windowInsetsPadding here – avoids double-consuming insets on rotation
+        modifier = Modifier
+            .fillMaxHeight()
+            .width(80.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxHeight(),
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             screens.forEach { screen ->
                 val selected = currentRoute == screen.route
-                val animatedScale by animateFloatAsState(if (selected) 1.25f else 1f)
+                val animatedScale by animateFloatAsState(
+                    targetValue = if (selected) 1.25f else 1f,
+                    label = "railScale"
+                )
 
                 NavigationRailItem(
                     selected = selected,

@@ -100,7 +100,13 @@ fun MusicStudioScreen(
 
     Box(modifier = modifier.fillMaxSize().background(Color.Transparent)) {
         if (uiState.audioUri == null) {
-            EmptyStudioState(onPickFile = { fileLauncher.launch("audio/*") })
+            ProjectSetupView(
+                uiState = uiState,
+                onPickFile = { fileLauncher.launch("audio/*") },
+                onAlgorithmSelect = { viewModel.setAlgorithm(it) },
+                onToggleRedGlyph = { viewModel.toggleRedGlyph(it) },
+                onBpmChange = viewModel::setBpmOverride
+            )
         } else {
             if (isLandscape) {
                 // Split-pane Landscape Layout
@@ -393,29 +399,44 @@ private fun FrequencyBar(magnitudes: List<Float>, modifier: Modifier = Modifier)
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .height(64.dp)
+            .clip(RoundedCornerShape(20.dp))
             .background(Color(0xFF080808))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
+            .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(20.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.Bottom
     ) {
         magnitudes.forEachIndexed { i, m ->
             val h by animateFloatAsState(
-                targetValue = (m / 100f).coerceIn(0.05f, 1f),
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+                targetValue = (m / 100f).coerceIn(0.1f, 1f),
+                animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
                 label = "fq_$i"
             )
-            Box(
-                modifier = Modifier.weight(1f).fillMaxHeight(h)
-                    .background(
-                        brush = Brush.verticalGradient(
-                            if (m > 70) listOf(Color(0xFF00E676), Color(0xFF00C853))
-                            else listOf(Color(0xFF2A2A2A), Color(0xFF1A1A1A))
-                        ),
-                        shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
+            
+            Column(
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                verticalArrangement = Arrangement.Bottom,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Dot matrix effect
+                val dotCount = 6
+                val activeDots = (h * dotCount).toInt().coerceAtLeast(1)
+                repeat(dotCount) { dotIdx ->
+                    val isActive = (dotCount - dotIdx) <= activeDots
+                    Box(
+                        modifier = Modifier
+                            .padding(vertical = 1.dp)
+                            .size(if (isActive) 5.dp else 3.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isActive) {
+                                    if (m > 75) Color(0xFFFF1744) else Color(0xFF00C853)
+                                } else Color(0xFF1A1A1A)
+                            )
                     )
-            )
+                }
+            }
         }
     }
 }
@@ -991,7 +1012,6 @@ private fun IntensityFader(
     onIntensityChange: (Int) -> Unit
 ) {
     var trackHeightPx by remember { mutableStateOf(0f) }
-    val density = LocalDensity.current
 
     Column(
         modifier = modifier.fillMaxHeight(),
@@ -1001,10 +1021,25 @@ private fun IntensityFader(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(Color(0xFF0F0F0F))
-                .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(8.dp))
+                .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(12.dp))
                 .onGloballyPositioned { trackHeightPx = it.size.height.toFloat() }
+                .pointerInput(enabled) {
+                    if (!enabled) return@pointerInput
+                    detectTapGestures(
+                        onTap = { offset ->
+                            val fraction = 1f - (offset.y / trackHeightPx).coerceIn(0f, 1f)
+                            val newLevel = when {
+                                fraction > 0.8f -> 3
+                                fraction > 0.45f -> 2
+                                fraction > 0.15f -> 1
+                                else -> 0
+                            }
+                            onIntensityChange(newLevel)
+                        }
+                    )
+                }
                 .pointerInput(enabled) {
                     if (!enabled) return@pointerInput
                     detectDragGestures { change, _ ->
@@ -1012,16 +1047,19 @@ private fun IntensityFader(
                         val y = change.position.y
                         val fraction = 1f - (y / trackHeightPx).coerceIn(0f, 1f)
                         val newLevel = when {
-                            fraction > 0.88f -> 3
-                            fraction > 0.55f -> 2
-                            fraction > 0.22f -> 1
+                            fraction > 0.8f -> 3
+                            fraction > 0.45f -> 2
+                            fraction > 0.15f -> 1
                             else -> 0
                         }
                         if (newLevel != intensity) onIntensityChange(newLevel)
                     }
                 }
         ) {
-            val fillFraction by animateFloatAsState(intensity / 3f, animationSpec = spring(stiffness = Spring.StiffnessLow))
+            val fillFraction by animateFloatAsState(
+                targetValue = intensity / 3f,
+                animationSpec = spring(stiffness = Spring.StiffnessLow)
+            )
             
             Box(
                 modifier = Modifier
@@ -1030,31 +1068,35 @@ private fun IntensityFader(
                     .fillMaxHeight(fillFraction)
                     .background(
                         brush = Brush.verticalGradient(
-                            colors = listOf(color.copy(alpha = 0.5f), color)
+                            colors = listOf(color.copy(alpha = 0.4f), color)
                         )
                     )
-                    .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
+                    .clip(RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
             )
 
-            // Minimal notches
-            repeat(3) { i ->
-                val notchY = (1f - (i + 1) / 3f)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .offset(y = (notchY * trackHeightPx / density.density).dp)
-                        .background(Color.White.copy(alpha = 0.05f))
-                )
+            // Visual markers
+            Column(
+                modifier = Modifier.fillMaxSize().padding(vertical = 12.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                repeat(4) { i ->
+                    Box(
+                        Modifier
+                            .width(8.dp)
+                            .height(1.dp)
+                            .background(if ((3-i) <= intensity && intensity > 0) Color.White.copy(0.4f) else Color.White.copy(0.05f))
+                    )
+                }
             }
         }
 
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = when(intensity) { 1 -> "L"; 2 -> "M"; 3 -> "H"; else -> "•" },
-            color = if (intensity > 0) color else Color(0xFF444444),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Black
+        Spacer(Modifier.height(8.dp))
+        Box(
+            modifier = Modifier
+                .size(14.dp)
+                .clip(CircleShape)
+                .background(if (intensity > 0) color else Color(0xFF1A1A1A))
         )
     }
 }
@@ -1147,17 +1189,201 @@ private fun AnalysisOverlay(algo: BeatAlgorithm, complete: Boolean) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun EmptyStudioState(onPickFile: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF050505)).padding(40.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        val inf = rememberInfiniteTransition(label = "pulse")
-        val scale by inf.animateFloat(1f, 1.15f, infiniteRepeatable(tween(1500, easing = LinearOutSlowInEasing), RepeatMode.Reverse), label = "s")
-        val alpha by inf.animateFloat(0.3f, 1f, infiniteRepeatable(tween(1500, easing = LinearOutSlowInEasing), RepeatMode.Reverse), label = "a")
+private fun ProjectSetupView(
+    uiState: MusicStudioUiState,
+    onPickFile: () -> Unit,
+    onAlgorithmSelect: (BeatAlgorithm) -> Unit,
+    onToggleRedGlyph: (Boolean) -> Unit,
+    onBpmChange: (Int) -> Unit
+) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF050505))
+            .verticalScroll(rememberScrollState())
+            .padding(if (isLandscape) 24.dp else 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = if (isLandscape) Arrangement.Top else Arrangement.Center
+    ) {
+        if (!isLandscape) {
+            StudioLogoSection()
+            Spacer(Modifier.height(48.dp))
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "GLYPH STUDIO",
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 20.sp,
+                    letterSpacing = 2.sp,
+                    fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
+                )
+                Button(
+                    onClick = onPickFile,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.AudioFile, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("SELECT TRACK", fontWeight = FontWeight.Black, fontSize = 11.sp)
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(if (isLandscape) 1f else 0.95f),
+            color = Color(0xFF111111),
+            shape = RoundedCornerShape(32.dp),
+            border = BorderStroke(1.dp, Color(0xFF222222))
+        ) {
+            Column(modifier = Modifier.padding(if (isLandscape) 24.dp else 32.dp)) {
+                Text(
+                    "PROJECT CONFIGURATION",
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 14.sp,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    "Set your preferences before loading the track",
+                    color = Color.Gray,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(Modifier.height(32.dp))
+
+                Text("BEAT DETECTION ALGORITHM", color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                Spacer(Modifier.height(12.dp))
+                
+                // Algorithm Grid/List
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    BeatAlgorithm.entries.forEach { algo ->
+                        val isSelected = algo == uiState.selectedAlgorithm
+                        Surface(
+                            onClick = { onAlgorithmSelect(algo) },
+                            color = if (isSelected) Color.White else Color(0xFF1A1A1A),
+                            shape = RoundedCornerShape(16.dp),
+                            border = if (!isSelected) BorderStroke(1.dp, Color(0xFF222222)) else null
+                        ) {
+                            Text(
+                                algo.displayName,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                                color = if (isSelected) Color.Black else Color.Gray,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                if (uiState.selectedAlgorithm == BeatAlgorithm.BPM_GRID) {
+                    Spacer(Modifier.height(20.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFF080808))
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Target Tempo", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { onBpmChange(uiState.bpmOverride - 5) }) {
+                                Text("−", color = Color.White, fontSize = 20.sp)
+                            }
+                            Text("${uiState.bpmOverride} BPM", color = Color.White, fontWeight = FontWeight.Black)
+                            IconButton(onClick = { onBpmChange(uiState.bpmOverride + 5) }) {
+                                Text("+", color = Color.White, fontSize = 20.sp)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(32.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFF1A1A1A))
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(if (uiState.includeRedGlyph) Color(0xFFFF1744).copy(0.2f) else Color(0xFF080808)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(Modifier.size(8.dp).clip(CircleShape).background(if (uiState.includeRedGlyph) Color(0xFFFF1744) else Color(0xFF333333)))
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("RED GLYPH SYNC", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                            Text("Include the red center LED in patterns", color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Switch(
+                        checked = uiState.includeRedGlyph,
+                        onCheckedChange = onToggleRedGlyph,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFFFF1744),
+                            uncheckedThumbColor = Color.Gray,
+                            uncheckedTrackColor = Color(0xFF080808)
+                        )
+                    )
+                }
+            }
+        }
+
+        if (!isLandscape) {
+            Spacer(Modifier.height(48.dp))
+            Button(
+                onClick = onPickFile,
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier
+                    .fillMaxWidth(0.85f)
+                    .height(64.dp),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+            ) {
+                Icon(Icons.Default.AudioFile, null, Modifier.size(24.dp))
+                Spacer(Modifier.width(16.dp))
+                Text("PICK AUDIO FILE", fontWeight = FontWeight.Black, fontSize = 15.sp, letterSpacing = 1.sp)
+            }
+        }
+        
+        Spacer(Modifier.height(120.dp))
+    }
+}
+
+@Composable
+private fun StudioLogoSection() {
+    val inf = rememberInfiniteTransition(label = "pulse")
+    val scale by inf.animateFloat(1f, 1.15f, infiniteRepeatable(tween(1500, easing = LinearOutSlowInEasing), RepeatMode.Reverse), label = "s")
+    val alpha by inf.animateFloat(0.3f, 1f, infiniteRepeatable(tween(1500, easing = LinearOutSlowInEasing), RepeatMode.Reverse), label = "a")
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier.size(120.dp)
                 .graphicsLayer { scaleX = scale; scaleY = scale; this.alpha = alpha }
@@ -1186,19 +1412,9 @@ private fun EmptyStudioState(onPickFile: () -> Unit) {
         Text("Compose reactive glyph patterns to your favorite tracks.\nHigh precision sync powered by Nothing Phone.",
             color = Color(0xFF555555), fontSize = 13.sp, textAlign = TextAlign.Center, lineHeight = 22.sp,
             fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(64.dp))
-        Button(
-            onClick = onPickFile,
-            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth(0.8f).height(58.dp)
-        ) {
-            Icon(Icons.Default.AudioFile, null, Modifier.size(20.dp))
-            Spacer(Modifier.width(12.dp))
-            Text("PICK AUDIO FILE", fontWeight = FontWeight.Black, fontSize = 14.sp, letterSpacing = 1.sp, fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont)
-        }
     }
 }
+
 
 private fun formatTime(ms: Int): String {
     val total = ms / 1000
