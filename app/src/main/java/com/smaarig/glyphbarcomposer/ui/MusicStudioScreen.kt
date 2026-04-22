@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -559,18 +560,18 @@ private fun FrequencyBar(magnitudes: List<Float>, modifier: Modifier = Modifier)
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(64.dp)
+            .height(72.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Color(0xFF080808))
             .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(20.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.Bottom
     ) {
         magnitudes.forEachIndexed { i, m ->
             val h by animateFloatAsState(
-                targetValue = (m / 100f).coerceIn(0.1f, 1f),
-                animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+                targetValue = (m / 150f).coerceIn(0.1f, 1f),
+                animationSpec = spring(dampingRatio = 0.5f, stiffness = 600f),
                 label = "fq_$i"
             )
             
@@ -579,21 +580,24 @@ private fun FrequencyBar(magnitudes: List<Float>, modifier: Modifier = Modifier)
                 verticalArrangement = Arrangement.Bottom,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Dot matrix effect
-                val dotCount = 6
+                // Dot matrix effect - taller and more reactive
+                val dotCount = 8
                 val activeDots = (h * dotCount).toInt().coerceAtLeast(1)
                 repeat(dotCount) { dotIdx ->
                     val isActive = (dotCount - dotIdx) <= activeDots
+                    val dotColor = if (isActive) {
+                        if (m > 100) Color(0xFFFF1744) 
+                        else if (m > 60) Color(0xFF00E676)
+                        else Color(0xFF00C853)
+                    } else Color(0xFF161616)
+                    
                     Box(
                         modifier = Modifier
-                            .padding(vertical = 1.dp)
-                            .size(if (isActive) 5.dp else 3.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isActive) {
-                                    if (m > 75) Color(0xFFFF1744) else Color(0xFF00C853)
-                                } else Color(0xFF1A1A1A)
-                            )
+                            .padding(vertical = 1.5.dp)
+                            .height(if (isActive) 4.dp else 2.dp)
+                            .fillMaxWidth(if (isActive) 0.8f else 0.5f)
+                            .clip(RoundedCornerShape(1.dp))
+                            .background(dotColor)
                     )
                 }
             }
@@ -717,14 +721,32 @@ private fun WaveformRuler(
         if (samples == 0) return@Canvas
 
         val pxPerSample = width / samples
+        
+        // Background subtle glow
+        drawRect(
+            brush = Brush.verticalGradient(
+                colors = listOf(Color(0xFF00C853).copy(alpha = 0.05f), Color.Transparent, Color(0xFF00C853).copy(alpha = 0.05f))
+            ),
+            size = size
+        )
+
         waveform.forEachIndexed { i, energy ->
             val x = i * pxPerSample
-            val barHeight = energy * height
+            val barHeight = (energy * height * 0.8f).coerceAtLeast(2f)
+            
+            // Draw dual-sided bars for a more premium "pro audio" look
             drawLine(
-                color = Color(0xFF00C853).copy(alpha = 0.4f),
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF00E676).copy(alpha = 0.8f),
+                        Color(0xFF00C853),
+                        Color(0xFF00E676).copy(alpha = 0.8f)
+                    )
+                ),
                 start = Offset(x, height / 2 - barHeight / 2),
                 end = Offset(x, height / 2 + barHeight / 2),
-                strokeWidth = 1f
+                strokeWidth = (pxPerSample * 0.7f).coerceAtLeast(1.5f),
+                cap = StrokeCap.Round
             )
         }
     }
