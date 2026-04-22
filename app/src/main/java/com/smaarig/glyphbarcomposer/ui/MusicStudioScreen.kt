@@ -234,9 +234,24 @@ private fun StudioHeader(uiState: MusicStudioUiState, viewModel: MusicStudioView
             if (uiState.musicEvents.isNotEmpty()) {
                 IconButton(
                     onClick = viewModel::saveMusicProject,
-                    modifier = Modifier.clip(CircleShape).background(Color(0x1A00C853))
+                    modifier = Modifier.clip(CircleShape).background(
+                        if (uiState.showSaveSuccess) Color(0xFF00C853) else Color(0x1A00C853)
+                    )
                 ) {
-                    Icon(Icons.Default.Save, null, tint = Color(0xFF00C853), modifier = Modifier.size(20.dp))
+                    AnimatedContent(
+                        targetState = uiState.showSaveSuccess,
+                        label = "saveIcon"
+                    ) { success ->
+                        if (success) {
+                            Icon(Icons.Default.CheckCircle, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                        } else {
+                            if (uiState.isSaving) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color(0xFF00C853), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.Save, null, tint = Color(0xFF00C853), modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    }
                 }
                 Spacer(Modifier.width(12.dp))
             }
@@ -253,42 +268,98 @@ private fun StudioHeader(uiState: MusicStudioUiState, viewModel: MusicStudioView
 @Composable
 private fun AnalyzerCard(uiState: MusicStudioUiState, visualizerData: List<Float>, viewModel: MusicStudioViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("AUDIO ANALYSIS", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Text("SYNC ENGINE", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         Surface(
             color = Color(0xFF111111),
             shape = RoundedCornerShape(24.dp),
             border = BorderStroke(1.dp, Color(0xFF222222))
         ) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 FrequencyBar(visualizerData)
                 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text("ACTIVE ALGORITHM", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                        Text(uiState.selectedAlgorithm.displayName.uppercase(), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                    // 1. Algorithm Dropdown
+                    var expanded by remember { mutableStateOf(false) }
+                    Box(modifier = Modifier.weight(1f)) {
+                        Surface(
+                            onClick = { expanded = true },
+                            color = Color(0xFF1A1A1A),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color(0xFF2A2A2A))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    uiState.selectedAlgorithm.displayName,
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Icon(Icons.Default.ArrowDropDown, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                        
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            modifier = Modifier.background(Color(0xFF1A1A1A)).border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(8.dp))
+                        ) {
+                            BeatAlgorithm.entries.forEach { algo ->
+                                DropdownMenuItem(
+                                    text = { Text(algo.displayName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp) },
+                                    onClick = {
+                                        viewModel.setAlgorithm(algo)
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (uiState.isAnalyzing) {
-                            CircularProgressIndicator(modifier = Modifier.size(12.dp), color = Color(0xFF00C853), strokeWidth = 2.dp)
-                        }
+                    // 2. Red Toggle (Mini)
+                    Box(
+                        modifier = Modifier
+                            .size(height = 42.dp, width = 56.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (uiState.includeRedGlyph) Color(0xFFFF1744).copy(0.15f) else Color(0xFF1A1A1A))
+                            .border(1.dp, if (uiState.includeRedGlyph) Color(0xFFFF1744).copy(0.5f) else Color(0xFF2A2A2A), RoundedCornerShape(12.dp))
+                            .clickable { viewModel.toggleRedGlyph(!uiState.includeRedGlyph) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Adjust, 
+                            null, 
+                            tint = if (uiState.includeRedGlyph) Color(0xFFFF1744) else Color(0xFF444444),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
 
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (uiState.includeRedGlyph) Color(0xFFFF1744) else Color(0xFF1A1A1A))
-                                .clickable { viewModel.toggleRedGlyph(!uiState.includeRedGlyph) }
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                        ) {
-                            Text(
-                                "RED",
-                                color = if (uiState.includeRedGlyph) Color.White else Color(0xFF555555),
-                                fontSize = 9.sp, fontWeight = FontWeight.Black
-                            )
+                    // 3. Generate Button
+                    Button(
+                        onClick = viewModel::reanalyze,
+                        enabled = !uiState.isAnalyzing,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White,
+                            contentColor = Color.Black,
+                            disabledContainerColor = Color(0xFF1A1A1A)
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.height(42.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp)
+                    ) {
+                        if (uiState.isAnalyzing) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.Black, strokeWidth = 2.dp)
+                        } else {
+                            Text("GENERATE", fontSize = 11.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -1143,8 +1214,10 @@ private fun AnalysisOverlay(algo: BeatAlgorithm, complete: Boolean) {
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("ANALYZING WITH ${algo.displayName.uppercase()}", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp, letterSpacing = 1.sp)
-                    Text(algo.description, color = Color(0xFF444444), fontSize = 12.sp, textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 50.dp), fontWeight = FontWeight.Bold)
+                    if (algo == BeatAlgorithm.MANUAL_EDIT) {
+                        Text(algo.description, color = Color(0xFF444444), fontSize = 12.sp, textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 50.dp), fontWeight = FontWeight.Bold)
+                    }
                 }
                 
                 CircularProgressIndicator(modifier = Modifier.size(32.dp), color = Color(0xFF00C853), strokeWidth = 3.dp)

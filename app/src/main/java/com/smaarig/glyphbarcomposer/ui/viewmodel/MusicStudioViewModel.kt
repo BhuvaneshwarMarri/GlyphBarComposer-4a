@@ -30,35 +30,35 @@ import kotlin.math.hypot
 
 enum class BeatAlgorithm(val displayName: String, val description: String) {
     MANUAL_EDIT(
-        "Manual Edit",
+        "FREESTYLE",
         "No auto-generation — fresh timeline for composers"
     ),
     PRO_SYNC_FFT(
-        "PRO Sync (FFT)",
+        "VIBE CHECK",
         "Mel-scale frequency bands with hysteresis — maps each instrument to its own LED"
     ),
     PEAK_DETECTION(
-        "Peak Detection",
+        "DRUM GO DUM",
         "Median-adaptive transient detector — precise on drums & fast transients"
     ),
     SPECTRAL_FLUX(
-        "Spectral Flux",
+        "EDM MAGIC",
         "Per-band half-wave rectified flux — best for EDM, electronic, synth-heavy music"
     ),
     VOLUME_HEIGHT(
-        "Volume Height",
+        "LOUDNESS",
         "Bar-graph mode — number of lit LEDs grows and shrinks with loudness in real time"
     ),
     BPM_GRID(
-        "BPM Grid",
+        "TEMPO TIK",
         "Onset-snapped tempo grid — fills patterns on every beat for steady-tempo tracks"
     ),
     ADAPTIVE_THRESHOLD(
-        "Adaptive",
+        "BRAINAF",
         "Local energy ratio threshold — self-calibrates across quiet and loud sections"
     ),
     MULTI_BAND(
-        "Multi-Band",
+        "DANCE FLOOR",
         "7-band equaliser display — all LEDs animate simultaneously as a live spectrum"
     )
 }
@@ -82,7 +82,9 @@ data class MusicStudioUiState(
     val bpmOverride: Int = 120,
     val defaultDurationMs: Int = 300,
     val selectedEventId: Long? = null,
-    val includeRedGlyph: Boolean = true
+    val includeRedGlyph: Boolean = true,
+    val isSaving: Boolean = false,
+    val showSaveSuccess: Boolean = false
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -135,6 +137,7 @@ class MusicStudioViewModel(
     // ── Actions ───────────────────────────────────────────────────────────────
 
     fun setAlgorithm(algo: BeatAlgorithm) {
+        if (_uiState.value.selectedAlgorithm == algo) return
         _uiState.update { it.copy(selectedAlgorithm = algo) }
     }
 
@@ -148,21 +151,6 @@ class MusicStudioViewModel(
 
     fun toggleRedGlyph(include: Boolean) {
         _uiState.update { it.copy(includeRedGlyph = include) }
-        if (!include) {
-            _composerIntensities.update { cur -> cur.toMutableList().apply { this[6] = 0 } }
-            _uiState.update { state ->
-                state.copy(
-                    musicEvents = state.musicEvents.map { event ->
-                        event.copy(channelIntensities = event.channelIntensities.toMutableMap().apply { remove(channels[6]) })
-                    }.filter { it.channelIntensities.isNotEmpty() }
-                )
-            }
-        } else {
-            // If turning RED on and we have a song, re-analyze to generate the red patterns
-            if (_uiState.value.audioUri != null) {
-                reanalyze()
-            }
-        }
     }
 
     fun selectEvent(event: MusicStudioEvent?) {
@@ -547,20 +535,29 @@ class MusicStudioViewModel(
 
     fun saveMusicProject() {
         val state = _uiState.value
-        val uri   = state.audioUri ?: return
+        val uri = state.audioUri ?: return
+        if (state.isSaving) return
+
+        _uiState.update { it.copy(isSaving = true) }
+
         viewModelScope.launch {
-            val dir  = File(getApplication<Application>().getExternalFilesDir(null), "MusicStudio").apply { mkdirs() }
+            val dir = File(getApplication<Application>().getExternalFilesDir(null), "MusicStudio").apply { mkdirs() }
             val file = File(dir, "audio_${System.currentTimeMillis()}.mp3")
             try {
                 getApplication<Application>().contentResolver.openInputStream(uri)?.use { ins ->
                     FileOutputStream(file).use { out -> ins.copyTo(out) }
                 }
-            } catch (e: Exception) { return@launch }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isSaving = false) }
+                return@launch
+            }
             repository.saveMusicProject(
                 MusicStudioProject(0, state.audioName ?: "Untitled", file.absolutePath, null),
                 state.musicEvents
             )
-            _uiState.update { it.copy(musicProjectSaved = true) }
+            _uiState.update { it.copy(isSaving = false, musicProjectSaved = true, showSaveSuccess = true) }
+            delay(3000)
+            _uiState.update { it.copy(showSaveSuccess = false) }
         }
     }
 
