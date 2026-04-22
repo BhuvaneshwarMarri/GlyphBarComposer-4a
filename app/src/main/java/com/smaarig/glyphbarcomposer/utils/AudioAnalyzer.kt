@@ -472,7 +472,7 @@ object AudioAnalyzer {
                     val info = MediaCodec.BufferInfo()
                     var extDone = false
                     var decDone = false
-                    val pcm = mutableListOf<Short>()
+                    val pcm = java.util.ArrayDeque<Short>() // Use ArrayDeque for O(1) removal
 
                     while (!decDone) {
                         if (!extDone) {
@@ -498,12 +498,8 @@ object AudioAnalyzer {
                             // Emit as many 50ms windows as we have buffered
                             while (pcm.size >= windowSizeSamples) {
                                 val window = ShortArray(windowSizeSamples)
-                                for (i in 0 until windowSizeSamples) window[i] = pcm[i]
+                                for (i in 0 until windowSizeSamples) window[i] = pcm.removeFirst()
                                 windows.add(window)
-                                
-                                // Proper non-overlapping or controlled overlapping sequence
-                                // Here we consume exactly 50ms to keep sync with timeline
-                                repeat(windowSizeSamples) { pcm.removeAt(0) }
                             }
 
                             codec.releaseOutputBuffer(outIdx, false)

@@ -1,5 +1,6 @@
 package com.smaarig.glyphbarcomposer.ui
 
+import android.content.res.Configuration
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -17,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,12 +38,15 @@ fun ComposerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRedOn by redViewModel.isRedOn.collectAsStateWithLifecycle()
+    
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Transparent)
-            .padding(horizontal = 20.dp, vertical = 24.dp)
+            .padding(horizontal = 20.dp, vertical = if (isLandscape) 16.dp else 24.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(24.dp)
@@ -83,117 +88,177 @@ fun ComposerScreen(
             }
         }
 
-        // Painter Card
-        Surface(
-            color = Color(0xFF111111),
-            shape = RoundedCornerShape(24.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF222222))
-        ) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("GLYPH PAINTER", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    IntensityLegend()
+        if (isLandscape) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                // Left Column: Painter
+                Box(modifier = Modifier.weight(1.2f)) {
+                    PainterCard(uiState, isRedOn, viewModel, redViewModel)
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // Right Column: Preview & Save
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    uiState.glyphIntensities.forEachIndexed { index, intensity ->
-                        val isRedGlyph = index == 6
-                        val finalIntensity = if (isRedGlyph) {
-                            if (intensity > 0 || isRedOn) 6 else 0
-                        } else intensity
-
-                        GlyphBox(
-                            label = if (isRedGlyph) "RED" else "A${index + 1}",
-                            intensity = finalIntensity,
-                            modifier = Modifier.weight(1f),
-                            onIntensityChange = { newIntensity ->
-                                if (isRedGlyph) {
-                                    redViewModel.setRed(newIntensity > 0)
-                                    viewModel.onIntensityChange(index, newIntensity)
-                                } else {
-                                    viewModel.onIntensityChange(index, newIntensity)
-                                }
-                            },
-                            enabled = !uiState.isPlaying,
-                            isRed = isRedGlyph
+                    if (uiState.currentSequenceSteps.isNotEmpty()) {
+                        TimelinePreviewSection(uiState, viewModel)
+                        SaveRow(
+                            name = uiState.sequenceName,
+                            onNameChange = viewModel::onSequenceNameChange,
+                            onSave = viewModel::savePlaylist,
+                            enabled = !uiState.isPlaying && uiState.sequenceName.isNotBlank()
                         )
+                    } else {
+                        EmptyTimelinePlaceholder()
                     }
                 }
+            }
+        } else {
+            // Portrait Layout
+            PainterCard(uiState, isRedOn, viewModel, redViewModel)
 
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Default.Timer, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
-                    Text("${uiState.durationMs.toInt()}ms", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(50.dp))
-                    Slider(
-                        value = uiState.durationMs,
-                        onValueChange = viewModel::onDurationChange,
-                        valueRange = 100f..2000f,
-                        steps = 18,
-                        enabled = !uiState.isPlaying,
-                        colors = SliderDefaults.colors(
-                            thumbColor = Color.White,
-                            activeTrackColor = Color.White,
-                            inactiveTrackColor = Color(0xFF222222)
-                        ),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                PlaybackControls(
-                    uiState = uiState,
-                    onAddStep = viewModel::addStep,
-                    onStartPlayback = { viewModel.startPlayback(uiState.currentSequenceSteps) },
-                    onTogglePause = viewModel::togglePause,
-                    onStopPlayback = viewModel::stopPlayback
+            if (uiState.currentSequenceSteps.isNotEmpty()) {
+                TimelinePreviewSection(uiState, viewModel)
+                SaveRow(
+                    name = uiState.sequenceName,
+                    onNameChange = viewModel::onSequenceNameChange,
+                    onSave = viewModel::savePlaylist,
+                    enabled = !uiState.isPlaying && uiState.sequenceName.isNotBlank()
                 )
             }
         }
 
-        // Sequence Preview
-        if (uiState.currentSequenceSteps.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("CURRENT TIMELINE", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    Text(
-                        "Clear",
-                        color = Color(0xFFFF5252),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable(enabled = !uiState.isPlaying) { viewModel.clearSequence() }
+        Spacer(Modifier.height(120.dp))
+    }
+}
+
+@Composable
+private fun PainterCard(
+    uiState: ComposerUiState,
+    isRedOn: Boolean,
+    viewModel: ComposerViewModel,
+    redViewModel: RedGlyphViewModel
+) {
+    Surface(
+        color = Color(0xFF111111),
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, Color(0xFF222222))
+    ) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("GLYPH PAINTER", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                IntensityLegend()
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                uiState.glyphIntensities.forEachIndexed { index, intensity ->
+                    val isRedGlyph = index == 6
+                    val finalIntensity = if (isRedGlyph) {
+                        if (intensity > 0 || isRedOn) 6 else 0
+                    } else intensity
+
+                    GlyphBox(
+                        label = if (isRedGlyph) "RED" else "A${index + 1}",
+                        intensity = finalIntensity,
+                        modifier = Modifier.weight(1f),
+                        onIntensityChange = { newIntensity ->
+                            if (isRedGlyph) {
+                                redViewModel.setRed(newIntensity > 0)
+                                viewModel.onIntensityChange(index, newIntensity)
+                            } else {
+                                viewModel.onIntensityChange(index, newIntensity)
+                            }
+                        },
+                        enabled = !uiState.isPlaying,
+                        isRed = isRedGlyph
                     )
                 }
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(uiState.currentSequenceSteps) { step ->
-                        StepPreviewBox(step)
-                    }
-                }
             }
-        }
 
-        // Save Row
-        if (uiState.currentSequenceSteps.isNotEmpty()) {
-            SaveRow(
-                name = uiState.sequenceName,
-                onNameChange = viewModel::onSequenceNameChange,
-                onSave = viewModel::savePlaylist,
-                enabled = !uiState.isPlaying && uiState.sequenceName.isNotBlank()
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Default.Timer, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                Text("${uiState.durationMs.toInt()}ms", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(50.dp))
+                Slider(
+                    value = uiState.durationMs,
+                    onValueChange = viewModel::onDurationChange,
+                    valueRange = 100f..2000f,
+                    steps = 18,
+                    enabled = !uiState.isPlaying,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color.White,
+                        activeTrackColor = Color.White,
+                        inactiveTrackColor = Color(0xFF222222)
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            PlaybackControls(
+                uiState = uiState,
+                onAddStep = viewModel::addStep,
+                onStartPlayback = { viewModel.startPlayback(uiState.currentSequenceSteps) },
+                onTogglePause = viewModel::togglePause,
+                onStopPlayback = viewModel::stopPlayback
             )
         }
+    }
+}
 
-        Spacer(Modifier.height(120.dp))
+@Composable
+private fun TimelinePreviewSection(uiState: ComposerUiState, viewModel: ComposerViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("CURRENT TIMELINE", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text(
+                "Clear",
+                color = Color(0xFFFF5252),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable(enabled = !uiState.isPlaying) { viewModel.clearSequence() }
+            )
+        }
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(uiState.currentSequenceSteps) { step ->
+                StepPreviewBox(step)
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyTimelinePlaceholder() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color(0xFF111111))
+            .border(BorderStroke(1.dp, Color(0xFF1A1A1A)), RoundedCornerShape(24.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Default.Layers, null, tint = Color(0xFF222222), modifier = Modifier.size(48.dp))
+            Spacer(Modifier.height(12.dp))
+            Text("Timeline is empty", color = Color(0xFF333333), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text("Add steps to build sequence", color = Color(0xFF222222), fontSize = 11.sp)
+        }
     }
 }
 

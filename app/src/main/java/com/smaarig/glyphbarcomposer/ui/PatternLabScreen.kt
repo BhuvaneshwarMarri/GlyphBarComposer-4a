@@ -1,5 +1,6 @@
 package com.smaarig.glyphbarcomposer.ui
 
+import android.content.res.Configuration
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -16,12 +17,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import com.smaarig.glyphbarcomposer.ui.viewmodel.PatternLabViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.PatternLabUiState
 
 @Composable
 fun PatternLabScreen(viewModel: PatternLabViewModel) {
@@ -29,13 +32,16 @@ fun PatternLabScreen(viewModel: PatternLabViewModel) {
     val allPlaylists by viewModel.allPlaylists.collectAsStateWithLifecycle(initialValue = emptyList())
     var showDialogA by remember { mutableStateOf(false) }
     var showDialogB by remember { mutableStateOf(false) }
+    
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(28.dp)
+                .padding(horizontal = 20.dp, vertical = if (isLandscape) 12.dp else 24.dp),
+            verticalArrangement = Arrangement.spacedBy(if (isLandscape) 16.dp else 28.dp)
         ) {
             // Header
             Row(
@@ -76,56 +82,110 @@ fun PatternLabScreen(viewModel: PatternLabViewModel) {
                 modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                BaseControlCard(
-                    title = "BASE A",
-                    name = uiState.selectedPlaylistA?.playlist?.name,
-                    speed = uiState.speedMultiplierA,
-                    brightness = uiState.brightnessA,
-                    repeats = uiState.repeatsA,
-                    inverted = uiState.isInvertedA,
-                    mirrored = uiState.isMirroredA,
-                    onPick = { showDialogA = true },
-                    onSpeedChange = viewModel::onSpeedMultiplierAChange,
-                    onBrightnessChange = viewModel::onBrightnessAChange,
-                    onRepeatsChange = viewModel::onRepeatsAChange,
-                    onInvertChange = viewModel::onInvertAChange,
-                    onMirrorChange = viewModel::onMirrorAChange
-                )
+                if (isLandscape) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
+                        // Left Column: Controls
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(20.dp)
+                        ) {
+                            BaseControlCard(
+                                title = "BASE A",
+                                name = uiState.selectedPlaylistA?.playlist?.name,
+                                speed = uiState.speedMultiplierA,
+                                brightness = uiState.brightnessA,
+                                repeats = uiState.repeatsA,
+                                inverted = uiState.isInvertedA,
+                                mirrored = uiState.isMirroredA,
+                                onPick = { showDialogA = true },
+                                onSpeedChange = viewModel::onSpeedMultiplierAChange,
+                                onBrightnessChange = viewModel::onBrightnessAChange,
+                                onRepeatsChange = viewModel::onRepeatsAChange,
+                                onInvertChange = viewModel::onInvertAChange,
+                                onMirrorChange = viewModel::onMirrorAChange
+                            )
+                            BaseControlCard(
+                                title = "BASE B",
+                                name = uiState.selectedPlaylistB?.playlist?.name,
+                                speed = uiState.speedMultiplierB,
+                                brightness = uiState.brightnessB,
+                                repeats = uiState.repeatsB,
+                                inverted = uiState.isInvertedB,
+                                mirrored = uiState.isMirroredB,
+                                onPick = { showDialogB = true },
+                                onSpeedChange = viewModel::onSpeedMultiplierBChange,
+                                onBrightnessChange = viewModel::onBrightnessBChange,
+                                onRepeatsChange = viewModel::onRepeatsBChange,
+                                onInvertChange = viewModel::onInvertBChange,
+                                onMirrorChange = viewModel::onMirrorBChange
+                            )
+                        }
 
-                BaseControlCard(
-                    title = "BASE B",
-                    name = uiState.selectedPlaylistB?.playlist?.name,
-                    speed = uiState.speedMultiplierB,
-                    brightness = uiState.brightnessB,
-                    repeats = uiState.repeatsB,
-                    inverted = uiState.isInvertedB,
-                    mirrored = uiState.isMirroredB,
-                    onPick = { showDialogB = true },
-                    onSpeedChange = viewModel::onSpeedMultiplierBChange,
-                    onBrightnessChange = viewModel::onBrightnessBChange,
-                    onRepeatsChange = viewModel::onRepeatsBChange,
-                    onInvertChange = viewModel::onInvertBChange,
-                    onMirrorChange = viewModel::onMirrorBChange
-                )
-
-                // Merge Mode
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("MERGE MODE", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ModeButton("Sequential", !uiState.isLayered, Modifier.weight(1f)) { viewModel.onMergeModeChange(false) }
-                        ModeButton("Layered", uiState.isLayered, Modifier.weight(1f)) { viewModel.onMergeModeChange(true) }
+                        // Right Column: Merge & Save
+                        Column(
+                            modifier = Modifier.weight(0.8f),
+                            verticalArrangement = Arrangement.spacedBy(24.dp)
+                        ) {
+                            MergeModeSection(uiState, viewModel)
+                            if (uiState.previewSteps.isNotEmpty()) {
+                                SaveResultSection(
+                                    name = uiState.resultName,
+                                    onNameChange = viewModel::onResultNameChange,
+                                    onSave = viewModel::saveResult,
+                                    isPlaying = uiState.isPlaying,
+                                    onTogglePreview = viewModel::togglePreview
+                                )
+                            }
+                        }
                     }
-                }
-
-                // Preview & Save Result
-                if (uiState.previewSteps.isNotEmpty()) {
-                    SaveResultSection(
-                        name = uiState.resultName,
-                        onNameChange = viewModel::onResultNameChange,
-                        onSave = viewModel::saveResult,
-                        isPlaying = uiState.isPlaying,
-                        onTogglePreview = viewModel::togglePreview
+                } else {
+                    // Portrait Layout
+                    BaseControlCard(
+                        title = "BASE A",
+                        name = uiState.selectedPlaylistA?.playlist?.name,
+                        speed = uiState.speedMultiplierA,
+                        brightness = uiState.brightnessA,
+                        repeats = uiState.repeatsA,
+                        inverted = uiState.isInvertedA,
+                        mirrored = uiState.isMirroredA,
+                        onPick = { showDialogA = true },
+                        onSpeedChange = viewModel::onSpeedMultiplierAChange,
+                        onBrightnessChange = viewModel::onBrightnessAChange,
+                        onRepeatsChange = viewModel::onRepeatsAChange,
+                        onInvertChange = viewModel::onInvertAChange,
+                        onMirrorChange = viewModel::onMirrorAChange
                     )
+
+                    BaseControlCard(
+                        title = "BASE B",
+                        name = uiState.selectedPlaylistB?.playlist?.name,
+                        speed = uiState.speedMultiplierB,
+                        brightness = uiState.brightnessB,
+                        repeats = uiState.repeatsB,
+                        inverted = uiState.isInvertedB,
+                        mirrored = uiState.isMirroredB,
+                        onPick = { showDialogB = true },
+                        onSpeedChange = viewModel::onSpeedMultiplierBChange,
+                        onBrightnessChange = viewModel::onBrightnessBChange,
+                        onRepeatsChange = viewModel::onRepeatsBChange,
+                        onInvertChange = viewModel::onInvertBChange,
+                        onMirrorChange = viewModel::onMirrorBChange
+                    )
+
+                    MergeModeSection(uiState, viewModel)
+
+                    if (uiState.previewSteps.isNotEmpty()) {
+                        SaveResultSection(
+                            name = uiState.resultName,
+                            onNameChange = viewModel::onResultNameChange,
+                            onSave = viewModel::saveResult,
+                            isPlaying = uiState.isPlaying,
+                            onTogglePreview = viewModel::togglePreview
+                        )
+                    }
                 }
                 
                 Spacer(Modifier.height(120.dp))
@@ -152,6 +212,17 @@ fun PatternLabScreen(viewModel: PatternLabViewModel) {
             },
             onDismiss = { showDialogB = false }
         )
+    }
+}
+
+@Composable
+private fun MergeModeSection(uiState: PatternLabUiState, viewModel: PatternLabViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("MERGE MODE", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            ModeButton("Sequential", !uiState.isLayered, Modifier.weight(1f)) { viewModel.onMergeModeChange(false) }
+            ModeButton("Layered", uiState.isLayered, Modifier.weight(1f)) { viewModel.onMergeModeChange(true) }
+        }
     }
 }
 

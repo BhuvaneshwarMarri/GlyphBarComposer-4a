@@ -2,6 +2,7 @@ package com.smaarig.glyphbarcomposer.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -27,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +61,9 @@ fun MusicStudioScreen(
     val audioPositionMs by viewModel.audioPositionMs.collectAsStateWithLifecycle()
     val composerIntensities by viewModel.composerIntensities.collectAsStateWithLifecycle()
     val liveGlyphIntensities by viewModel.liveGlyphIntensities.collectAsStateWithLifecycle()
+    
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val context = LocalContext.current
     var hasPermission by remember {
@@ -70,7 +75,7 @@ fun MusicStudioScreen(
     }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted ->
+    ) { granted: Boolean ->
         hasPermission = granted
         if (granted) viewModel.retryVisualizerSetup()
     }
@@ -81,15 +86,15 @@ fun MusicStudioScreen(
     val fileLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
+        uri?.let { u ->
             if (!hasPermission) permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-            val name = context.contentResolver.query(it, null, null, null, null)?.use { cur ->
+            val name = context.contentResolver.query(u, null, null, null, null)?.use { cur ->
                 if (cur.moveToFirst()) {
                     val idx = cur.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                     if (idx >= 0) cur.getString(idx) else "Unknown Song"
                 } else "Unknown Song"
             } ?: "Unknown Song"
-            viewModel.loadSong(it, name)
+            viewModel.loadSong(u, name)
         }
     }
 
@@ -97,104 +102,80 @@ fun MusicStudioScreen(
         if (uiState.audioUri == null) {
             EmptyStudioState(onPickFile = { fileLauncher.launch("audio/*") })
         } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(28.dp)
-            ) {
-                // Header
+            if (isLandscape) {
+                // Split-pane Landscape Layout
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    Column {
-                        Text(
-                            "GLYPH STUDIO",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 2.sp,
-                            fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
-                        )
-                        Text(
-                            "Sync patterns to audio",
-                            color = Color.Gray,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        )
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (uiState.musicEvents.isNotEmpty()) {
-                            IconButton(
-                                onClick = viewModel::saveMusicProject,
-                                modifier = Modifier.clip(CircleShape).background(Color(0x1A00C853))
-                            ) {
-                                Icon(Icons.Default.Save, null, tint = Color(0xFF00C853), modifier = Modifier.size(20.dp))
-                            }
-                            Spacer(Modifier.width(12.dp))
-                        }
-                        IconButton(
-                            onClick = viewModel::clearAllMusicEvents,
-                            modifier = Modifier.clip(CircleShape).background(Color(0x1AFF5252))
-                        ) {
-                            Icon(Icons.Default.DeleteSweep, null, tint = Color(0xFFFF5252), modifier = Modifier.size(20.dp))
-                        }
-                    }
-                }
-
-                // Player Card
-                StudioPlayerCard(
-                    uiState = uiState,
-                    audioPositionMs = audioPositionMs,
-                    onPlayPause = viewModel::toggleMusicPlayback,
-                    onSeek = viewModel::seekMusic,
-                    onChangeAudio = { fileLauncher.launch("audio/*") }
-                )
-
-                // Analyzer Card
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("AUDIO ANALYSIS", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    
-                    Surface(
-                        color = Color(0xFF111111),
-                        shape = RoundedCornerShape(24.dp),
-                        border = BorderStroke(1.dp, Color(0xFF222222))
+                    // Left Pane: Info & Audio Controls (Scrollable)
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            FrequencyBar(visualizerData)
-                            
-                            AlgorithmRow(
-                                selected = uiState.selectedAlgorithm,
-                                bpm = uiState.bpmOverride,
-                                isAnalyzing = uiState.isAnalyzing,
-                                includeRedGlyph = uiState.includeRedGlyph,
-                                onSelect = { viewModel.setAlgorithm(it); viewModel.reanalyze() },
-                                onBpmChange = viewModel::setBpmOverride,
-                                onToggleRedGlyph = viewModel::toggleRedGlyph
-                            )
-                        }
+                        StudioHeader(uiState, viewModel)
+                        
+                        StudioPlayerCard(
+                            uiState = uiState,
+                            audioPositionMs = audioPositionMs,
+                            onPlayPause = viewModel::toggleMusicPlayback,
+                            onSeek = viewModel::seekMusic,
+                            onChangeAudio = { fileLauncher.launch("audio/*") }
+                        )
+
+                        AnalyzerCard(uiState, visualizerData, viewModel)
+                    }
+
+                    // Right Pane: Editor & Composer (Scrollable)
+                    Column(
+                        modifier = Modifier
+                            .weight(1.2f)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
+                        TimelineCard(uiState, audioPositionMs, viewModel)
+                        
+                        ComposerPanel(
+                            intensities = composerIntensities,
+                            liveIntensities = liveGlyphIntensities,
+                            isPlaying = uiState.isAudioPlaying,
+                            isReady = uiState.isAnalysisComplete,
+                            isSelected = uiState.selectedEventId != null,
+                            defaultDuration = uiState.defaultDurationMs,
+                            onIntensityChange = viewModel::onComposerIntensityChange,
+                            onDurationChange = viewModel::setDefaultDuration,
+                            onClear = viewModel::clearComposer,
+                            onInsert = viewModel::addMusicEvent
+                        )
+                        
+                        Spacer(Modifier.height(80.dp))
                     }
                 }
+            } else {
+                // Portrait Layout
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(28.dp)
+                ) {
+                    StudioHeader(uiState, viewModel)
 
-                // Timeline Editor
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("TIMELINE", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    StudioTimelineEditor(
+                    StudioPlayerCard(
                         uiState = uiState,
                         audioPositionMs = audioPositionMs,
-                        viewModel = viewModel,
-                        modifier = Modifier.height(280.dp)
+                        onPlayPause = viewModel::toggleMusicPlayback,
+                        onSeek = viewModel::seekMusic,
+                        onChangeAudio = { fileLauncher.launch("audio/*") }
                     )
-                }
 
-                // Composer Card
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("GLYPH PAINTER", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    AnalyzerCard(uiState, visualizerData, viewModel)
                     
+                    TimelineCard(uiState, audioPositionMs, viewModel)
+
                     ComposerPanel(
                         intensities = composerIntensities,
                         liveIntensities = liveGlyphIntensities,
@@ -207,15 +188,97 @@ fun MusicStudioScreen(
                         onClear = viewModel::clearComposer,
                         onInsert = viewModel::addMusicEvent
                     )
+                    
+                    Spacer(Modifier.height(120.dp))
                 }
-                
-                Spacer(Modifier.height(120.dp)) // Increased space for floating nav bar
             }
         }
 
         AnimatedVisibility(visible = uiState.isAnalyzing, enter = fadeIn(), exit = fadeOut()) {
             AnalysisOverlay(uiState.selectedAlgorithm, uiState.isAnalysisComplete)
         }
+    }
+}
+
+@Composable
+private fun StudioHeader(uiState: MusicStudioUiState, viewModel: MusicStudioViewModel) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column {
+            Text(
+                "GLYPH STUDIO",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.sp,
+                fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
+            )
+            Text(
+                "Sync patterns to audio",
+                color = Color.Gray,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (uiState.musicEvents.isNotEmpty()) {
+                IconButton(
+                    onClick = viewModel::saveMusicProject,
+                    modifier = Modifier.clip(CircleShape).background(Color(0x1A00C853))
+                ) {
+                    Icon(Icons.Default.Save, null, tint = Color(0xFF00C853), modifier = Modifier.size(20.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+            }
+            IconButton(
+                onClick = viewModel::clearAllMusicEvents,
+                modifier = Modifier.clip(CircleShape).background(Color(0x1AFF5252))
+            ) {
+                Icon(Icons.Default.DeleteSweep, null, tint = Color(0xFFFF5252), modifier = Modifier.size(20.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnalyzerCard(uiState: MusicStudioUiState, visualizerData: List<Float>, viewModel: MusicStudioViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("AUDIO ANALYSIS", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Surface(
+            color = Color(0xFF111111),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, Color(0xFF222222))
+        ) {
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                FrequencyBar(visualizerData)
+                AlgorithmRow(
+                    selected = uiState.selectedAlgorithm,
+                    bpm = uiState.bpmOverride,
+                    isAnalyzing = uiState.isAnalyzing,
+                    includeRedGlyph = uiState.includeRedGlyph,
+                    onSelect = { viewModel.setAlgorithm(it); viewModel.reanalyze() },
+                    onBpmChange = viewModel::setBpmOverride,
+                    onToggleRedGlyph = viewModel::toggleRedGlyph
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimelineCard(uiState: MusicStudioUiState, audioPositionMs: Int, viewModel: MusicStudioViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("TIMELINE", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        StudioTimelineEditor(
+            uiState = uiState,
+            audioPositionMs = audioPositionMs,
+            viewModel = viewModel,
+            modifier = Modifier.height(280.dp)
+        )
     }
 }
 

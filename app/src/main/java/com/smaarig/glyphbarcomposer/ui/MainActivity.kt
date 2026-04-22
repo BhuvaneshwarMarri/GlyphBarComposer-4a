@@ -1,26 +1,15 @@
 package com.smaarig.glyphbarcomposer.ui
 
-import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MusicNote
@@ -30,14 +19,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -47,8 +33,6 @@ import androidx.navigation.compose.rememberNavController
 import com.smaarig.glyphbarcomposer.ui.theme.GlyphBarComposerTheme
 import com.smaarig.glyphbarcomposer.GlyphApplication
 import com.smaarig.glyphbarcomposer.ui.viewmodel.*
-import com.smaarig.glyphbarcomposer.controller.GlyphController
-import com.smaarig.glyphbarcomposer.service.BatteryService
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -76,125 +60,81 @@ fun MainApp() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    
-    val isSplashScreen = currentRoute == Screen.SplashScreen.route
+    val orientation = rememberAppOrientation()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = Color(0xFF0A0A0A), // Revert to solid background for Scaffold
-        topBar = {
-            if (!isSplashScreen) {
-                GlyphPreviewBar()
-            }
-        },
-        bottomBar = {
-            if (!isSplashScreen) {
+    val isSplashScreen = currentRoute == Screen.SplashScreen.route
+    val screens = listOf(
+        Screen.Composer,
+        Screen.PatternLab,
+        Screen.MusicStudio,
+        Screen.Library
+    )
+
+    if (orientation == AppOrientation.Landscape && !isSplashScreen) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            ModernNavigationRail(navController, screens)
+            Scaffold(
+                modifier = Modifier.weight(1f),
+                containerColor = Color(0xFF0A0A0A),
+                topBar = {
+                    Surface(
+                        color = Color(0xFF0A0A0A),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column {
+                            Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+                            GlyphPreviewBar()
+                        }
+                    }
+                }
+            ) { innerPadding ->
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.Transparent)
-                        .navigationBarsPadding()
-                        .padding(horizontal = 24.dp, vertical = 20.dp)
+                        .fillMaxSize()
+                        .padding(innerPadding)
                 ) {
-                    ModernBottomNavigationBar(navController)
+                    NavHostContainer(navController, Modifier.fillMaxSize())
                 }
             }
         }
-    ) { innerPadding ->
-        NavHostContainer(
-            navController, 
-            Modifier
-                .fillMaxSize()
-                .padding(top = innerPadding.calculateTopPadding())
-        )
-    }
-}
-
-@Composable
-fun GlyphPreviewBar() {
-    val context = LocalContext.current
-    val glyphController = remember { GlyphController.getInstance(context) }
-    val intensities by glyphController.currentIntensities.collectAsState()
-    val isBatteryEnabled by glyphController.isBatteryFeatureEnabled.collectAsState()
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            glyphController.toggleBatteryFeature(true)
-            context.startForegroundService(Intent(context, BatteryService::class.java))
-        }
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        // Left spacer to balance the switch on the right
-        Box(modifier = Modifier.width(70.dp))
-
-        // Center: Glyph Squares
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            intensities.forEachIndexed { index, intensity ->
-                val isRedGlyph = index == 6
-                val finalIntensity = if (isRedGlyph && intensity > 0 && intensity < 4) 6 else intensity
-                val color = intensityColor.getOrElse(finalIntensity) { Color(0xFF1C1C1C) }
-
-                Box(
-                    modifier = Modifier
-                        .size(16.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(color)
-                )
-            }
-        }
-
-        // Right: Battery Toggle
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.End,
-            modifier = Modifier.width(70.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.BatteryChargingFull,
-                contentDescription = "Battery Sync",
-                tint = if (isBatteryEnabled) Color(0xFF00C853) else Color.Gray,
-                modifier = Modifier.size(16.dp)
-            )
-            Switch(
-                checked = isBatteryEnabled,
-                onCheckedChange = { enabled ->
-                    if (enabled) {
-                        val hasPermission = ContextCompat.checkSelfPermission(
-                            context, Manifest.permission.POST_NOTIFICATIONS
-                        ) == PackageManager.PERMISSION_GRANTED
-                        
-                        if (!hasPermission) {
-                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            return@Switch
+    } else {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color(0xFF0A0A0A),
+            topBar = {
+                if (!isSplashScreen) {
+                    Surface(
+                        color = Color(0xFF0A0A0A),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column {
+                            Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+                            GlyphPreviewBar()
                         }
-                        glyphController.toggleBatteryFeature(true)
-                        context.startForegroundService(Intent(context, BatteryService::class.java))
-                    } else {
-                        glyphController.toggleBatteryFeature(false)
-                        context.stopService(Intent(context, BatteryService::class.java))
                     }
-                },
-                modifier = Modifier.scale(0.6f),
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = Color(0xFF00C853),
-                    uncheckedThumbColor = Color.Gray,
-                    uncheckedTrackColor = Color(0xFF333333)
-                )
-            )
+                }
+            },
+            bottomBar = {
+                if (!isSplashScreen) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.Transparent)
+                            .windowInsetsPadding(WindowInsets.navigationBars)
+                            .padding(horizontal = 24.dp, vertical = 20.dp)
+                    ) {
+                        ModernBottomNavigationBar(navController, screens)
+                    }
+                }
+            }
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                NavHostContainer(navController, Modifier.fillMaxSize())
+            }
         }
     }
 }
@@ -270,7 +210,6 @@ fun NavHostContainer(
 
 @Composable
 fun SplashScreen(onTimeout: () -> Unit) {
-    // 7 squares animation
     val squareCount = 7
     val animationStates = List(squareCount) { index ->
         rememberInfiniteTransition(label = "square_$index").animateFloat(
@@ -305,7 +244,6 @@ fun SplashScreen(onTimeout: () -> Unit) {
             
             Spacer(modifier = Modifier.height(48.dp))
             
-            // 7 Loading Squares
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 animationStates.forEachIndexed { index, alpha ->
                     val color = if (index == 6) Color(0xFFFF1744) else Color.White
@@ -326,70 +264,6 @@ fun SplashScreen(onTimeout: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 letterSpacing = 1.sp
             )
-        }
-    }
-}
-
-@Composable
-fun ModernBottomNavigationBar(navController: NavHostController) {
-    val screens = listOf(
-        Screen.Composer,
-        Screen.PatternLab,
-        Screen.MusicStudio,
-        Screen.Library
-    )
-
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
-    Surface(
-        modifier = Modifier
-            .height(72.dp) // Slightly taller
-            .fillMaxWidth(),
-        color = Color(0xFF111111).copy(alpha = 0.85f),
-        shape = RoundedCornerShape(36.dp),
-        border = BorderStroke(1.dp, Color(0xFF222222))
-    ) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            screens.forEach { screen ->
-                val selected = currentRoute == screen.route
-                val animatedScale by animateFloatAsState(if (selected) 1.15f else 1f)
-                val animatedColor by animateColorAsState(if (selected) Color.White else Color.Gray)
-
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .clickable {
-                            if (currentRoute != screen.route) {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.startDestinationId)
-                                    launchSingleTop = true
-                                }
-                            }
-                        }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Icon(
-                        imageVector = screen.icon,
-                        contentDescription = null,
-                        tint = animatedColor,
-                        modifier = Modifier.size(24.dp).scale(animatedScale)
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = screen.label.uppercase(),
-                        color = animatedColor,
-                        fontSize = 8.sp,
-                        fontWeight = if (selected) FontWeight.Black else FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    )
-                }
-            }
         }
     }
 }
