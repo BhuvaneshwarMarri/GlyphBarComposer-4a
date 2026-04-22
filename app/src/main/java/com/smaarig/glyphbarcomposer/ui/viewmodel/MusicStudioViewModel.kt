@@ -486,25 +486,44 @@ class MusicStudioViewModel(
     // ─────────────────────────────────────────────────────────────────────────
 
     private fun analyzeFft(fft: ByteArray) {
-        val n          = fft.size
-        val barsCount  = 16
-        val groupSize  = (n / 2) / barsCount
-        val magnitudes = (0 until barsCount).map { i ->
-            var sum = 0f
+        val n         = fft.size
+        val barsCount = 16
+        // Android Visualizer FFT layout:
+        //   fft[0]      = DC real (no imaginary)
+        //   fft[1]      = Nyquist real (no imaginary)  
+        //   fft[2k], fft[2k+1] = real, imag of bin k  (k = 1 .. n/2-1)
+        // Bytes are SIGNED (-128..127). Cast to unsigned before magnitude.
+        val totalBins = (n / 2).coerceAtLeast(1)
+        val groupSize = (totalBins / barsCount).coerceAtLeast(1)
+
+        val magnitudes = (0 until barsCount).map { bar ->
+            var maxMag = 0f
             for (j in 0 until groupSize) {
-                val idx = (i * groupSize + j) * 2
-                if (idx + 1 < n) sum += hypot(fft[idx].toFloat(), fft[idx + 1].toFloat())
+                val bin = bar * groupSize + j + 1   // skip DC bin 0
+                val re  = bin * 2
+                val im  = re + 1
+                if (im < n) {
+                    // toInt() and 0xFF converts signed byte → unsigned 0..255
+                    val real = (fft[re].toInt() and 0xFF).toFloat()
+                    val imag = (fft[im].toInt() and 0xFF).toFloat()
+                    val mag  = hypot(real, imag)
+                    if (mag > maxMag) maxMag = mag
+                }
             }
-            (sum / groupSize).coerceIn(0f, 150f)
+            // Log-scale so quiet passages stay visible; output is 0–255
+            val logMag = if (maxMag > 1f)
+                (Math.log10(maxMag.toDouble()) / Math.log10(362.0) * 255f).toFloat()
+            else 0f
+            logMag.coerceIn(0f, 255f)
         }
         _visualizerData.value = magnitudes
 
         val state = _uiState.value
-        // Live mode: only drive glyphs directly when playing and no events are queued
         if (!state.isAudioPlaying || state.musicEvents.isNotEmpty() || state.selectedAlgorithm == BeatAlgorithm.MANUAL_EDIT) return
 
         val now = System.currentTimeMillis()
-        val freqIndices = listOf(15, 12, 9, 6, 3, 1, 0)   // high→low frequency per channel
+        // Remap frequency indices for 0-255 magnitudes (threshold now ~30 instead of 10)
+        val freqIndices = listOf(15, 12, 9, 6, 3, 1, 0)
         val detected = MutableList(7) { 0 }
         var anyBeat = false
 
@@ -512,8 +531,12 @@ class MusicStudioViewModel(
             val energy  = magnitudes[freqIdx]
             val history = energyHistory[i]
             val avg     = if (history.isEmpty()) 0f else history.average().toFloat()
-            if (energy > avg * (if (i < 6) SENSITIVITY else 1.4f) && energy > 10f) {
-                detected[i] = if (energy > 70f) 3 else if (energy > 30f) 2 else 1
+            if (energy > avg * (if (i < 6) SENSITIVITY else 1.4f) && energy > 30f) {
+                detected[i] = when {
+                    energy > 180f -> 3
+                    energy > 100f -> 2
+                    else          -> 1
+                }
                 anyBeat = true
             }
             history.add(energy)

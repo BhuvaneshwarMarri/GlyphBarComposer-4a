@@ -569,38 +569,37 @@ private fun FrequencyBar(magnitudes: List<Float>, modifier: Modifier = Modifier)
         verticalAlignment = Alignment.Bottom
     ) {
         magnitudes.forEachIndexed { i, m ->
+            var lastM by remember { mutableFloatStateOf(0f) }
+            val isRising = m > lastM
+            
             val h by animateFloatAsState(
-                targetValue = (m / 150f).coerceIn(0.1f, 1f),
-                animationSpec = spring(dampingRatio = 0.5f, stiffness = 600f),
+                targetValue = (m / 255f).coerceIn(0.04f, 1f),
+                animationSpec = if (isRising) {
+                    tween(80, easing = FastOutLinearInEasing)
+                } else {
+                    spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow)
+                },
                 label = "fq_$i"
             )
             
-            Column(
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-                verticalArrangement = Arrangement.Bottom,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Dot matrix effect - taller and more reactive
-                val dotCount = 8
-                val activeDots = (h * dotCount).toInt().coerceAtLeast(1)
-                repeat(dotCount) { dotIdx ->
-                    val isActive = (dotCount - dotIdx) <= activeDots
-                    val dotColor = if (isActive) {
-                        if (m > 100) Color(0xFFFF1744) 
-                        else if (m > 60) Color(0xFF00E676)
-                        else Color(0xFF00C853)
-                    } else Color(0xFF161616)
-                    
-                    Box(
-                        modifier = Modifier
-                            .padding(vertical = 1.5.dp)
-                            .height(if (isActive) 4.dp else 2.dp)
-                            .fillMaxWidth(if (isActive) 0.8f else 0.5f)
-                            .clip(RoundedCornerShape(1.dp))
-                            .background(dotColor)
+            SideEffect { lastM = m }
+            
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(h)
+                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = when {
+                                m > 200f -> listOf(Color(0xFFFF1744), Color(0xFFFF5252)) // Red/Clipping
+                                m > 150f -> listOf(Color(0xFFFFFF00), Color(0xFFFFEA00)) // Yellow/Peak
+                                m > 40f -> listOf(Color(0xFFFFD600), Color(0xFFFFC400))  // Yellow/Normal
+                                else -> listOf(Color(0xFF1A1A1A), Color(0xFF0F0F0F))     // Dim/Idle
+                            }
+                        )
                     )
-                }
-            }
+            )
         }
     }
 }
