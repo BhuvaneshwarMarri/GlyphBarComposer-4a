@@ -42,6 +42,9 @@ interface PlaylistDao {
     @Delete
     suspend fun deleteMusicProject(project: MusicStudioProject)
 
+    @Update
+    suspend fun updateMusicProject(project: MusicStudioProject)
+
     // Contact Ringtone Bindings
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertContactBinding(binding: ContactBinding)

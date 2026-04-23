@@ -1,5 +1,6 @@
 package com.smaarig.glyphbarcomposer.ui
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -45,6 +47,12 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Update the activity's intent so the LaunchedEffect in MainApp picks it up
+        setIntent(intent)
+    }
 }
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
@@ -57,10 +65,61 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
 
 @Composable
 fun MainApp() {
+    val context = LocalContext.current
+    val activity = LocalActivity.current as ComponentActivity
+    val app = activity.application as GlyphApplication
+    val factory = GlyphViewModelFactory(app, app.repository)
+    val libraryViewModel: LibraryViewModel = viewModel(
+        viewModelStoreOwner = activity,
+        factory = factory
+    )
+
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val orientation = rememberAppOrientation()
+
+    // ── Incoming file intent handler ─────────────────────────────────────────
+    // Triggered on cold start and whenever onNewIntent fires (setIntent updates activity.intent).
+    // Handles both ACTION_VIEW (open file) and ACTION_SEND (share sheet).
+    LaunchedEffect(activity.intent) {
+        val intent = activity.intent ?: return@LaunchedEffect
+
+        val uri: android.net.Uri? = when (intent.action) {
+            Intent.ACTION_VIEW -> intent.data
+
+            Intent.ACTION_SEND -> {
+                // URI is carried in EXTRA_STREAM for file shares
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(Intent.EXTRA_STREAM)
+            }
+
+            else -> null
+        }
+
+        if (uri != null) {
+            // Try to take persistable permission (only granted by some providers).
+            // Silently ignore if not offered — transient access is enough for import.
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: SecurityException) { }
+
+            libraryViewModel.importItem(context, uri)
+
+            // Clear the intent so recompositions don't re-trigger the import
+            activity.intent = Intent()
+
+            // Navigate to Library so the user sees the imported item
+            navController.navigate(Screen.Library.route) {
+                // Don't pop splash if it hasn't finished yet — just avoid stacking Library twice
+                launchSingleTop = true
+            }
+        }
+    }
+    // ── End intent handler ───────────────────────────────────────────────────
 
     val isSplashScreen = currentRoute == Screen.SplashScreen.route
     val screens = listOf(
@@ -71,12 +130,10 @@ fun MainApp() {
     )
 
     if (orientation == AppOrientation.Landscape && !isSplashScreen) {
-        // Landscape: fixed TopBar, sidebar NavigationRail
         Row(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFF0A0A0A))
-                // Apply horizontal insets (for notches) and bottom insets
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
         ) {
             ModernNavigationRail(navController, screens)
@@ -105,7 +162,6 @@ fun MainApp() {
             }
         }
     } else {
-        // Portrait: fixed TopBar, hovering Bottom NavBar
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = Color(0xFF0A0A0A),
@@ -127,11 +183,9 @@ fun MainApp() {
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                // Content layer — fills the whole screen including behind hovering bars
                 NavHostContainer(navController, Modifier.fillMaxSize())
 
                 if (!isSplashScreen) {
-                    // Bottom navbar floats over content — pill with shadow
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()

@@ -36,6 +36,11 @@ class GlyphRepository(private val playlistDao: PlaylistDao) {
         playlistDao.deleteMusicProject(project)
     }
 
+    suspend fun updateMusicProject(project: MusicStudioProject) {
+        Log.d(TAG, "Updating music project: ${project.name}")
+        playlistDao.updateMusicProject(project)
+    }
+
     suspend fun saveEventBinding(binding: EventBinding) {
         Log.d(TAG, "Saving event binding for ID: ${binding.eventId}")
         playlistDao.insertEventBinding(binding)

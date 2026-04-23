@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.io.File
 import com.smaarig.glyphbarcomposer.data.MusicProjectWithEvents
 import com.smaarig.glyphbarcomposer.data.MusicStudioProject
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
@@ -278,20 +279,24 @@ private fun LibraryHeader(onImport: () -> Unit, onStopAll: () -> Unit, isAnyPlay
                 fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
             )
             Text(
-                "Your creations",
+                "Manage your creations",
                 color = Color.Gray,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.5.sp
+                fontWeight = FontWeight.Bold
             )
         }
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            IconButton(
+            // Import Button with Label
+            Button(
                 onClick = onImport,
-                modifier = Modifier.clip(CircleShape).background(Color(0x1A82AAFF))
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A1A), contentColor = Color.White),
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                Icon(Icons.Default.FileUpload, null, tint = Color(0xFF82AAFF), modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.FileUpload, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("IMPORT", fontSize = 10.sp, fontWeight = FontWeight.Black)
             }
 
             if (isAnyPlaying) {
@@ -334,16 +339,46 @@ private fun SequencesTab(isPlaying: Boolean, isPaused: Boolean, activeId: Long?,
 }
 
 @Composable
-private fun StudioTab(isPlaying: Boolean, activeId: Long?, projects: List<MusicProjectWithEvents>, viewModel: MusicStudioViewModel, onShare: (MusicProjectWithEvents) -> Unit) {
+private fun StudioTab(
+    isPlaying: Boolean,
+    activeId: Long?,
+    projects: List<MusicProjectWithEvents>,
+    viewModel: MusicStudioViewModel,
+    onShare: (MusicProjectWithEvents) -> Unit
+) {
+    var projectToRelink by remember { mutableStateOf<MusicProjectWithEvents?>(null) }
+
+    val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { selectedUri ->
+            projectToRelink?.let { project ->
+                viewModel.relinkAudioAndPlay(project, selectedUri)
+            }
+        }
+    }
+
     LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         if (projects.isEmpty()) {
             item { EmptyStateView(Icons.Default.Audiotrack, "No Projects", "Sync a track in the Music Studio") }
         } else {
             items(projects, key = { it.project.id }) { project ->
-                StudioProjectCard(project, activeId == project.project.id, isPlaying && activeId == project.project.id,
-                    onPlay = { viewModel.playMusicProject(project) },
+                val isAudioMissing = project.project.localAudioPath.isBlank() || !File(project.project.localAudioPath).exists()
+                
+                StudioProjectCard(
+                    project = project,
+                    isActive = activeId == project.project.id,
+                    isPlaying = isPlaying && activeId == project.project.id,
+                    isAudioMissing = isAudioMissing,
+                    onPlay = {
+                        if (isAudioMissing) {
+                            projectToRelink = project
+                            audioPicker.launch("audio/*")
+                        } else {
+                            viewModel.playMusicProject(project)
+                        }
+                    },
                     onDelete = { viewModel.deleteMusicProject(project.project) },
-                    onShare = { onShare(project) })
+                    onShare = { onShare(project) }
+                )
             }
         }
         item { Spacer(Modifier.height(120.dp)) }
@@ -396,21 +431,53 @@ private fun PresetCard(preset: PresetSequence, isActive: Boolean, onClick: () ->
 }
 
 @Composable
-private fun StudioProjectCard(project: MusicProjectWithEvents, isActive: Boolean, isPlaying: Boolean, onPlay: () -> Unit, onDelete: () -> Unit, onShare: () -> Unit) {
+private fun StudioProjectCard(
+    project: MusicProjectWithEvents,
+    isActive: Boolean,
+    isPlaying: Boolean,
+    isAudioMissing: Boolean,
+    onPlay: () -> Unit,
+    onDelete: () -> Unit,
+    onShare: () -> Unit
+) {
     Surface(
         modifier = Modifier.fillMaxWidth().clickable { onPlay() },
         color = Color(0xFF111111),
         shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, if (isActive) Color(0xFF00C853) else Color(0xFF222222))
+        border = BorderStroke(1.dp, if (isActive) Color(0xFF00C853) else if (isAudioMissing) Color(0xFFFF5252).copy(alpha = 0.5f) else Color(0xFF222222))
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(if (isActive) Color(0xFF00C853) else Color(0xFF1A1A1A)), contentAlignment = Alignment.Center) {
-                Icon(if (isActive && isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = if (isActive) Color.Black else Color.Gray)
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isActive) Color(0xFF00C853) 
+                        else if (isAudioMissing) Color(0xFFFF5252).copy(alpha = 0.1f)
+                        else Color(0xFF1A1A1A)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = when {
+                        isActive && isPlaying -> Icons.Default.Pause
+                        isAudioMissing -> Icons.Default.MusicOff
+                        else -> Icons.Default.PlayArrow
+                    },
+                    contentDescription = null,
+                    tint = if (isActive) Color.Black else if (isAudioMissing) Color(0xFFFF5252) else Color.Gray
+                )
             }
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(project.project.name, color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${project.events.size} sync events", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("${project.events.size} sync events", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    if (isAudioMissing) {
+                        Spacer(Modifier.width(8.dp))
+                        Text("• MISSING AUDIO", color = Color(0xFFFF5252), fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    }
+                }
             }
             IconButton(onClick = onShare) {
                 Icon(Icons.Default.Share, null, tint = Color.Gray, modifier = Modifier.size(20.dp))

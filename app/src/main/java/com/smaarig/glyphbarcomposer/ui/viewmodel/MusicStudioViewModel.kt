@@ -4,6 +4,7 @@ import android.app.Application
 import android.media.MediaPlayer
 import android.media.audiofx.Visualizer
 import android.net.Uri
+import android.util.Log
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -587,7 +588,10 @@ class MusicStudioViewModel(
     fun playMusicProject(project: MusicProjectWithEvents) {
         stopMusicStudio(); mediaPlayer?.release(); releaseVisualizer()
         val f = File(project.project.localAudioPath)
-        if (!f.exists()) return
+        if (!f.exists()) {
+            Log.e("MusicStudioViewModel", "Audio file not found at ${project.project.localAudioPath}")
+            return
+        }
         try {
             mediaPlayer = MediaPlayer().apply {
                 setDataSource(f.absolutePath)
@@ -608,6 +612,27 @@ class MusicStudioViewModel(
                 prepareAsync()
             }
         } catch (e: Exception) { e.printStackTrace() }
+    }
+
+    fun relinkAudioAndPlay(project: MusicProjectWithEvents, audioUri: Uri) {
+        viewModelScope.launch {
+            val dir = File(getApplication<Application>().getExternalFilesDir(null), "MusicStudio").apply { mkdirs() }
+            val file = File(dir, "audio_${System.currentTimeMillis()}.mp3")
+            try {
+                getApplication<Application>().contentResolver.openInputStream(audioUri)?.use { ins ->
+                    FileOutputStream(file).use { out -> ins.copyTo(out) }
+                }
+            } catch (e: Exception) {
+                Log.e("MusicStudioViewModel", "Failed to copy relinked audio", e)
+                return@launch
+            }
+
+            val updatedProject = project.project.copy(localAudioPath = file.absolutePath)
+            repository.updateMusicProject(updatedProject)
+
+            // Trigger playback with updated path
+            playMusicProject(project.copy(project = updatedProject))
+        }
     }
 
     fun deleteMusicProject(project: MusicStudioProject) {
