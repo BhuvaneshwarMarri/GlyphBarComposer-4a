@@ -108,12 +108,6 @@ fun LibraryScreen(
 
     var selectedTab by remember { mutableIntStateOf(0) }
 
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { viewModel.importItem(context, it) }
-    }
-
     if (orientation == AppOrientation.Landscape) {
         LibraryLandscape(
             selectedTab = selectedTab,
@@ -124,7 +118,6 @@ fun LibraryScreen(
             studioState = studioState,
             composerViewModel = composerViewModel,
             musicStudioViewModel = musicStudioViewModel,
-            onImport = { importLauncher.launch("*/*") },
             onSharePlaylist = { viewModel.exportPlaylist(context, it) },
             onShareStudio = { viewModel.exportMusicProject(context, it) }
         )
@@ -138,7 +131,6 @@ fun LibraryScreen(
             studioState = studioState,
             composerViewModel = composerViewModel,
             musicStudioViewModel = musicStudioViewModel,
-            onImport = { importLauncher.launch("*/*") },
             onSharePlaylist = { viewModel.exportPlaylist(context, it) },
             onShareStudio = { viewModel.exportMusicProject(context, it) }
         )
@@ -155,7 +147,6 @@ fun LibraryPortrait(
     studioState: com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioUiState,
     composerViewModel: ComposerViewModel,
     musicStudioViewModel: MusicStudioViewModel,
-    onImport: () -> Unit,
     onSharePlaylist: (PlaylistWithSteps) -> Unit,
     onShareStudio: (MusicProjectWithEvents) -> Unit
 ) {
@@ -165,8 +156,7 @@ fun LibraryPortrait(
                 composerViewModel.stopPlayback()
                 if (studioState.isAudioPlaying) musicStudioViewModel.toggleMusicPlayback()
             }, 
-            isAnyPlaying = compState.isPlaying || studioState.isAudioPlaying,
-            onImport = onImport
+            isAnyPlaying = compState.isPlaying || studioState.isAudioPlaying
         )
         
         Row(
@@ -216,7 +206,6 @@ fun LibraryLandscape(
     studioState: com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioUiState,
     composerViewModel: ComposerViewModel,
     musicStudioViewModel: MusicStudioViewModel,
-    onImport: () -> Unit,
     onSharePlaylist: (PlaylistWithSteps) -> Unit,
     onShareStudio: (MusicProjectWithEvents) -> Unit
 ) {
@@ -227,8 +216,7 @@ fun LibraryLandscape(
                     composerViewModel.stopPlayback()
                     if (studioState.isAudioPlaying) musicStudioViewModel.toggleMusicPlayback()
                 }, 
-                isAnyPlaying = compState.isPlaying || studioState.isAudioPlaying,
-                onImport = onImport
+                isAnyPlaying = compState.isPlaying || studioState.isAudioPlaying
             )
             
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -263,7 +251,7 @@ private fun LibNavItem(label: String, icon: ImageVector, selected: Boolean, onCl
 }
 
 @Composable
-private fun LibraryHeader(onImport: () -> Unit, onStopAll: () -> Unit, isAnyPlaying: Boolean) {
+private fun LibraryHeader(onStopAll: () -> Unit, isAnyPlaying: Boolean) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -286,26 +274,12 @@ private fun LibraryHeader(onImport: () -> Unit, onStopAll: () -> Unit, isAnyPlay
             )
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Import Button with Label
-            Button(
-                onClick = onImport,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A1A), contentColor = Color.White),
-                shape = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+        if (isAnyPlaying) {
+            IconButton(
+                onClick = onStopAll,
+                modifier = Modifier.clip(CircleShape).background(Color(0x1AFF5252))
             ) {
-                Icon(Icons.Default.FileUpload, null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("IMPORT", fontSize = 10.sp, fontWeight = FontWeight.Black)
-            }
-
-            if (isAnyPlaying) {
-                IconButton(
-                    onClick = onStopAll,
-                    modifier = Modifier.clip(CircleShape).background(Color(0x1AFF5252))
-                ) {
-                    Icon(Icons.Default.Stop, null, tint = Color(0xFFFF5252), modifier = Modifier.size(20.dp))
-                }
+                Icon(Icons.Default.Stop, null, tint = Color(0xFFFF5252), modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -328,10 +302,15 @@ private fun SequencesTab(isPlaying: Boolean, isPaused: Boolean, activeId: Long?,
             item { EmptyStateView(Icons.Default.Create, "No Sequences", "Create one in the Composer tab") }
         } else {
             items(playlists, key = { it.playlist.id }) { playlist ->
-                SavedSequenceCard(playlist, activeId == playlist.playlist.id, isPlaying && !isPaused && activeId == playlist.playlist.id, 
+                SavedSequenceCard(
+                    playlist = playlist,
+                    isActive = activeId == playlist.playlist.id,
+                    isPlaying = isPlaying,
+                    isPaused = isPaused,
                     onPlay = { viewModel.playSequence(playlist) }, 
                     onDelete = { viewModel.deletePlaylist(playlist.playlist) },
-                    onShare = { onShare(playlist) })
+                    onShare = { onShare(playlist) }
+                )
             }
         }
         item { Spacer(Modifier.height(120.dp)) }
@@ -373,7 +352,11 @@ private fun StudioTab(
                             projectToRelink = project
                             audioPicker.launch("audio/*")
                         } else {
-                            viewModel.playMusicProject(project)
+                            if (activeId == project.project.id) {
+                                viewModel.toggleMusicPlayback()
+                            } else {
+                                viewModel.playMusicProject(project)
+                            }
                         }
                     },
                     onDelete = { viewModel.deleteMusicProject(project.project) },
@@ -386,7 +369,15 @@ private fun StudioTab(
 }
 
 @Composable
-private fun SavedSequenceCard(playlist: PlaylistWithSteps, isActive: Boolean, isPlaying: Boolean, onPlay: () -> Unit, onDelete: () -> Unit, onShare: () -> Unit) {
+private fun SavedSequenceCard(
+    playlist: PlaylistWithSteps,
+    isActive: Boolean,
+    isPlaying: Boolean,
+    isPaused: Boolean,
+    onPlay: () -> Unit,
+    onDelete: () -> Unit,
+    onShare: () -> Unit
+) {
     Surface(
         modifier = Modifier.fillMaxWidth().clickable { onPlay() },
         color = Color(0xFF111111),
@@ -394,8 +385,19 @@ private fun SavedSequenceCard(playlist: PlaylistWithSteps, isActive: Boolean, is
         border = BorderStroke(1.dp, if (isActive) Color(0xFF00C853) else Color(0xFF222222))
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(if (isActive) Color(0xFF00C853) else Color(0xFF1A1A1A)), contentAlignment = Alignment.Center) {
-                Icon(if (isActive && isPlaying) Icons.Default.GraphicEq else Icons.AutoMirrored.Filled.PlaylistPlay, null, tint = if (isActive) Color.Black else Color.Gray)
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(if (isActive) Color(0xFF00C853) else Color(0xFF1A1A1A)),
+                contentAlignment = Alignment.Center
+            ) {
+                val icon = when {
+                    !isActive -> Icons.AutoMirrored.Filled.PlaylistPlay
+                    isPlaying && !isPaused -> Icons.Default.Pause
+                    else -> Icons.Default.PlayArrow
+                }
+                Icon(icon, null, tint = if (isActive) Color.Black else Color.Gray)
             }
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
