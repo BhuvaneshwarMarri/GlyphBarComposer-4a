@@ -1,5 +1,8 @@
 package com.smaarig.glyphbarcomposer.ui
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -18,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,6 +36,8 @@ import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.LibraryViewModel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
+import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioUiState
 
 private val ch = listOf(
     com.nothing.ketchum.Glyph.Code_25111.A_1,
@@ -96,8 +103,15 @@ fun LibraryScreen(
     val compState by composerViewModel.uiState.collectAsStateWithLifecycle()
     val studioState by musicStudioViewModel.uiState.collectAsStateWithLifecycle()
     val orientation = rememberAppOrientation()
+    val context = LocalContext.current
 
     var selectedTab by remember { mutableIntStateOf(0) }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.importItem(context, it) }
+    }
 
     if (orientation == AppOrientation.Landscape) {
         LibraryLandscape(
@@ -108,7 +122,10 @@ fun LibraryScreen(
             compState = compState,
             studioState = studioState,
             composerViewModel = composerViewModel,
-            musicStudioViewModel = musicStudioViewModel
+            musicStudioViewModel = musicStudioViewModel,
+            onImport = { importLauncher.launch("*/*") },
+            onSharePlaylist = { viewModel.exportPlaylist(context, it) },
+            onShareStudio = { viewModel.exportMusicProject(context, it) }
         )
     } else {
         LibraryPortrait(
@@ -119,7 +136,10 @@ fun LibraryScreen(
             compState = compState,
             studioState = studioState,
             composerViewModel = composerViewModel,
-            musicStudioViewModel = musicStudioViewModel
+            musicStudioViewModel = musicStudioViewModel,
+            onImport = { importLauncher.launch("*/*") },
+            onSharePlaylist = { viewModel.exportPlaylist(context, it) },
+            onShareStudio = { viewModel.exportMusicProject(context, it) }
         )
     }
 }
@@ -133,13 +153,20 @@ fun LibraryPortrait(
     compState: com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState,
     studioState: com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioUiState,
     composerViewModel: ComposerViewModel,
-    musicStudioViewModel: MusicStudioViewModel
+    musicStudioViewModel: MusicStudioViewModel,
+    onImport: () -> Unit,
+    onSharePlaylist: (PlaylistWithSteps) -> Unit,
+    onShareStudio: (MusicProjectWithEvents) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        LibraryHeader(onStopAll = {
-            composerViewModel.stopPlayback()
-            if (studioState.isAudioPlaying) musicStudioViewModel.toggleMusicPlayback()
-        }, isAnyPlaying = compState.isPlaying || studioState.isAudioPlaying)
+        LibraryHeader(
+            onStopAll = {
+                composerViewModel.stopPlayback()
+                if (studioState.isAudioPlaying) musicStudioViewModel.toggleMusicPlayback()
+            }, 
+            isAnyPlaying = compState.isPlaying || studioState.isAudioPlaying,
+            onImport = onImport
+        )
         
         Row(
             modifier = Modifier
@@ -170,9 +197,9 @@ fun LibraryPortrait(
 
         Box(modifier = Modifier.weight(1f)) {
             if (selectedTab == 0) {
-                SequencesTab(compState.isPlaying, compState.isPaused, compState.activePlaylistId, playlists, composerViewModel)
+                SequencesTab(compState.isPlaying, compState.isPaused, compState.activePlaylistId, playlists, composerViewModel, onSharePlaylist)
             } else {
-                StudioTab(studioState.isAudioPlaying, studioState.activeProjectId, studioProjects, musicStudioViewModel)
+                StudioTab(studioState.isAudioPlaying, studioState.activeProjectId, studioProjects, musicStudioViewModel, onShareStudio)
             }
         }
     }
@@ -187,14 +214,21 @@ fun LibraryLandscape(
     compState: com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState,
     studioState: com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioUiState,
     composerViewModel: ComposerViewModel,
-    musicStudioViewModel: MusicStudioViewModel
+    musicStudioViewModel: MusicStudioViewModel,
+    onImport: () -> Unit,
+    onSharePlaylist: (PlaylistWithSteps) -> Unit,
+    onShareStudio: (MusicProjectWithEvents) -> Unit
 ) {
     Row(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
         Column(modifier = Modifier.width(220.dp), verticalArrangement = Arrangement.spacedBy(32.dp)) {
-            LibraryHeader(onStopAll = {
-                composerViewModel.stopPlayback()
-                if (studioState.isAudioPlaying) musicStudioViewModel.toggleMusicPlayback()
-            }, isAnyPlaying = compState.isPlaying || studioState.isAudioPlaying)
+            LibraryHeader(
+                onStopAll = {
+                    composerViewModel.stopPlayback()
+                    if (studioState.isAudioPlaying) musicStudioViewModel.toggleMusicPlayback()
+                }, 
+                isAnyPlaying = compState.isPlaying || studioState.isAudioPlaying,
+                onImport = onImport
+            )
             
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 LibNavItem("SEQUENCES", Icons.AutoMirrored.Filled.List, selectedTab == 0) { onTabSelect(0) }
@@ -204,9 +238,9 @@ fun LibraryLandscape(
 
         Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
             if (selectedTab == 0) {
-                SequencesTab(compState.isPlaying, compState.isPaused, compState.activePlaylistId, playlists, composerViewModel)
+                SequencesTab(compState.isPlaying, compState.isPaused, compState.activePlaylistId, playlists, composerViewModel, onSharePlaylist)
             } else {
-                StudioTab(studioState.isAudioPlaying, studioState.activeProjectId, studioProjects, musicStudioViewModel)
+                StudioTab(studioState.isAudioPlaying, studioState.activeProjectId, studioProjects, musicStudioViewModel, onShareStudio)
             }
         }
     }
@@ -228,22 +262,52 @@ private fun LibNavItem(label: String, icon: ImageVector, selected: Boolean, onCl
 }
 
 @Composable
-private fun LibraryHeader(onStopAll: () -> Unit, isAnyPlaying: Boolean) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+private fun LibraryHeader(onImport: () -> Unit, onStopAll: () -> Unit, isAnyPlaying: Boolean) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Column {
-            Text("LIBRARY", style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Black, letterSpacing = 2.sp, fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont)
-            Text("Your creations", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "LIBRARY",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.sp,
+                fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
+            )
+            Text(
+                "Your creations",
+                color = Color.Gray,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp
+            )
         }
-        if (isAnyPlaying) {
-            IconButton(onClick = onStopAll, modifier = Modifier.clip(CircleShape).background(Color(0x1AFF5252))) {
-                Icon(Icons.Default.Stop, null, tint = Color(0xFFFF5252))
+
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            IconButton(
+                onClick = onImport,
+                modifier = Modifier.clip(CircleShape).background(Color(0x1A82AAFF))
+            ) {
+                Icon(Icons.Default.FileUpload, null, tint = Color(0xFF82AAFF), modifier = Modifier.size(20.dp))
+            }
+
+            if (isAnyPlaying) {
+                IconButton(
+                    onClick = onStopAll,
+                    modifier = Modifier.clip(CircleShape).background(Color(0x1AFF5252))
+                ) {
+                    Icon(Icons.Default.Stop, null, tint = Color(0xFFFF5252), modifier = Modifier.size(20.dp))
+                }
             }
         }
     }
 }
 
 @Composable
-private fun SequencesTab(isPlaying: Boolean, isPaused: Boolean, activeId: Long?, playlists: List<PlaylistWithSteps>, viewModel: ComposerViewModel) {
+private fun SequencesTab(isPlaying: Boolean, isPaused: Boolean, activeId: Long?, playlists: List<PlaylistWithSteps>, viewModel: ComposerViewModel, onShare: (PlaylistWithSteps) -> Unit) {
     LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { SectionLabel("FACTORY PRESETS") }
         item {
@@ -261,7 +325,8 @@ private fun SequencesTab(isPlaying: Boolean, isPaused: Boolean, activeId: Long?,
             items(playlists, key = { it.playlist.id }) { playlist ->
                 SavedSequenceCard(playlist, activeId == playlist.playlist.id, isPlaying && !isPaused && activeId == playlist.playlist.id, 
                     onPlay = { viewModel.playSequence(playlist) }, 
-                    onDelete = { viewModel.deletePlaylist(playlist.playlist) })
+                    onDelete = { viewModel.deletePlaylist(playlist.playlist) },
+                    onShare = { onShare(playlist) })
             }
         }
         item { Spacer(Modifier.height(120.dp)) }
@@ -269,7 +334,7 @@ private fun SequencesTab(isPlaying: Boolean, isPaused: Boolean, activeId: Long?,
 }
 
 @Composable
-private fun StudioTab(isPlaying: Boolean, activeId: Long?, projects: List<MusicProjectWithEvents>, viewModel: MusicStudioViewModel) {
+private fun StudioTab(isPlaying: Boolean, activeId: Long?, projects: List<MusicProjectWithEvents>, viewModel: MusicStudioViewModel, onShare: (MusicProjectWithEvents) -> Unit) {
     LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         if (projects.isEmpty()) {
             item { EmptyStateView(Icons.Default.Audiotrack, "No Projects", "Sync a track in the Music Studio") }
@@ -277,7 +342,8 @@ private fun StudioTab(isPlaying: Boolean, activeId: Long?, projects: List<MusicP
             items(projects, key = { it.project.id }) { project ->
                 StudioProjectCard(project, activeId == project.project.id, isPlaying && activeId == project.project.id,
                     onPlay = { viewModel.playMusicProject(project) },
-                    onDelete = { viewModel.deleteMusicProject(project.project) })
+                    onDelete = { viewModel.deleteMusicProject(project.project) },
+                    onShare = { onShare(project) })
             }
         }
         item { Spacer(Modifier.height(120.dp)) }
@@ -285,7 +351,7 @@ private fun StudioTab(isPlaying: Boolean, activeId: Long?, projects: List<MusicP
 }
 
 @Composable
-private fun SavedSequenceCard(playlist: PlaylistWithSteps, isActive: Boolean, isPlaying: Boolean, onPlay: () -> Unit, onDelete: () -> Unit) {
+private fun SavedSequenceCard(playlist: PlaylistWithSteps, isActive: Boolean, isPlaying: Boolean, onPlay: () -> Unit, onDelete: () -> Unit, onShare: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().clickable { onPlay() },
         color = Color(0xFF111111),
@@ -300,6 +366,9 @@ private fun SavedSequenceCard(playlist: PlaylistWithSteps, isActive: Boolean, is
             Column(modifier = Modifier.weight(1f)) {
                 Text(playlist.playlist.name, color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
                 Text("${playlist.steps.size} steps", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+            IconButton(onClick = onShare) {
+                Icon(Icons.Default.Share, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.DeleteOutline, null, tint = Color.Gray.copy(0.4f))
@@ -327,7 +396,7 @@ private fun PresetCard(preset: PresetSequence, isActive: Boolean, onClick: () ->
 }
 
 @Composable
-private fun StudioProjectCard(project: MusicProjectWithEvents, isActive: Boolean, isPlaying: Boolean, onPlay: () -> Unit, onDelete: () -> Unit) {
+private fun StudioProjectCard(project: MusicProjectWithEvents, isActive: Boolean, isPlaying: Boolean, onPlay: () -> Unit, onDelete: () -> Unit, onShare: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().clickable { onPlay() },
         color = Color(0xFF111111),
@@ -342,6 +411,9 @@ private fun StudioProjectCard(project: MusicProjectWithEvents, isActive: Boolean
             Column(modifier = Modifier.weight(1f)) {
                 Text(project.project.name, color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text("${project.events.size} sync events", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+            IconButton(onClick = onShare) {
+                Icon(Icons.Default.Share, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.DeleteOutline, null, tint = Color.Gray.copy(0.4f))
