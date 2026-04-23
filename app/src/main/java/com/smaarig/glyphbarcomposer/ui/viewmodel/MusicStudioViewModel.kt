@@ -480,6 +480,16 @@ class MusicStudioViewModel(
         }
     }
 
+    fun resetProject() {
+        stopMusicStudio()
+        mediaPlayer?.release()
+        mediaPlayer = null
+        releaseVisualizer()
+        _uiState.value = MusicStudioUiState()
+        _audioPositionMs.value = 0
+        _visualizerData.value = List(16) { 0f }
+    }
+
     fun clearAllMusicEvents() { _uiState.update { it.copy(musicEvents = emptyList()) } }
 
     // ─────────────────────────────────────────────────────────────────────────

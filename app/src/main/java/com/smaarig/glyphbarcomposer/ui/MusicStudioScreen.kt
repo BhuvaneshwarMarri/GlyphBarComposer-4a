@@ -259,7 +259,7 @@ private fun StudioHeader(
     ) {
         Column {
             Text(
-                "GLYPH STUDIO",
+                "MUSIC STUDIO",
                 style = MaterialTheme.typography.headlineMedium,
                 color = Color.White,
                 fontWeight = FontWeight.Black,
@@ -300,7 +300,7 @@ private fun StudioHeader(
                 Spacer(Modifier.width(12.dp))
             }
             IconButton(
-                onClick = viewModel::clearAllMusicEvents,
+                onClick = viewModel::resetProject,
                 modifier = Modifier.clip(CircleShape).background(Color(0x1AFF5252))
             ) {
                 Icon(Icons.Default.DeleteSweep, null, tint = Color(0xFFFF5252), modifier = Modifier.size(20.dp))
@@ -1271,7 +1271,7 @@ private fun ProjectSetupView(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    "GLYPH STUDIO",
+                    "MUSIC STUDIO",
                     color = Color.White,
                     fontWeight = FontWeight.Black,
                     fontSize = 20.sp,
@@ -1475,7 +1475,7 @@ private fun StudioLogoSection() {
         }
 
         Spacer(Modifier.height(32.dp))
-        Text("GLYPH STUDIO", color = Color.White, fontWeight = FontWeight.Black,
+        Text("MUSIC STUDIO", color = Color.White, fontWeight = FontWeight.Black,
             fontSize = 28.sp, letterSpacing = 4.sp, fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont)
         Spacer(Modifier.height(8.dp))
         Text("Precision audio synchronization",

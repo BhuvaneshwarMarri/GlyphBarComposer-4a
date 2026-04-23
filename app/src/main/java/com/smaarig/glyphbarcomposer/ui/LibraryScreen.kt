@@ -167,7 +167,7 @@ fun LibraryPortrait(
                 .background(Color(0xFF111111))
                 .padding(4.dp)
         ) {
-            listOf("SEQUENCES", "STUDIO").forEachIndexed { index, label ->
+            listOf("SEQUENCES", "MUSIC STUDIO").forEachIndexed { index, label ->
                 val selected = selectedTab == index
                 val bg by animateColorAsState(if (selected) Color.White else Color.Transparent)
                 val textCol by animateColorAsState(if (selected) Color.Black else Color.Gray)
@@ -221,7 +221,7 @@ fun LibraryLandscape(
             
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 LibNavItem("SEQUENCES", Icons.AutoMirrored.Filled.List, selectedTab == 0) { onTabSelect(0) }
-                LibNavItem("STUDIO", Icons.Default.GraphicEq, selectedTab == 1) { onTabSelect(1) }
+                LibNavItem("MUSIC STUDIO", Icons.Default.GraphicEq, selectedTab == 1) { onTabSelect(1) }
             }
         }
 
