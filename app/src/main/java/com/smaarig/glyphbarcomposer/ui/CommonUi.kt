@@ -8,7 +8,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -96,18 +96,17 @@ fun IntensityWheelPicker(
 
     Box(
         modifier = modifier
-            .height(100.dp)
-            .width(50.dp)
+            .size(70.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Color(0xFF111111))
             .border(1.dp, Color(0xFF222222), RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
     ) {
-        LazyColumn(
+        LazyRow(
             state = state,
             flingBehavior = rememberSnapFlingBehavior(lazyListState = state),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(vertical = 30.dp),
+            contentPadding = PaddingValues(horizontal = 15.dp),
             userScrollEnabled = enabled
         ) {
             items(states.size) { idx ->
@@ -116,8 +115,8 @@ fun IntensityWheelPicker(
                 
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(40.dp)
+                        .fillMaxHeight()
+                        .width(40.dp)
                         .padding(4.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -139,8 +138,8 @@ fun IntensityWheelPicker(
         // Center indicator overlay
         Box(
             Modifier
-                .fillMaxWidth()
-                .height(40.dp)
+                .fillMaxHeight()
+                .width(40.dp)
                 .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
         )
     }

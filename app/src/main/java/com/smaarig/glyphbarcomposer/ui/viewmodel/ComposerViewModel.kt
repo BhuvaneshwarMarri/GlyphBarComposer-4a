@@ -23,7 +23,8 @@ data class ComposerUiState(
     val sequenceName: String = "",
     val isPlaying: Boolean = false,
     val isPaused: Boolean = false,
-    val activePlaylistId: Long? = null
+    val activePlaylistId: Long? = null,
+    val selectedChannelIndex: Int = 0
 )
 
 class ComposerViewModel(
@@ -60,6 +61,23 @@ class ComposerViewModel(
         }
         
         glyphController.applyGlyphStateWithIntensities(getIntensitiesMap(), 2000)
+    }
+
+    fun setSelectedChannel(index: Int) {
+        _uiState.update { it.copy(selectedChannelIndex = index) }
+    }
+
+    fun onIntensityChangeForSelected(intensity: Int) {
+        onIntensityChange(_uiState.value.selectedChannelIndex, intensity)
+    }
+
+    fun reorderSteps(from: Int, to: Int) {
+        val list = _uiState.value.currentSequenceSteps.toMutableList()
+        if (from in list.indices && to in list.indices) {
+            val item = list.removeAt(from)
+            list.add(to, item)
+            _uiState.update { it.copy(currentSequenceSteps = list) }
+        }
     }
 
     fun onDurationChange(newDuration: Float) {
