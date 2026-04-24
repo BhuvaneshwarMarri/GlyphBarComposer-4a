@@ -47,7 +47,7 @@ fun GlyphScrollPicker(
 ) {
     val states = if (isRed) listOf(0, 3) else listOf(0, 1, 2, 3)
     val infiniteCount = 10000
-    val startOffset = (infiniteCount / 2) - ((infiniteCount / 2) % states.size)
+    val startOffset = (infiniteCount / 2)
     val initialIdx = startOffset + states.indexOf(intensity).coerceAtLeast(0)
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIdx)
 
@@ -121,6 +121,14 @@ fun ComposerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var useOldVersion by remember { mutableStateOf(false) }
+
+    var isPowerOffAnimating by remember { mutableStateOf(false) }
+    val powerScale by animateFloatAsState(
+        targetValue = if (isPowerOffAnimating) 1.4f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        finishedListener = { isPowerOffAnimating = false },
+        label = "powerOffScale"
+    )
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -198,10 +206,11 @@ fun ComposerScreen(
                 }
                 IconButton(
                     onClick = {
+                        isPowerOffAnimating = true
                         viewModel.turnOffAllGlyphs()
                         redViewModel.setRed(false)
                     },
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(32.dp).scale(powerScale)
                 ) {
                     Icon(
                         Icons.Default.PowerSettingsNew, "Turn Off All",
@@ -221,66 +230,7 @@ fun ComposerScreen(
                     .weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // ── Column 1: Glyph scroll-pickers ──────────────────────────────
-                Column(
-                    modifier = Modifier
-                        .width(88.dp)
-                        .fillMaxHeight(0.8f)
-                        .padding(vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        "GLYPH",
-                        color = Color.Gray,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.height(14.dp))
-
-                    repeat(7) { index ->
-                        val isRed = index == 6
-                        val isSelected = uiState.selectedChannelIndex == index
-                        val intensity = uiState.glyphIntensities[index]
-
-                        if (isRed) {
-                            Spacer(Modifier.height(8.dp))
-                            HorizontalDivider(
-                                modifier = Modifier.width(50.dp),
-                                thickness = 1.dp,
-                                color = Color(0xFF2A2A2A)
-                            )
-                            Spacer(Modifier.height(8.dp))
-                        }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(4.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isSelected) Color.White else Color.Transparent)
-                            )
-
-                            GlyphScrollPicker(
-                                intensity = intensity,
-                                onIntensityChange = { newVal ->
-                                    viewModel.onIntensityChange(index, newVal)
-                                    viewModel.setSelectedChannel(index)
-                                    if (isRed) redViewModel.setRed(newVal > 0)
-                                },
-                                isRed = isRed,
-                                enabled = !uiState.isPlaying
-                            )
-                        }
-
-                        if (!isRed) Spacer(Modifier.height(8.dp))
-                    }
-                }
-
-                // ── Column 2: Duration slider + Add Step ────────────────────────
+                // ── Column 1: Duration slider + Add Step ────────────────────────
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -341,6 +291,72 @@ fun ComposerScreen(
                         Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("ADD STEP", fontWeight = FontWeight.Black, fontSize = 10.sp)
+                    }
+                }
+
+                // ── Column 2: Glyph scroll-pickers ──────────────────────────────
+                Column(
+                    modifier = Modifier
+                        .width(88.dp)
+                        .fillMaxHeight(0.8f)
+                        .padding(vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        "GLYPH",
+                        color = Color.Gray,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(14.dp))
+
+                    repeat(7) { index ->
+                        val isRed = index == 6
+                        val isSelected = uiState.selectedChannelIndex == index
+                        val intensity = uiState.glyphIntensities[index]
+
+                        if (isRed) {
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                // Spacer to match the dot width (4dp)
+                                Spacer(Modifier.width(4.dp))
+                                HorizontalDivider(
+                                    modifier = Modifier.width(54.dp), // Match GlyphScrollPicker cellWidth
+                                    thickness = 1.dp,
+                                    color = Color(0xFF2A2A2A)
+                                )
+                            }
+                            Spacer(Modifier.height(8.dp))
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(4.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isSelected) Color.White else Color.Transparent)
+                            )
+
+                            GlyphScrollPicker(
+                                intensity = intensity,
+                                onIntensityChange = { newVal ->
+                                    viewModel.onIntensityChange(index, newVal)
+                                    viewModel.setSelectedChannel(index)
+                                    if (isRed) redViewModel.setRed(newVal > 0)
+                                },
+                                isRed = isRed,
+                                enabled = !uiState.isPlaying
+                            )
+                        }
+
+                        if (!isRed) Spacer(Modifier.height(8.dp))
                     }
                 }
 
@@ -473,8 +489,6 @@ fun DraggableTimeline(
                             StepPreviewBox(
                                 step = step,
                                 onDelete = { viewModel.removeStep(index) },
-                                onLoad = { viewModel.loadStep(index) },
-                                onInsertAfter = { viewModel.insertStepAt(index + 1) },
                                 enabled = !uiState.isPlaying
                             )
                         }
@@ -727,7 +741,7 @@ fun ComposerScreenOld(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Bottom
             ) {
                 // First 6 glyphs
                 repeat(6) { index ->
@@ -748,6 +762,7 @@ fun ComposerScreenOld(
                 // Divider between regular and red
                 Box(
                     modifier = Modifier
+                        .padding(bottom = 0.dp) // Align with button bottom
                         .width(1.dp)
                         .height(52.dp)
                         .background(Color(0xFF222222))
@@ -1021,8 +1036,6 @@ fun DraggableTimelineHorizontal(
 fun StepPreviewBox(
     step: GlyphSequence,
     onDelete: () -> Unit,
-    onLoad: () -> Unit,
-    onInsertAfter: () -> Unit,
     enabled: Boolean
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -1071,12 +1084,6 @@ fun StepPreviewBox(
                 contentAlignment = Alignment.Center
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    IconButton(onClick = { onLoad(); showMenu = false }, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Edit, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    }
-                    IconButton(onClick = { onInsertAfter(); showMenu = false }, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.AddCircle, null, tint = Color(0xFF00C853), modifier = Modifier.size(16.dp))
-                    }
                     IconButton(onClick = { onDelete(); showMenu = false }, modifier = Modifier.size(28.dp)) {
                         Icon(Icons.Default.Delete, null, tint = Color(0xFFFF5252), modifier = Modifier.size(16.dp))
                     }

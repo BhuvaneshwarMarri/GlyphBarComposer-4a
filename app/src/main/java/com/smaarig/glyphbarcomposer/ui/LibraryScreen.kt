@@ -266,12 +266,6 @@ private fun LibraryHeader(onStopAll: () -> Unit, isAnyPlaying: Boolean) {
                 letterSpacing = 2.sp,
                 fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
             )
-            Text(
-                "Manage your creations",
-                color = Color.Gray,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
         }
 
         if (isAnyPlaying) {
@@ -288,7 +282,7 @@ private fun LibraryHeader(onStopAll: () -> Unit, isAnyPlaying: Boolean) {
 @Composable
 private fun SequencesTab(isPlaying: Boolean, isPaused: Boolean, activeId: Long?, playlists: List<PlaylistWithSteps>, viewModel: ComposerViewModel, onShare: (PlaylistWithSteps) -> Unit) {
     LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { SectionLabel("FACTORY PRESETS") }
+        item { SectionLabel("GLYPH  PRESETS") }
         item {
             Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 presetSequences.forEach { preset ->
