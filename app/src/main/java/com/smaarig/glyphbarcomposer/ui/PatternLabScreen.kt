@@ -184,7 +184,7 @@ fun PatternLabLandscape(
                     val selected = uiState.selectedTab == index
                     val bg = if (selected) {
                         when (index) {
-                            0 -> Color(0xFFB3E5FC)
+                            0 -> Color(0xFF0086EA)
                             1 -> Color(0xFFFFEB3B)
                             else -> Color(0xFFFFC1CC)
                         }

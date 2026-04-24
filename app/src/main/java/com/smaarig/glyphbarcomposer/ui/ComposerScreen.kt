@@ -194,7 +194,9 @@ fun ComposerPortrait(
             ComposerScreenOld(uiState, viewModel, redViewModel)
         } else {
             Row(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 ControlsColumn(uiState, viewModel, Modifier.weight(1f))
@@ -219,10 +221,9 @@ fun ComposerLandscape(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Integrated Top Header
         ComposerHeader(
             uiState = uiState,
             viewModel = viewModel,
@@ -232,24 +233,24 @@ fun ComposerLandscape(
             onPowerClick = onPowerClick
         )
 
-        // Main Content Area
-        Box(modifier = Modifier.weight(1f)) {
-            if (useOldVersion) {
-                ComposerScreenOld(uiState, viewModel, redViewModel)
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+        if (useOldVersion) {
+            ComposerScreenOldLandscape(uiState, viewModel, redViewModel)
+        } else {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Left Panel: Horizontal Glyphs & Horizontal Controls
+                Column(
+                    modifier = Modifier.weight(1.3f).fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Controls Column - Slightly narrower in landscape
-                    ControlsColumn(uiState, viewModel, Modifier.width(180.dp))
-                    
-                    // Glyphs Column - Fixed width
-                    GlyphsColumn(uiState, viewModel, redViewModel, Modifier.width(88.dp))
-                    
-                    // Timeline - Takes remaining space
-                    DraggableTimeline(uiState, viewModel, Modifier.weight(1f))
+                    LandscapeGlyphsRow(uiState, viewModel, redViewModel, Modifier.weight(1f))
+                    LandscapeControlsRow(uiState, viewModel)
                 }
+
+                // Right Panel: Timeline
+                DraggableTimeline(uiState, viewModel, Modifier.weight(1f))
             }
         }
     }
@@ -279,7 +280,6 @@ private fun ComposerHeader(
         )
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // ── Segmented V2 / V1 pill toggle ───────────────────────────
             Box(
                 modifier = Modifier
                     .padding(end = 8.dp)
@@ -327,7 +327,9 @@ private fun ComposerHeader(
             }
             IconButton(
                 onClick = onPowerClick,
-                modifier = Modifier.size(32.dp).scale(powerScale)
+                modifier = Modifier
+                    .size(32.dp)
+                    .scale(powerScale)
             ) {
                 Icon(
                     Icons.Default.PowerSettingsNew, "Turn Off All",
@@ -339,6 +341,7 @@ private fun ComposerHeader(
     }
 }
 
+// ─── Portrait Specific V2 Layout Components ──────────────────────────────────
 @Composable
 private fun ControlsColumn(
     uiState: ComposerUiState,
@@ -355,12 +358,7 @@ private fun ControlsColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            "CONTROLS",
-            color = Color.Gray,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Text("CONTROLS", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -422,12 +420,7 @@ private fun GlyphsColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            "GLYPH",
-            color = Color.Gray,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Text("GLYPH", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(14.dp))
 
         repeat(7) { index ->
@@ -475,6 +468,126 @@ private fun GlyphsColumn(
             }
 
             if (!isRed) Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+// ─── Landscape Specific V2 Layout Components ─────────────────────────────────
+@Composable
+private fun LandscapeGlyphsRow(
+    uiState: ComposerUiState,
+    viewModel: ComposerViewModel,
+    redViewModel: RedGlyphViewModel,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color(0xFF111111))
+            .border(1.dp, Color(0xFF222222), RoundedCornerShape(20.dp))
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("GLYPHS", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(7) { index ->
+                val isRed = index == 6
+                val isSelected = uiState.selectedChannelIndex == index
+                val intensity = uiState.glyphIntensities[index]
+
+                if (isRed) {
+                    Box(modifier = Modifier.width(1.dp).height(44.dp).background(Color(0xFF2A2A2A)))
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(4.dp)
+                            .clip(CircleShape)
+                            .background(if (isSelected) Color.White else Color.Transparent)
+                    )
+                    GlyphScrollPicker(
+                        intensity = intensity,
+                        onIntensityChange = { newVal ->
+                            viewModel.onIntensityChange(index, newVal)
+                            viewModel.setSelectedChannel(index)
+                            if (isRed) redViewModel.setRed(newVal > 0)
+                        },
+                        isRed = isRed,
+                        enabled = !uiState.isPlaying
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LandscapeControlsRow(
+    uiState: ComposerUiState,
+    viewModel: ComposerViewModel,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color(0xFF111111))
+            .border(1.dp, Color(0xFF222222), RoundedCornerShape(20.dp))
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("DURATION", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("${uiState.durationMs.toInt()}ms", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            }
+            Slider(
+                value = uiState.durationMs,
+                onValueChange = viewModel::onDurationChange,
+                valueRange = 100f..2000f,
+                steps = 18,
+                colors = SliderDefaults.colors(
+                    thumbColor = Color.White,
+                    activeTrackColor = Color.White,
+                    inactiveTrackColor = Color(0xFF222222)
+                )
+            )
+        }
+
+        Button(
+            onClick = viewModel::addStep,
+            modifier = Modifier
+                .height(44.dp)
+                .width(120.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.White,
+                contentColor = Color.Black
+            ),
+            shape = RoundedCornerShape(10.dp),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("ADD STEP", fontWeight = FontWeight.Black, fontSize = 10.sp)
         }
     }
 }
@@ -769,6 +882,7 @@ fun OldGlyphButton(
     }
 }
 
+// ─── V1 Portrait Screen ──────────────────────────────────────────────────────
 @Composable
 fun ComposerScreenOld(
     uiState: ComposerUiState,
@@ -960,6 +1074,197 @@ fun ComposerScreenOld(
             Text("TIMELINE", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             DraggableTimelineHorizontal(uiState, viewModel, onSaveRequest = { showSaveDialog = true })
         }
+    }
+}
+
+// ─── V1 Landscape Screen ─────────────────────────────────────────────────────
+@Composable
+fun ComposerScreenOldLandscape(
+    uiState: ComposerUiState,
+    viewModel: ComposerViewModel,
+    redViewModel: RedGlyphViewModel
+) {
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var fileName by remember { mutableStateOf("") }
+
+    if (showSaveDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveDialog = false },
+            title = { Text("Save Sequence", color = Color.White, fontWeight = FontWeight.Black) },
+            text = {
+                TextField(
+                    value = fileName,
+                    onValueChange = { fileName = it },
+                    placeholder = { Text("Sequence Name", color = Color.Gray) },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFF1A1A1A),
+                        unfocusedContainerColor = Color(0xFF1A1A1A),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        cursorColor = Color.White
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (fileName.isNotBlank()) {
+                        viewModel.savePlaylist(fileName)
+                        showSaveDialog = false
+                        fileName = ""
+                    }
+                }) {
+                    Text("SAVE", color = Color(0xFF00C853), fontWeight = FontWeight.Black)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveDialog = false }) {
+                    Text("CANCEL", color = Color.Gray)
+                }
+            },
+            containerColor = Color(0xFF111111),
+            shape = RoundedCornerShape(28.dp)
+        )
+    }
+
+    Row(
+        modifier = Modifier.fillMaxSize(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Left Column: Controls (Scrollable to prevent overflow)
+        Column(
+            modifier = Modifier
+                .weight(1.3f)
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF0C0C0C))
+                    .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(16.dp))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("GLYPHS", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    repeat(6) { index ->
+                        OldGlyphButton(
+                            index = index,
+                            intensity = uiState.glyphIntensities[index],
+                            isSelected = uiState.selectedChannelIndex == index,
+                            isRed = false,
+                            onIntensityChange = { newVal ->
+                                viewModel.onIntensityChange(index, newVal)
+                                viewModel.setSelectedChannel(index)
+                            },
+                            onSelect = { viewModel.setSelectedChannel(index) },
+                            enabled = !uiState.isPlaying
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(52.dp)
+                            .background(Color(0xFF222222))
+                    )
+
+                    OldGlyphButton(
+                        index = 6,
+                        intensity = uiState.glyphIntensities[6],
+                        isSelected = uiState.selectedChannelIndex == 6,
+                        isRed = true,
+                        onIntensityChange = { newVal ->
+                            viewModel.onIntensityChange(6, newVal)
+                            viewModel.setSelectedChannel(6)
+                            redViewModel.setRed(newVal > 0)
+                        },
+                        onSelect = { viewModel.setSelectedChannel(6) },
+                        enabled = !uiState.isPlaying
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF0C0C0C))
+                    .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(16.dp))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("DURATION", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text("${uiState.durationMs.toInt()}ms", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                }
+                Slider(
+                    value = uiState.durationMs,
+                    onValueChange = viewModel::onDurationChange,
+                    valueRange = 100f..2000f,
+                    steps = 18,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color.White,
+                        activeTrackColor = Color.White,
+                        inactiveTrackColor = Color(0xFF222222)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = viewModel::addStep,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Color.Black
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("ADD STEP", fontWeight = FontWeight.Black, fontSize = 11.sp)
+                }
+
+                if (uiState.currentSequenceSteps.isNotEmpty()) {
+                    IconButton(
+                        onClick = viewModel::clearSequence,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF1A1A1A))
+                            .border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(12.dp))
+                    ) {
+                        Icon(
+                            Icons.Default.DeleteSweep,
+                            contentDescription = "Clear",
+                            tint = Color(0xFFFF5252),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Right Column: Timeline (Switched to Vertical for Landscape V1 mapping)
+        DraggableTimeline(uiState, viewModel, Modifier.weight(1f))
     }
 }
 
