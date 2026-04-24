@@ -116,7 +116,6 @@ fun GlyphScrollPicker(
 @Composable
 fun ComposerScreen(
     viewModel: ComposerViewModel,
-    modifier: Modifier = Modifier,
     redViewModel: RedGlyphViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -133,244 +132,349 @@ fun ComposerScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+    if (isLandscape) {
+        ComposerLandscape(
+            uiState = uiState,
+            viewModel = viewModel,
+            redViewModel = redViewModel,
+            useOldVersion = useOldVersion,
+            onToggleVersion = { useOldVersion = it },
+            powerScale = powerScale,
+            onPowerClick = {
+                isPowerOffAnimating = true
+                viewModel.turnOffAllGlyphs()
+                redViewModel.setRed(false)
+            }
+        )
+    } else {
+        ComposerPortrait(
+            uiState = uiState,
+            viewModel = viewModel,
+            redViewModel = redViewModel,
+            useOldVersion = useOldVersion,
+            onToggleVersion = { useOldVersion = it },
+            powerScale = powerScale,
+            onPowerClick = {
+                isPowerOffAnimating = true
+                viewModel.turnOffAllGlyphs()
+                redViewModel.setRed(false)
+            }
+        )
+    }
+}
+
+@Composable
+fun ComposerPortrait(
+    uiState: ComposerUiState,
+    viewModel: ComposerViewModel,
+    redViewModel: RedGlyphViewModel,
+    useOldVersion: Boolean,
+    onToggleVersion: (Boolean) -> Unit,
+    powerScale: Float,
+    onPowerClick: () -> Unit
+) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .padding(
-                start = 16.dp,
-                top = if (isLandscape) 12.dp else 16.dp,
-                end = 16.dp,
-                bottom = 0.dp
-            ),
+            .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 0.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // ── Header ──────────────────────────────────────────────────────────
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "COMPOSER",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.White,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 2.sp,
-                fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-
-                // ── Segmented V2 / V1 pill toggle ───────────────────────────
-                Box(
-                    modifier = Modifier
-                        .padding(end = 8.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF111111))
-                        .border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(10.dp))
-                        .padding(3.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        listOf("V2" to false, "V1" to true).forEach { (label, isV1) ->
-                            val selected = useOldVersion == isV1
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(
-                                        if (selected) {
-                                            if (isV1) Color(0xFFFFEB3B) else Color(0xFFFFC1CC)
-                                        } else Color.Transparent
-                                    )
-                                    .clickable { useOldVersion = isV1 }
-                                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = label,
-                                    color = if (selected) Color.Black else Color(0xFF555555),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Black,
-                                    letterSpacing = 0.5.sp,
-                                    fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (uiState.currentSequenceSteps.isNotEmpty()) {
-                    IconButton(onClick = viewModel::clearSequence, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            Icons.Default.DeleteSweep, "Clear",
-                            tint = Color(0xFFFF5252),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-                IconButton(
-                    onClick = {
-                        isPowerOffAnimating = true
-                        viewModel.turnOffAllGlyphs()
-                        redViewModel.setRed(false)
-                    },
-                    modifier = Modifier.size(32.dp).scale(powerScale)
-                ) {
-                    Icon(
-                        Icons.Default.PowerSettingsNew, "Turn Off All",
-                        tint = Color(0xFF00E676),
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-        }
+        ComposerHeader(
+            uiState = uiState,
+            viewModel = viewModel,
+            useOldVersion = useOldVersion,
+            onToggleVersion = onToggleVersion,
+            powerScale = powerScale,
+            onPowerClick = onPowerClick
+        )
 
         if (useOldVersion) {
             ComposerScreenOld(uiState, viewModel, redViewModel)
         } else {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // ── Column 1: Duration slider + Add Step ────────────────────────
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(0.8f)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xFF111111))
-                        .border(1.dp, Color(0xFF222222), RoundedCornerShape(20.dp))
-                        .padding(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        "CONTROLS",
-                        color = Color.Gray,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                ControlsColumn(uiState, viewModel, Modifier.weight(1f))
+                GlyphsColumn(uiState, viewModel, redViewModel, Modifier.width(88.dp))
+                DraggableTimeline(uiState, viewModel, Modifier.weight(1.2f))
+            }
+        }
+    }
+}
 
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("${uiState.durationMs.toInt()}ms", color = Color.Gray, fontSize = 8.sp)
+@Composable
+fun ComposerLandscape(
+    uiState: ComposerUiState,
+    viewModel: ComposerViewModel,
+    redViewModel: RedGlyphViewModel,
+    useOldVersion: Boolean,
+    onToggleVersion: (Boolean) -> Unit,
+    powerScale: Float,
+    onPowerClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Integrated Top Header
+        ComposerHeader(
+            uiState = uiState,
+            viewModel = viewModel,
+            useOldVersion = useOldVersion,
+            onToggleVersion = onToggleVersion,
+            powerScale = powerScale,
+            onPowerClick = onPowerClick
+        )
+
+        // Main Content Area
+        Box(modifier = Modifier.weight(1f)) {
+            if (useOldVersion) {
+                ComposerScreenOld(uiState, viewModel, redViewModel)
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Controls Column - Slightly narrower in landscape
+                    ControlsColumn(uiState, viewModel, Modifier.width(180.dp))
+                    
+                    // Glyphs Column - Fixed width
+                    GlyphsColumn(uiState, viewModel, redViewModel, Modifier.width(88.dp))
+                    
+                    // Timeline - Takes remaining space
+                    DraggableTimeline(uiState, viewModel, Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ComposerHeader(
+    uiState: ComposerUiState,
+    viewModel: ComposerViewModel,
+    useOldVersion: Boolean,
+    onToggleVersion: (Boolean) -> Unit,
+    powerScale: Float,
+    onPowerClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "COMPOSER",
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 2.sp,
+            fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
+        )
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // ── Segmented V2 / V1 pill toggle ───────────────────────────
+            Box(
+                modifier = Modifier
+                    .padding(end = 8.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF111111))
+                    .border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(10.dp))
+                    .padding(3.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    listOf("V2" to false, "V1" to true).forEach { (label, isV1) ->
+                        val selected = useOldVersion == isV1
                         Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (selected) {
+                                        if (isV1) Color(0xFFFFEB3B) else Color(0xFFFFC1CC)
+                                    } else Color.Transparent
+                                )
+                                .clickable { onToggleVersion(isV1) }
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Slider(
-                                value = uiState.durationMs,
-                                onValueChange = viewModel::onDurationChange,
-                                valueRange = 100f..2000f,
-                                steps = 18,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = Color.White,
-                                    activeTrackColor = Color.White
-                                ),
-                                modifier = Modifier
-                                    .graphicsLayer { rotationZ = -90f }
-                                    .requiredWidth(320.dp)
+                            Text(
+                                text = label,
+                                color = if (selected) Color.Black else Color(0xFF555555),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 0.5.sp,
+                                fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
                             )
                         }
                     }
-
-                    Button(
-                        onClick = viewModel::addStep,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(40.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = Color.Black
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("ADD STEP", fontWeight = FontWeight.Black, fontSize = 10.sp)
-                    }
                 }
+            }
 
-                // ── Column 2: Glyph scroll-pickers ──────────────────────────────
-                Column(
-                    modifier = Modifier
-                        .width(88.dp)
-                        .fillMaxHeight(0.8f)
-                        .padding(vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        "GLYPH",
-                        color = Color.Gray,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold
+            if (uiState.currentSequenceSteps.isNotEmpty()) {
+                IconButton(onClick = viewModel::clearSequence, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Default.DeleteSweep, "Clear",
+                        tint = Color(0xFFFF5252),
+                        modifier = Modifier.size(20.dp)
                     )
-                    Spacer(Modifier.height(14.dp))
-
-                    repeat(7) { index ->
-                        val isRed = index == 6
-                        val isSelected = uiState.selectedChannelIndex == index
-                        val intensity = uiState.glyphIntensities[index]
-
-                        if (isRed) {
-                            Spacer(Modifier.height(8.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                // Spacer to match the dot width (4dp)
-                                Spacer(Modifier.width(4.dp))
-                                HorizontalDivider(
-                                    modifier = Modifier.width(54.dp), // Match GlyphScrollPicker cellWidth
-                                    thickness = 1.dp,
-                                    color = Color(0xFF2A2A2A)
-                                )
-                            }
-                            Spacer(Modifier.height(8.dp))
-                        }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(4.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isSelected) Color.White else Color.Transparent)
-                            )
-
-                            GlyphScrollPicker(
-                                intensity = intensity,
-                                onIntensityChange = { newVal ->
-                                    viewModel.onIntensityChange(index, newVal)
-                                    viewModel.setSelectedChannel(index)
-                                    if (isRed) redViewModel.setRed(newVal > 0)
-                                },
-                                isRed = isRed,
-                                enabled = !uiState.isPlaying
-                            )
-                        }
-
-                        if (!isRed) Spacer(Modifier.height(8.dp))
-                    }
                 }
-
-                // ── Column 3: Draggable Timeline ────────────────────────────────
-                DraggableTimeline(
-                    uiState = uiState,
-                    viewModel = viewModel,
-                    modifier = Modifier.weight(1.2f)
+            }
+            IconButton(
+                onClick = onPowerClick,
+                modifier = Modifier.size(32.dp).scale(powerScale)
+            ) {
+                Icon(
+                    Icons.Default.PowerSettingsNew, "Turn Off All",
+                    tint = Color(0xFF00E676),
+                    modifier = Modifier.size(22.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ControlsColumn(
+    uiState: ComposerUiState,
+    viewModel: ComposerViewModel,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxHeight(0.8f)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color(0xFF111111))
+            .border(1.dp, Color(0xFF222222), RoundedCornerShape(20.dp))
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            "CONTROLS",
+            color = Color.Gray,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.weight(1f)
+        ) {
+            Text("${uiState.durationMs.toInt()}ms", color = Color.Gray, fontSize = 8.sp)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Slider(
+                    value = uiState.durationMs,
+                    onValueChange = viewModel::onDurationChange,
+                    valueRange = 100f..2000f,
+                    steps = 18,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color.White,
+                        activeTrackColor = Color.White
+                    ),
+                    modifier = Modifier
+                        .graphicsLayer { rotationZ = -90f }
+                        .requiredWidth(320.dp)
+                )
+            }
+        }
+
+        Button(
+            onClick = viewModel::addStep,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.White,
+                contentColor = Color.Black
+            ),
+            shape = RoundedCornerShape(10.dp),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("ADD STEP", fontWeight = FontWeight.Black, fontSize = 10.sp)
+        }
+    }
+}
+
+@Composable
+private fun GlyphsColumn(
+    uiState: ComposerUiState,
+    viewModel: ComposerViewModel,
+    redViewModel: RedGlyphViewModel,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxHeight(0.8f)
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            "GLYPH",
+            color = Color.Gray,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.height(14.dp))
+
+        repeat(7) { index ->
+            val isRed = index == 6
+            val isSelected = uiState.selectedChannelIndex == index
+            val intensity = uiState.glyphIntensities[index]
+
+            if (isRed) {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Spacer(Modifier.width(4.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.width(54.dp),
+                        thickness = 1.dp,
+                        color = Color(0xFF2A2A2A)
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(4.dp)
+                        .clip(CircleShape)
+                        .background(if (isSelected) Color.White else Color.Transparent)
+                )
+
+                GlyphScrollPicker(
+                    intensity = intensity,
+                    onIntensityChange = { newVal ->
+                        viewModel.onIntensityChange(index, newVal)
+                        viewModel.setSelectedChannel(index)
+                        if (isRed) redViewModel.setRed(newVal > 0)
+                    },
+                    isRed = isRed,
+                    enabled = !uiState.isPlaying
+                )
+            }
+
+            if (!isRed) Spacer(Modifier.height(8.dp))
         }
     }
 }
@@ -428,7 +532,6 @@ fun DraggableTimeline(
         )
     }
 
-    // Approximate px per step item (55dp card + 6dp gap = 61dp @ ~3x density ≈ 183px)
     val itemHeightPx = 183f
 
     Column(
@@ -501,7 +604,6 @@ fun DraggableTimeline(
             }
         }
 
-        // Play / Save — shown only when steps exist and nothing is being dragged
         if (uiState.currentSequenceSteps.isNotEmpty() && draggingIndex == null) {
             Row(
                 modifier = Modifier
@@ -544,7 +646,6 @@ fun DraggableTimeline(
     }
 }
 
-// ─── Empty timeline placeholder ───────────────────────────────────────────────
 @Composable
 fun EmptyTimelinePlaceholder() {
     Box(
@@ -565,10 +666,6 @@ fun EmptyTimelinePlaceholder() {
     }
 }
 
-// ─── Old Version Components ──────────────────────────────────────────────────
-
-/** A tappable glyph button for V1. Tapping cycles through intensity states.
- *  Also supports vertical drag to scrub through states. */
 @Composable
 fun OldGlyphButton(
     index: Int,
@@ -587,7 +684,6 @@ fun OldGlyphButton(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // Glyph index label
         Text(
             text = if (isRed) "R" else "${index + 1}",
             color = if (isSelected) Color.White else Color(0xFF444444),
@@ -631,7 +727,6 @@ fun OldGlyphButton(
                     )
                 }
                 .clickable(enabled = enabled) {
-                    // Tap cycles to next intensity state
                     val currentIdx = states.indexOf(intensity)
                     val nextIdx = (currentIdx + 1) % states.size
                     onIntensityChange(states[nextIdx])
@@ -639,7 +734,6 @@ fun OldGlyphButton(
                 },
             contentAlignment = Alignment.Center
         ) {
-            // Full-height intensity fill with rounded inner rect
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -649,7 +743,6 @@ fun OldGlyphButton(
                     .background(intensityColor[colorIdx])
             )
 
-            // Intensity level dots at the bottom
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -731,7 +824,6 @@ fun ComposerScreenOld(
             .fillMaxHeight(0.9f),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // ── Glyph Buttons ─────────────────────────────────────────────────
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -747,7 +839,6 @@ fun ComposerScreenOld(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
-                // First 6 glyphs
                 repeat(6) { index ->
                     OldGlyphButton(
                         index = index,
@@ -763,16 +854,14 @@ fun ComposerScreenOld(
                     )
                 }
 
-                // Divider between regular and red
                 Box(
                     modifier = Modifier
-                        .padding(bottom = 0.dp) // Align with button bottom
+                        .padding(bottom = 0.dp)
                         .width(1.dp)
                         .height(52.dp)
                         .background(Color(0xFF222222))
                 )
 
-                // Red glyph (index 6)
                 OldGlyphButton(
                     index = 6,
                     intensity = uiState.glyphIntensities[6],
@@ -789,7 +878,6 @@ fun ComposerScreenOld(
             }
         }
 
-        // ── Duration Slider ───────────────────────────────────────────────
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -826,7 +914,6 @@ fun ComposerScreenOld(
             )
         }
 
-        // ── Action Row: Add Step + Clear ──────────────────────────────────
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -866,7 +953,6 @@ fun ComposerScreenOld(
             }
         }
 
-        // ── Timeline ──────────────────────────────────────────────────────
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -894,7 +980,6 @@ fun DraggableTimelineHorizontal(
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Timeline scroll area
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -952,7 +1037,6 @@ fun DraggableTimelineHorizontal(
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold
                                 )
-                                // Mini glyph preview bars
                                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                                     repeat(7) { i ->
                                         val intensityVal = step.channelIntensities[getChannelForIndex(i)] ?: 0
@@ -985,7 +1069,6 @@ fun DraggableTimelineHorizontal(
             }
         }
 
-        // ── Play / Save row (only when steps exist) ───────────────────────
         if (uiState.currentSequenceSteps.isNotEmpty()) {
             Row(
                 modifier = Modifier
@@ -993,7 +1076,6 @@ fun DraggableTimelineHorizontal(
                     .height(36.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Play / Stop
                 IconButton(
                     onClick = {
                         if (uiState.isPlaying) viewModel.stopPlayback()
@@ -1014,7 +1096,6 @@ fun DraggableTimelineHorizontal(
                         modifier = Modifier.size(18.dp)
                     )
                 }
-                // Save
                 IconButton(
                     onClick = onSaveRequest,
                     modifier = Modifier
@@ -1035,7 +1116,6 @@ fun DraggableTimelineHorizontal(
     }
 }
 
-// ─── Step preview card ────────────────────────────────────────────────────────
 @Composable
 fun StepPreviewBox(
     step: GlyphSequence,

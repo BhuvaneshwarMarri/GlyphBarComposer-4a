@@ -41,121 +41,22 @@ fun PatternLabScreen(viewModel: PatternLabViewModel) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = if (isLandscape) 12.dp else 24.dp),
-            verticalArrangement = Arrangement.spacedBy(if (isLandscape) 16.dp else 24.dp)
-        ) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "PATTERN LAB",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp,
-                    fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
-                )
-                
-                if (uiState.isPlaying) {
-                    IconButton(
-                        onClick = viewModel::togglePreview,
-                        modifier = Modifier.clip(CircleShape).background(Color(0x1AFF5252))
-                    ) {
-                        Icon(Icons.Default.Stop, null, tint = Color(0xFFFF5252))
-                    }
-                } else if ((uiState.previewSteps.isNotEmpty() || uiState.selectedPlaylistA != null || uiState.selectedPlaylistB != null)) {
-                    IconButton(
-                        onClick = viewModel::togglePreview,
-                        modifier = Modifier.clip(CircleShape).background(Color(0x1A00C853))
-                    ) {
-                        Icon(Icons.Default.PlayArrow, null, tint = Color(0xFF00C853))
-                    }
-                }
-            }
-
-            // Tab Selector
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(Color(0xFF111111))
-                    .padding(4.dp)
-            ) {
-                listOf("BASE A", "BASE B", "MIXER").forEachIndexed { index, label ->
-                    val selected = uiState.selectedTab == index
-                    val bg by animateColorAsState(
-                        if (selected) {
-                            when (index) {
-                                0 -> Color(0xFF0086EA) // Light Blue
-                                1 -> Color(0xFFFFEB3B) // Yellow
-                                else -> Color(0xFFFFC1CC) // Light Pink
-                            }
-                        } else Color.Transparent,
-                        label = "tabBg"
-                    )
-                    val textCol by animateColorAsState(if (selected) Color.Black else Color.Gray, label = "tabText")
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(bg)
-                            .clickable { viewModel.onTabChange(index) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(label, color = textCol, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.sp)
-                    }
-                }
-            }
-
-            // Content
-            Box(modifier = Modifier.weight(1f)) {
-                when (uiState.selectedTab) {
-                    0 -> BaseTabContent(
-                        title = "SEQUENCE A",
-                        name = uiState.selectedPlaylistA?.playlist?.name,
-                        speed = uiState.speedMultiplierA,
-                        inverted = uiState.isInvertedA,
-                        mirrored = uiState.isMirroredA,
-                        reversed = uiState.isReversedA,
-                        pingPong = uiState.isPingPongA,
-                        onPick = { showDialogA = true },
-                        onSpeedChange = viewModel::onSpeedMultiplierAChange,
-                        onInvertChange = viewModel::onInvertAChange,
-                        onMirrorChange = viewModel::onMirrorAChange,
-                        onReverseChange = viewModel::onReverseAChange,
-                        onPingPongChange = viewModel::onPingPongAChange
-                    )
-                    1 -> BaseTabContent(
-                        title = "SEQUENCE B",
-                        name = uiState.selectedPlaylistB?.playlist?.name,
-                        speed = uiState.speedMultiplierB,
-                        inverted = uiState.isInvertedB,
-                        mirrored = uiState.isMirroredB,
-                        reversed = uiState.isReversedB,
-                        pingPong = uiState.isPingPongB,
-                        onPick = { showDialogB = true },
-                        onSpeedChange = viewModel::onSpeedMultiplierBChange,
-                        onInvertChange = viewModel::onInvertBChange,
-                        onMirrorChange = viewModel::onMirrorBChange,
-                        onReverseChange = viewModel::onReverseBChange,
-                        onPingPongChange = viewModel::onPingPongBChange
-                    )
-                    2 -> MixerTabContent(uiState, viewModel, onSaveClick = { showSaveDialog = true })
-                }
-            }
-            
-            Spacer(Modifier.height(if (isLandscape) 0.dp else 100.dp))
-        }
+    if (isLandscape) {
+        PatternLabLandscape(
+            uiState = uiState,
+            viewModel = viewModel,
+            onPickA = { showDialogA = true },
+            onPickB = { showDialogB = true },
+            onSaveClick = { showSaveDialog = true }
+        )
+    } else {
+        PatternLabPortrait(
+            uiState = uiState,
+            viewModel = viewModel,
+            onPickA = { showDialogA = true },
+            onPickB = { showDialogB = true },
+            onSaveClick = { showSaveDialog = true }
+        )
     }
 
     if (showSaveDialog) {
@@ -187,6 +88,216 @@ fun PatternLabScreen(viewModel: PatternLabViewModel) {
             },
             onDismiss = { showDialogB = false }
         )
+    }
+}
+
+@Composable
+fun PatternLabPortrait(
+    uiState: PatternLabUiState,
+    viewModel: PatternLabViewModel,
+    onPickA: () -> Unit,
+    onPickB: () -> Unit,
+    onSaveClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        // Header
+        PatternLabHeader(uiState, viewModel)
+
+        // Tab Selector
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(Color(0xFF111111))
+                .padding(4.dp)
+        ) {
+            listOf("BASE A", "BASE B", "MIXER").forEachIndexed { index, label ->
+                val selected = uiState.selectedTab == index
+                val bg by animateColorAsState(
+                    if (selected) {
+                        when (index) {
+                            0 -> Color(0xFFB3E5FC) // Light Blue
+                            1 -> Color(0xFFFFEB3B) // Yellow
+                            else -> Color(0xFFFFC1CC) // Light Pink
+                        }
+                    } else Color.Transparent,
+                    label = "tabBg"
+                )
+                val textCol by animateColorAsState(if (selected) Color.Black else Color.Gray, label = "tabText")
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(bg)
+                        .clickable { viewModel.onTabChange(index) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(label, color = textCol, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.sp)
+                }
+            }
+        }
+
+        // Content
+        Box(modifier = Modifier.weight(1f)) {
+            PatternLabContent(uiState, viewModel, onPickA, onPickB, onSaveClick)
+        }
+        
+        Spacer(Modifier.height(100.dp))
+    }
+}
+
+@Composable
+fun PatternLabLandscape(
+    uiState: PatternLabUiState,
+    viewModel: PatternLabViewModel,
+    onPickA: () -> Unit,
+    onPickB: () -> Unit,
+    onSaveClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Integrated Top Header
+        PatternLabHeader(uiState, viewModel)
+
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            // Left Column: Tab Selector (Compact Vertical)
+            Column(
+                modifier = Modifier.width(160.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("BASE A" to 0, "BASE B" to 1, "MIXER" to 2).forEach { (label, index) ->
+                    val selected = uiState.selectedTab == index
+                    val bg = if (selected) {
+                        when (index) {
+                            0 -> Color(0xFFB3E5FC)
+                            1 -> Color(0xFFFFEB3B)
+                            else -> Color(0xFFFFC1CC)
+                        }
+                    } else Color.Transparent
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(bg)
+                            .border(1.dp, if (selected) Color.Transparent else Color(0xFF222222), RoundedCornerShape(12.dp))
+                            .clickable { viewModel.onTabChange(index) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            color = if (selected) Color.Black else Color.Gray,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                }
+            }
+
+            // Right Area: Content (Scrollable)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                PatternLabContent(uiState, viewModel, onPickA, onPickB, onSaveClick)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PatternLabHeader(uiState: PatternLabUiState, viewModel: PatternLabViewModel) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            "PATTERN LAB",
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 2.sp,
+            fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
+        )
+        
+        if (uiState.isPlaying) {
+            IconButton(
+                onClick = viewModel::togglePreview,
+                modifier = Modifier.clip(CircleShape).background(Color(0x1AFF5252))
+            ) {
+                Icon(Icons.Default.Stop, null, tint = Color(0xFFFF5252))
+            }
+        } else if ((uiState.previewSteps.isNotEmpty() || uiState.selectedPlaylistA != null || uiState.selectedPlaylistB != null)) {
+            IconButton(
+                onClick = viewModel::togglePreview,
+                modifier = Modifier.clip(CircleShape).background(Color(0x1A00C853))
+            ) {
+                Icon(Icons.Default.PlayArrow, null, tint = Color(0xFF00C853))
+            }
+        }
+    }
+}
+
+@Composable
+private fun PatternLabContent(
+    uiState: PatternLabUiState,
+    viewModel: PatternLabViewModel,
+    onPickA: () -> Unit,
+    onPickB: () -> Unit,
+    onSaveClick: () -> Unit
+) {
+    when (uiState.selectedTab) {
+        0 -> BaseTabContent(
+            title = "SEQUENCE A",
+            name = uiState.selectedPlaylistA?.playlist?.name,
+            speed = uiState.speedMultiplierA,
+            inverted = uiState.isInvertedA,
+            mirrored = uiState.isMirroredA,
+            reversed = uiState.isReversedA,
+            pingPong = uiState.isPingPongA,
+            onPick = onPickA,
+            onSpeedChange = viewModel::onSpeedMultiplierAChange,
+            onInvertChange = viewModel::onInvertAChange,
+            onMirrorChange = viewModel::onMirrorAChange,
+            onReverseChange = viewModel::onReverseAChange,
+            onPingPongChange = viewModel::onPingPongAChange
+        )
+        1 -> BaseTabContent(
+            title = "SEQUENCE B",
+            name = uiState.selectedPlaylistB?.playlist?.name,
+            speed = uiState.speedMultiplierB,
+            inverted = uiState.isInvertedB,
+            mirrored = uiState.isMirroredB,
+            reversed = uiState.isReversedB,
+            pingPong = uiState.isPingPongB,
+            onPick = onPickB,
+            onSpeedChange = viewModel::onSpeedMultiplierBChange,
+            onInvertChange = viewModel::onInvertBChange,
+            onMirrorChange = viewModel::onMirrorBChange,
+            onReverseChange = viewModel::onReverseBChange,
+            onPingPongChange = viewModel::onPingPongBChange
+        )
+        2 -> MixerTabContent(uiState, viewModel, onSaveClick = onSaveClick)
     }
 }
 

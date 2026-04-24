@@ -171,7 +171,7 @@ fun LibraryPortrait(
                 val selected = selectedTab == index
                 val bg by animateColorAsState(
                     if (selected) {
-                        if (index == 0) Color(0xFFFFEB3B) else Color(0xFFFFC1CC)
+                        if (index == 0) Color(0xFF0086EA) else Color(0xFFFFC1CC)
                     } else Color.Transparent,
                     label = "tabBg"
                 )
@@ -243,7 +243,7 @@ fun LibraryLandscape(
 @Composable
 private fun LibNavItem(label: String, icon: ImageVector, selected: Boolean, onClick: () -> Unit) {
     val bg = if (selected) {
-        if (label == "SEQUENCES") Color(0xFFFFEB3B) else Color(0xFFFFC1CC)
+        if (label == "SEQUENCES") Color(0xFF0086EA) else Color(0xFFFFC1CC)
     } else Color.Transparent
 
     Surface(
