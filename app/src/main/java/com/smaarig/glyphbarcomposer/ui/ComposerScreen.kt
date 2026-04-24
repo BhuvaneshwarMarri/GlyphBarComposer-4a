@@ -5,8 +5,10 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -20,13 +22,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
@@ -34,6 +35,98 @@ import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
 import kotlin.math.roundToInt
 
+// ─── Horizontal snap-scroll intensity picker for a single glyph ─────────────
+//
+// The column is laid out vertically, so each glyph gets a horizontal
+// strip that the user swipes left/right to cycle through intensity states.
+// White glyphs: 4 states → 0 (off), 1 (low), 2 (med), 3 (high)
+// Red glyph:    2 states → 0 (off), 3 (on)
+@Composable
+fun GlyphScrollPicker(
+    intensity: Int,
+    onIntensityChange: (Int) -> Unit,
+    isRed: Boolean = false,
+    enabled: Boolean = true
+) {
+    val states = if (isRed) listOf(0, 3) else listOf(0, 1, 2, 3)
+    val infiniteCount = 10000
+    val startOffset = (infiniteCount / 2) - ((infiniteCount / 2) % states.size)
+    val initialIdx = startOffset + states.indexOf(intensity).coerceAtLeast(0)
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIdx)
+
+    // Keep scroll position in sync with external state changes
+    LaunchedEffect(intensity) {
+        val targetIdxInStates = states.indexOf(intensity)
+        if (targetIdxInStates != -1) {
+            val currentIdx = listState.firstVisibleItemIndex
+            val currentIdxInStates = currentIdx % states.size
+            if (currentIdxInStates != targetIdxInStates) {
+                var diff = targetIdxInStates - currentIdxInStates
+                if (diff > states.size / 2) diff -= states.size
+                else if (diff < -states.size / 2) diff += states.size
+                listState.animateScrollToItem(currentIdx + diff)
+            }
+        }
+    }
+
+    // Emit value once the user lifts their finger and snapping settles
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (!listState.isScrollInProgress) {
+            val settled = listState.firstVisibleItemIndex
+            val newVal = states[settled % states.size]
+            if (newVal != intensity) onIntensityChange(newVal)
+        }
+    }
+
+    val cellWidth = 44.dp      // one cell fills the picker — shows exactly one dot
+
+    Box(
+        modifier = Modifier
+            .width(cellWidth)
+            .height(40.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFF111111))
+            .border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(8.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        LazyRow(
+            state = listState,
+            flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(0.dp),
+            userScrollEnabled = enabled
+        ) {
+            items(infiniteCount) { idx ->
+                val level = states[idx % states.size]
+                val colorIdx = if (isRed && level > 0) 6 else level
+
+                Box(
+                    modifier = Modifier
+                        .width(cellWidth)
+                        .fillMaxHeight(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(intensityColor[colorIdx])
+                    )
+                }
+            }
+        }
+
+        // Faint selection frame so the user sees the "slot"
+        Box(
+            modifier = Modifier
+                .width(cellWidth - 4.dp)
+                .fillMaxHeight()
+                .border(1.dp, Color.White.copy(alpha = 0.07f), RoundedCornerShape(6.dp))
+        )
+    }
+}
+
+// ─── Composer screen ─────────────────────────────────────────────────────────
 @Composable
 fun ComposerScreen(
     viewModel: ComposerViewModel,
@@ -41,7 +134,6 @@ fun ComposerScreen(
     redViewModel: RedGlyphViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val isRedOn by redViewModel.isRedOn.collectAsStateWithLifecycle()
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -59,90 +151,120 @@ fun ComposerScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Header
+        // ── Header ──────────────────────────────────────────────────────────
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = "COMPOSER",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp,
-                    fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
-                )
-            }
-
-            if (uiState.currentSequenceSteps.isNotEmpty()) {
-                IconButton(onClick = viewModel::clearSequence, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.DeleteSweep, "Clear", tint = Color(0xFFFF5252), modifier = Modifier.size(20.dp))
+            Text(
+                text = "COMPOSER",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.sp,
+                fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (uiState.currentSequenceSteps.isNotEmpty()) {
+                    IconButton(onClick = viewModel::clearSequence, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            Icons.Default.DeleteSweep, "Clear",
+                            tint = Color(0xFFFF5252),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                IconButton(
+                    onClick = {
+                        viewModel.turnOffAllGlyphs()
+                        redViewModel.setRed(false)
+                    },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.PowerSettingsNew, "Turn Off All",
+                        tint = Color(0xFF00E676),
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
             }
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth().weight(1f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Column 1: Glyph Visualizer (6 white + 1 red)
+            // ── Column 1: Glyph scroll-pickers ──────────────────────────────
             Column(
                 modifier = Modifier
                     .width(88.dp)
-                    .fillMaxHeight(0.75f)
+                    .fillMaxHeight(0.8f)
                     .padding(vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text("GLYPH", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-
-                Spacer(Modifier.height(16.dp))
+                Text(
+                    "GLYPH",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(14.dp))
 
                 repeat(7) { index ->
                     val isRed = index == 6
                     val isSelected = uiState.selectedChannelIndex == index
                     val intensity = uiState.glyphIntensities[index]
 
+                    // Divider before the red glyph
                     if (isRed) {
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(8.dp))
                         HorizontalDivider(
-                            modifier = Modifier.width(40.dp),
+                            modifier = Modifier.width(50.dp),
                             thickness = 1.dp,
                             color = Color(0xFF2A2A2A)
                         )
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(8.dp))
                     }
 
-                    val finalColor = if (isRed) {
-                        if (intensity > 0 || (isSelected && isRedOn)) Color(0xFFFF1744) else Color(0xFF1C1C1C)
-                    } else {
-                        intensityColor[intensity]
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Tiny dot indicating the selected channel
+                        Box(
+                            modifier = Modifier
+                                .size(4.dp)
+                                .clip(CircleShape)
+                                .background(if (isSelected) Color.White else Color.Transparent)
+                        )
+
+                        GlyphScrollPicker(
+                            intensity = intensity,
+                            onIntensityChange = { newVal ->
+                                viewModel.onIntensityChange(index, newVal)
+                                viewModel.setSelectedChannel(index)
+                                // Keep RedGlyphViewModel in sync for the red glyph
+                                if (isRed) redViewModel.setRed(newVal > 0)
+                            },
+                            isRed = isRed,
+                            enabled = !uiState.isPlaying
+                        )
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .size(if (isRed) 40.dp else 36.dp)
-                            .clip(if (isRed) CircleShape else RoundedCornerShape(8.dp))
-                            .background(finalColor)
-                            .border(
-                                width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) Color.White else Color(0xFF2A2A2A),
-                                shape = if (isRed) CircleShape else RoundedCornerShape(8.dp)
-                            )
-                            .clickable { viewModel.setSelectedChannel(index) }
-                    )
-
-                    if (!isRed) Spacer(Modifier.height(10.dp))
+                    if (!isRed) Spacer(Modifier.height(8.dp))
                 }
             }
 
-            // Column 2: Sliders & Controls
+            // ── Column 2: Duration slider + Add Step ────────────────────────
+            // Light slider removed per user request.
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxHeight(0.75f)
+                    .fillMaxHeight(0.8f)
                     .clip(RoundedCornerShape(20.dp))
                     .background(Color(0xFF111111))
                     .border(1.dp, Color(0xFF222222), RoundedCornerShape(20.dp))
@@ -150,57 +272,49 @@ fun ComposerScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("CONTROLS", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "CONTROLS",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
-                Row(
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f)
                 ) {
-                    // Intensity Slider
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                        Text("LIGHT", color = Color.Gray, fontSize = 8.sp)
-                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                            Slider(
-                                value = uiState.glyphIntensities[uiState.selectedChannelIndex].toFloat(),
-                                onValueChange = { viewModel.onIntensityChangeForSelected(it.toInt()) },
-                                valueRange = 0f..3f,
-                                steps = 2,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = Color.White,
-                                    activeTrackColor = Color.White
-                                ),
-                                modifier = Modifier
-                                    .graphicsLayer { rotationZ = -90f }
-                                    .requiredWidth(200.dp)
-                            )
-                        }
-                    }
-
-                    // Duration Slider
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                        Text("${uiState.durationMs.toInt()}ms", color = Color.Gray, fontSize = 8.sp)
-                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                            Slider(
-                                value = uiState.durationMs,
-                                onValueChange = viewModel::onDurationChange,
-                                valueRange = 100f..2000f,
-                                steps = 18,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = Color.White,
-                                    activeTrackColor = Color.White
-                                ),
-                                modifier = Modifier
-                                    .graphicsLayer { rotationZ = -90f }
-                                    .requiredWidth(320.dp)
-                            )
-                        }
+                    Text("${uiState.durationMs.toInt()}ms", color = Color.Gray, fontSize = 8.sp)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Slider(
+                            value = uiState.durationMs,
+                            onValueChange = viewModel::onDurationChange,
+                            valueRange = 100f..2000f,
+                            steps = 18,
+                            colors = SliderDefaults.colors(
+                                thumbColor = Color.White,
+                                activeTrackColor = Color.White
+                            ),
+                            modifier = Modifier
+                                .graphicsLayer { rotationZ = -90f }
+                                .requiredWidth(370.dp)
+                        )
                     }
                 }
 
                 Button(
                     onClick = viewModel::addStep,
-                    modifier = Modifier.fillMaxWidth().height(40.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Color.Black
+                    ),
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
@@ -210,16 +324,17 @@ fun ComposerScreen(
                 }
             }
 
-            // Column 3: Draggable Timeline
+            // ── Column 3: Draggable Timeline ────────────────────────────────
             DraggableTimeline(
                 uiState = uiState,
                 viewModel = viewModel,
-                modifier = Modifier.weight(1.2f).fillMaxHeight(0.75f)
+                modifier = Modifier.weight(1.2f)
             )
         }
     }
 }
 
+// ─── Draggable timeline ───────────────────────────────────────────────────────
 @Composable
 fun DraggableTimeline(
     uiState: ComposerUiState,
@@ -227,12 +342,60 @@ fun DraggableTimeline(
     modifier: Modifier = Modifier
 ) {
     var draggingIndex by remember { mutableStateOf<Int?>(null) }
-    var dragOffsetY by remember { mutableStateOf(0f) }
+    var dragOffsetY by remember { mutableFloatStateOf(0f) }
     val listState = rememberLazyListState()
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var fileName by remember { mutableStateOf("") }
+
+    if (showSaveDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveDialog = false },
+            title = { Text("Save Sequence", color = Color.White, fontWeight = FontWeight.Black) },
+            text = {
+                TextField(
+                    value = fileName,
+                    onValueChange = { fileName = it },
+                    placeholder = { Text("Sequence Name", color = Color.Gray) },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFF1A1A1A),
+                        unfocusedContainerColor = Color(0xFF1A1A1A),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        cursorColor = Color.White
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (fileName.isNotBlank()) {
+                        viewModel.savePlaylist(fileName)
+                        showSaveDialog = false
+                        fileName = ""
+                    }
+                }) {
+                    Text("SAVE", color = Color(0xFF00C853), fontWeight = FontWeight.Black)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveDialog = false }) {
+                    Text("CANCEL", color = Color.Gray)
+                }
+            },
+            containerColor = Color(0xFF111111),
+            shape = RoundedCornerShape(28.dp)
+        )
+    }
+
+    // Approximate px per step item (55dp card + 6dp gap = 61dp).
+    // Multiplied by display density (~3 for most phones) → ~183px.
+    // We keep it simple and hardcode; if needed the caller can pass density.
+    val itemHeightPx = 183f
+    val deleteThresholdPx = 250f   // drag further than this → delete
 
     Column(
         modifier = modifier
-            .fillMaxHeight(0.75f)
+            .fillMaxHeight(0.8f)
             .clip(RoundedCornerShape(20.dp))
             .background(Color(0xFF0C0C0C))
             .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(20.dp))
@@ -252,26 +415,36 @@ fun DraggableTimeline(
                 ) {
                     itemsIndexed(uiState.currentSequenceSteps) { index, step ->
                         val isDragging = draggingIndex == index
+
                         Box(
                             modifier = Modifier
+                                .zIndex(if (isDragging) 1f else 0f)
                                 .graphicsLayer {
                                     translationY = if (isDragging) dragOffsetY else 0f
-                                    alpha = if (isDragging) 0.8f else 1f
-                                    scaleX = if (isDragging) 1.05f else 1f
-                                    scaleY = if (isDragging) 1.05f else 1f
+                                    alpha = if (isDragging) 0.78f else 1f
+                                    scaleX = if (isDragging) 1.03f else 1f
+                                    scaleY = if (isDragging) 1.03f else 1f
                                 }
                                 .pointerInput(index) {
                                     detectDragGestures(
-                                        onDragStart = { draggingIndex = index },
+                                        onDragStart = {
+                                            if (!uiState.isPlaying) draggingIndex = index
+                                        },
                                         onDragEnd = {
-                                            // Handle drop reorder or delete
-                                            if (dragOffsetY > 120f) {
-                                                viewModel.removeStep(index)
-                                            } else {
-                                                val targetIndex = (index + (dragOffsetY / 65).roundToInt())
-                                                    .coerceIn(0, uiState.currentSequenceSteps.size - 1)
-                                                if (targetIndex != index) {
-                                                    viewModel.reorderSteps(index, targetIndex)
+                                            val src = draggingIndex
+                                            if (src != null) {
+                                                when {
+                                                    // Dragged far enough down → delete
+                                                    dragOffsetY > deleteThresholdPx -> {
+                                                        viewModel.removeStep(src)
+                                                    }
+                                                    // Otherwise reorder
+                                                    else -> {
+                                                        val steps = (dragOffsetY / itemHeightPx).roundToInt()
+                                                        val dst = (src + steps)
+                                                            .coerceIn(0, uiState.currentSequenceSteps.size - 1)
+                                                        if (dst != src) viewModel.reorderSteps(src, dst)
+                                                    }
                                                 }
                                             }
                                             draggingIndex = null
@@ -281,9 +454,9 @@ fun DraggableTimeline(
                                             draggingIndex = null
                                             dragOffsetY = 0f
                                         },
-                                        onDrag = { change, dragAmount ->
+                                        onDrag = { change, amount ->
                                             change.consume()
-                                            dragOffsetY += dragAmount.y
+                                            if (!uiState.isPlaying) dragOffsetY += amount.y
                                         }
                                     )
                                 }
@@ -301,29 +474,33 @@ fun DraggableTimeline(
             }
         }
 
-        // Trash Icon at bottom
+        // Delete drop-zone — shown only while actively dragging
         AnimatedVisibility(visible = draggingIndex != null) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (dragOffsetY > 120f) Color(0x33FF5252) else Color(0x1AFF5252)),
+                    .background(
+                        if (dragOffsetY > deleteThresholdPx) Color(0x44FF5252) else Color(0x1AFF5252)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.Delete,
                     null,
-                    tint = if (dragOffsetY > 120f) Color(0xFFFF5252) else Color.Gray,
-                    modifier = Modifier.size(if (dragOffsetY > 120f) 28.dp else 22.dp)
+                    tint = if (dragOffsetY > deleteThresholdPx) Color(0xFFFF5252) else Color.Gray,
+                    modifier = Modifier.size(if (dragOffsetY > deleteThresholdPx) 28.dp else 22.dp)
                 )
             }
         }
 
+        // Play / Save — shown only when steps exist and nothing is being dragged
         if (uiState.currentSequenceSteps.isNotEmpty() && draggingIndex == null) {
-            // Play/Save buttons at bottom of timeline
             Row(
-                modifier = Modifier.fillMaxWidth().height(40.dp).padding(bottom = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 IconButton(
@@ -331,7 +508,13 @@ fun DraggableTimeline(
                         if (uiState.isPlaying) viewModel.stopPlayback()
                         else viewModel.startPlayback(uiState.currentSequenceSteps)
                     },
-                    modifier = Modifier.weight(1f).fillMaxHeight().background(Color.White, RoundedCornerShape(10.dp))
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .background(
+                            if (uiState.isPlaying) Color(0xFF00E676) else Color.White,
+                            RoundedCornerShape(10.dp)
+                        )
                 ) {
                     Icon(
                         if (uiState.isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
@@ -340,10 +523,12 @@ fun DraggableTimeline(
                         modifier = Modifier.size(20.dp)
                     )
                 }
-
                 IconButton(
-                    onClick = viewModel::savePlaylist,
-                    modifier = Modifier.weight(1f).fillMaxHeight().background(Color(0xFF1A1A1A), RoundedCornerShape(10.dp))
+                    onClick = { showSaveDialog = true },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .background(Color(0xFF1A1A1A), RoundedCornerShape(10.dp))
                 ) {
                     Icon(Icons.Default.Save, null, tint = Color.White, modifier = Modifier.size(20.dp))
                 }
@@ -353,6 +538,7 @@ fun DraggableTimeline(
     }
 }
 
+// ─── Empty timeline placeholder ───────────────────────────────────────────────
 @Composable
 fun EmptyTimelinePlaceholder() {
     Box(
@@ -373,6 +559,7 @@ fun EmptyTimelinePlaceholder() {
     }
 }
 
+// ─── Step preview card ────────────────────────────────────────────────────────
 @Composable
 fun StepPreviewBox(
     step: GlyphSequence,
@@ -394,7 +581,9 @@ fun StepPreviewBox(
         contentAlignment = Alignment.Center
     ) {
         Row(
-            modifier = Modifier.padding(8.dp).fillMaxSize(),
+            modifier = Modifier
+                .padding(8.dp)
+                .fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -402,7 +591,6 @@ fun StepPreviewBox(
                 Text("STEP", fontSize = 7.sp, color = Color.Gray, fontWeight = FontWeight.Black)
                 Text("${step.durationMs}ms", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold)
             }
-
             Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 repeat(7) { i ->
                     val intensityVal = step.channelIntensities[getChannelForIndex(i)] ?: 0

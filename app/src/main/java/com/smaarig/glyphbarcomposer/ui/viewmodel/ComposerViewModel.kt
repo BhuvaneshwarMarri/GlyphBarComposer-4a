@@ -142,6 +142,12 @@ class ComposerViewModel(
         _uiState.update { it.copy(currentSequenceSteps = emptyList()) }
     }
 
+    fun turnOffAllGlyphs() {
+        if (_uiState.value.isPlaying) stopPlayback()
+        glyphController.turnOffGlyphs()
+        _uiState.update { it.copy(glyphIntensities = listOf(0, 0, 0, 0, 0, 0, 0)) }
+    }
+
     fun togglePause() {
         if (_uiState.value.isPlaying) {
             _uiState.update { it.copy(isPaused = !it.isPaused) }
@@ -190,12 +196,12 @@ class ComposerViewModel(
         }
     }
 
-    fun savePlaylist() {
+    fun savePlaylist(name: String) {
         val state = _uiState.value
-        if (state.sequenceName.isBlank() || state.currentSequenceSteps.isEmpty()) return
+        if (name.isBlank() || state.currentSequenceSteps.isEmpty()) return
 
         viewModelScope.launch {
-            val playlist = Playlist(name = state.sequenceName)
+            val playlist = Playlist(name = name)
             val playlistSteps = state.currentSequenceSteps.mapIndexed { index, step ->
                 SequenceStep(
                     playlistId = 0, // Assigned by repository
