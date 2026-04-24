@@ -177,7 +177,11 @@ fun ComposerScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (selected) Color.White else Color.Transparent)
+                                    .background(
+                                        if (selected) {
+                                            if (isV1) Color(0xFFFFEB3B) else Color(0xFFFFC1CC)
+                                        } else Color.Transparent
+                                    )
                                     .clickable { useOldVersion = isV1 }
                                     .padding(horizontal = 10.dp, vertical = 4.dp),
                                 contentAlignment = Alignment.Center

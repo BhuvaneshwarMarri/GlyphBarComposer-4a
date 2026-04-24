@@ -169,8 +169,13 @@ fun LibraryPortrait(
         ) {
             listOf("SEQUENCES", "MUSIC STUDIO").forEachIndexed { index, label ->
                 val selected = selectedTab == index
-                val bg by animateColorAsState(if (selected) Color.White else Color.Transparent)
-                val textCol by animateColorAsState(if (selected) Color.Black else Color.Gray)
+                val bg by animateColorAsState(
+                    if (selected) {
+                        if (index == 0) Color(0xFFFFEB3B) else Color(0xFFFFC1CC)
+                    } else Color.Transparent,
+                    label = "tabBg"
+                )
+                val textCol by animateColorAsState(if (selected) Color.Black else Color.Gray, label = "tabText")
 
                 Box(
                     modifier = Modifier
@@ -237,9 +242,13 @@ fun LibraryLandscape(
 
 @Composable
 private fun LibNavItem(label: String, icon: ImageVector, selected: Boolean, onClick: () -> Unit) {
+    val bg = if (selected) {
+        if (label == "SEQUENCES") Color(0xFFFFEB3B) else Color(0xFFFFC1CC)
+    } else Color.Transparent
+
     Surface(
         modifier = Modifier.fillMaxWidth().height(56.dp).clickable { onClick() },
-        color = if (selected) Color.White else Color.Transparent,
+        color = bg,
         shape = RoundedCornerShape(16.dp),
         border = if (!selected) BorderStroke(1.dp, Color(0xFF222222)) else null
     ) {

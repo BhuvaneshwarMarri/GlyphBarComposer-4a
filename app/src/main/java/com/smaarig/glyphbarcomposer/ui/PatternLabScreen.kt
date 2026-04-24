@@ -91,8 +91,17 @@ fun PatternLabScreen(viewModel: PatternLabViewModel) {
             ) {
                 listOf("BASE A", "BASE B", "MIXER").forEachIndexed { index, label ->
                     val selected = uiState.selectedTab == index
-                    val bg by animateColorAsState(if (selected) Color.White else Color.Transparent)
-                    val textCol by animateColorAsState(if (selected) Color.Black else Color.Gray)
+                    val bg by animateColorAsState(
+                        if (selected) {
+                            when (index) {
+                                0 -> Color(0xFF0086EA) // Light Blue
+                                1 -> Color(0xFFFFEB3B) // Yellow
+                                else -> Color(0xFFFFC1CC) // Light Pink
+                            }
+                        } else Color.Transparent,
+                        label = "tabBg"
+                    )
+                    val textCol by animateColorAsState(if (selected) Color.Black else Color.Gray, label = "tabText")
 
                     Box(
                         modifier = Modifier
