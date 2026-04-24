@@ -36,11 +36,6 @@ import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
 import kotlin.math.roundToInt
 
 // ─── Horizontal snap-scroll intensity picker for a single glyph ─────────────
-//
-// The column is laid out vertically, so each glyph gets a horizontal
-// strip that the user swipes left/right to cycle through intensity states.
-// White glyphs: 4 states → 0 (off), 1 (low), 2 (med), 3 (high)
-// Red glyph:    2 states → 0 (off), 3 (on)
 @Composable
 fun GlyphScrollPicker(
     intensity: Int,
@@ -54,7 +49,6 @@ fun GlyphScrollPicker(
     val initialIdx = startOffset + states.indexOf(intensity).coerceAtLeast(0)
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIdx)
 
-    // Keep scroll position in sync with external state changes
     LaunchedEffect(intensity) {
         val targetIdxInStates = states.indexOf(intensity)
         if (targetIdxInStates != -1) {
@@ -69,7 +63,6 @@ fun GlyphScrollPicker(
         }
     }
 
-    // Emit value once the user lifts their finger and snapping settles
     LaunchedEffect(listState.isScrollInProgress) {
         if (!listState.isScrollInProgress) {
             val settled = listState.firstVisibleItemIndex
@@ -78,12 +71,12 @@ fun GlyphScrollPicker(
         }
     }
 
-    val cellWidth = 44.dp      // one cell fills the picker — shows exactly one dot
+    val cellWidth = 54.dp
 
     Box(
         modifier = Modifier
             .width(cellWidth)
-            .height(40.dp)
+            .height(44.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(Color(0xFF111111))
             .border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(8.dp)),
@@ -109,20 +102,11 @@ fun GlyphScrollPicker(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .clip(RoundedCornerShape(2.dp))
                             .background(intensityColor[colorIdx])
                     )
                 }
             }
         }
-
-        // Faint selection frame so the user sees the "slot"
-        Box(
-            modifier = Modifier
-                .width(cellWidth - 4.dp)
-                .fillMaxHeight()
-                .border(1.dp, Color.White.copy(alpha = 0.07f), RoundedCornerShape(6.dp))
-        )
     }
 }
 
@@ -219,7 +203,6 @@ fun ComposerScreen(
                     val isSelected = uiState.selectedChannelIndex == index
                     val intensity = uiState.glyphIntensities[index]
 
-                    // Divider before the red glyph
                     if (isRed) {
                         Spacer(Modifier.height(8.dp))
                         HorizontalDivider(
@@ -234,7 +217,6 @@ fun ComposerScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        // Tiny dot indicating the selected channel
                         Box(
                             modifier = Modifier
                                 .size(4.dp)
@@ -247,7 +229,6 @@ fun ComposerScreen(
                             onIntensityChange = { newVal ->
                                 viewModel.onIntensityChange(index, newVal)
                                 viewModel.setSelectedChannel(index)
-                                // Keep RedGlyphViewModel in sync for the red glyph
                                 if (isRed) redViewModel.setRed(newVal > 0)
                             },
                             isRed = isRed,
@@ -260,7 +241,6 @@ fun ComposerScreen(
             }
 
             // ── Column 2: Duration slider + Add Step ────────────────────────
-            // Light slider removed per user request.
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -387,11 +367,8 @@ fun DraggableTimeline(
         )
     }
 
-    // Approximate px per step item (55dp card + 6dp gap = 61dp).
-    // Multiplied by display density (~3 for most phones) → ~183px.
-    // We keep it simple and hardcode; if needed the caller can pass density.
+    // Approximate px per step item (55dp card + 6dp gap = 61dp @ ~3x density ≈ 183px)
     val itemHeightPx = 183f
-    val deleteThresholdPx = 250f   // drag further than this → delete
 
     Column(
         modifier = modifier
@@ -433,19 +410,12 @@ fun DraggableTimeline(
                                         onDragEnd = {
                                             val src = draggingIndex
                                             if (src != null) {
-                                                when {
-                                                    // Dragged far enough down → delete
-                                                    dragOffsetY > deleteThresholdPx -> {
-                                                        viewModel.removeStep(src)
-                                                    }
-                                                    // Otherwise reorder
-                                                    else -> {
-                                                        val steps = (dragOffsetY / itemHeightPx).roundToInt()
-                                                        val dst = (src + steps)
-                                                            .coerceIn(0, uiState.currentSequenceSteps.size - 1)
-                                                        if (dst != src) viewModel.reorderSteps(src, dst)
-                                                    }
-                                                }
+                                                // Pure reorder only — deletion is exclusively via
+                                                // the delete icon inside StepPreviewBox
+                                                val steps = (dragOffsetY / itemHeightPx).roundToInt()
+                                                val dst = (src + steps)
+                                                    .coerceIn(0, uiState.currentSequenceSteps.size - 1)
+                                                if (dst != src) viewModel.reorderSteps(src, dst)
                                             }
                                             draggingIndex = null
                                             dragOffsetY = 0f
@@ -471,27 +441,6 @@ fun DraggableTimeline(
                         }
                     }
                 }
-            }
-        }
-
-        // Delete drop-zone — shown only while actively dragging
-        AnimatedVisibility(visible = draggingIndex != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        if (dragOffsetY > deleteThresholdPx) Color(0x44FF5252) else Color(0x1AFF5252)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.Delete,
-                    null,
-                    tint = if (dragOffsetY > deleteThresholdPx) Color(0xFFFF5252) else Color.Gray,
-                    modifier = Modifier.size(if (dragOffsetY > deleteThresholdPx) 28.dp else 22.dp)
-                )
             }
         }
 
