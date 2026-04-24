@@ -77,6 +77,48 @@ class ComposerViewModel(
         }
     }
 
+    fun insertStepAt(index: Int) {
+        _uiState.update { state ->
+            val mutableSteps = state.currentSequenceSteps.toMutableList()
+            mutableSteps.add(index, GlyphSequence(getIntensitiesMap(), state.durationMs.toInt()))
+            state.copy(currentSequenceSteps = mutableSteps)
+        }
+    }
+
+    fun removeStep(index: Int) {
+        if (_uiState.value.isPlaying) return
+        _uiState.update { state ->
+            val mutableSteps = state.currentSequenceSteps.toMutableList()
+            if (index in mutableSteps.indices) {
+                mutableSteps.removeAt(index)
+            }
+            state.copy(currentSequenceSteps = mutableSteps)
+        }
+    }
+
+    fun updateStep(index: Int) {
+        if (_uiState.value.isPlaying) return
+        _uiState.update { state ->
+            val mutableSteps = state.currentSequenceSteps.toMutableList()
+            if (index in mutableSteps.indices) {
+                mutableSteps[index] = GlyphSequence(getIntensitiesMap(), state.durationMs.toInt())
+            }
+            state.copy(currentSequenceSteps = mutableSteps)
+        }
+    }
+
+    fun loadStep(index: Int) {
+        val state = _uiState.value
+        val step = state.currentSequenceSteps.getOrNull(index) ?: return
+        
+        _uiState.update { it.copy(
+            glyphIntensities = channels.map { ch -> step.channelIntensities[ch] ?: 0 },
+            durationMs = step.durationMs.toFloat()
+        ) }
+        
+        glyphController.applyGlyphStateWithIntensities(step.channelIntensities, 2000)
+    }
+
     fun clearSequence() {
         if (_uiState.value.isPlaying) return
         _uiState.update { it.copy(currentSequenceSteps = emptyList()) }

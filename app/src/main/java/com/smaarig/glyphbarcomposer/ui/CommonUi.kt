@@ -7,6 +7,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,7 +47,7 @@ val intensityColor = listOf(
     Color(0xFFFFFFFF),   // 3 – HIGH
     Color(0xFFC62828),   // 4 – RED (Low)
     Color(0xFFEF5350),   // 5 – RED (Med)
-    Color(0xFFFF1744)    // 6 – RED (Full)
+    Color(0xFFFF1744),   // 6 – RED (Full)
 )
 
 val intensityBorder = listOf(
@@ -63,105 +66,83 @@ fun labelColor(intensity: Int) =
 val statusLabel = listOf("", "LOW", "MED", "HIGH", "ON", "ON", "ON")
 
 @Composable
-fun GlyphBox(
-    label: String,
+fun IntensityWheelPicker(
     intensity: Int,
-    modifier: Modifier = Modifier,
     onIntensityChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     isRed: Boolean = false
 ) {
-    var accumulatedDrag by remember { mutableStateOf(0f) }
+    val states = if (isRed) listOf(0, 3) else listOf(0, 1, 2, 3)
+    val state = rememberLazyListState(initialFirstVisibleItemIndex = states.indexOf(intensity).coerceAtLeast(0))
 
-    val scale by animateFloatAsState(
-        targetValue = if (intensity > 0) 1.08f else 1.0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessHigh
-        ),
-        label = "scale"
-    )
+    // Sync external state changes to picker
+    LaunchedEffect(intensity) {
+        val targetIdx = states.indexOf(intensity)
+        if (targetIdx >= 0 && state.firstVisibleItemIndex != targetIdx) {
+            state.animateScrollToItem(targetIdx)
+        }
+    }
 
-    val fillColor by animateColorAsState(
-        targetValue = intensityColor[intensity],
-        animationSpec = tween(durationMillis = 120),
-        label = "fill"
-    )
-    val borderColor by animateColorAsState(
-        targetValue = intensityBorder[intensity],
-        animationSpec = tween(durationMillis = 120),
-        label = "border"
-    )
-
-    val dragProgress = (kotlin.math.abs(accumulatedDrag).coerceAtMost(30f) / 30f)
-    val dragOverlayAlpha = dragProgress * 0.18f
+    // Sync picker changes to external state
+    LaunchedEffect(state.isScrollInProgress) {
+        if (!state.isScrollInProgress) {
+            val centerIdx = state.firstVisibleItemIndex
+            if (centerIdx in states.indices) {
+                onIntensityChange(states[centerIdx])
+            }
+        }
+    }
 
     Box(
         modifier = modifier
-            .aspectRatio(1f)
-            .scale(scale)
+            .height(100.dp)
+            .width(50.dp)
             .clip(RoundedCornerShape(12.dp))
-            .border(1.dp, if (intensity > 0) borderColor else Color(0xFF222222), RoundedCornerShape(12.dp))
-            .background(fillColor)
-            .then(if (enabled) {
-                Modifier
-                    .pointerInput(intensity) {
-                        detectVerticalDragGestures(
-                            onVerticalDrag = { change, dragAmount ->
-                                if (isRed) return@detectVerticalDragGestures
-                                change.consume()
-                                accumulatedDrag += dragAmount
-                                val threshold = 28f
-                                if (accumulatedDrag > threshold) {
-                                    if (intensity > 0) onIntensityChange(intensity - 1)
-                                    accumulatedDrag = 0f
-                                } else if (accumulatedDrag < -threshold) {
-                                    if (intensity < 3) onIntensityChange(intensity + 1)
-                                    accumulatedDrag = 0f
-                                }
-                            },
-                            onDragEnd = { accumulatedDrag = 0f },
-                            onDragCancel = { accumulatedDrag = 0f }
-                        )
-                    }
-                    .clickable {
-                        if (isRed) {
-                            if (intensity > 0) onIntensityChange(0) else onIntensityChange(3)
-                        } else {
-                            if (intensity > 0) onIntensityChange(0) else onIntensityChange(3)
-                        }
-                    }
-            } else Modifier),
+            .background(Color(0xFF111111))
+            .border(1.dp, Color(0xFF222222), RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
     ) {
-        if (dragOverlayAlpha > 0f && enabled) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(
-                        if (accumulatedDrag < 0) Color.White.copy(alpha = dragOverlayAlpha)
-                        else Color.Black.copy(alpha = dragOverlayAlpha)
+        LazyColumn(
+            state = state,
+            flingBehavior = rememberSnapFlingBehavior(lazyListState = state),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = 30.dp),
+            userScrollEnabled = enabled
+        ) {
+            items(states.size) { idx ->
+                val level = states[idx]
+                val isSelected = level == intensity
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp)
+                        .padding(4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(if (isSelected) 24.dp else 12.dp)
+                            .clip(CircleShape)
+                            .background(intensityColor[if (isRed && level > 0) 6 else level])
+                            .border(
+                                width = 1.dp,
+                                color = if (isSelected) Color.White else Color.Transparent,
+                                shape = CircleShape
+                            )
                     )
-            )
-        }
-
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = label,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = labelColor(intensity)
-            )
-            if (intensity > 0) {
-                Text(
-                    text = statusLabel[intensity],
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = labelColor(intensity).copy(alpha = 0.75f),
-                    letterSpacing = 0.8.sp
-                )
+                }
             }
         }
+        
+        // Center indicator overlay
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(40.dp)
+                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+        )
     }
 }
 
