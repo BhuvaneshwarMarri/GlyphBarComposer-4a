@@ -119,7 +119,6 @@ fun ComposerScreen(
     redViewModel: RedGlyphViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var useOldVersion by remember { mutableStateOf(false) }
 
     var isPowerOffAnimating by remember { mutableStateOf(false) }
     val powerScale by animateFloatAsState(
@@ -137,8 +136,6 @@ fun ComposerScreen(
             uiState = uiState,
             viewModel = viewModel,
             redViewModel = redViewModel,
-            useOldVersion = useOldVersion,
-            onToggleVersion = { useOldVersion = it },
             powerScale = powerScale,
             onPowerClick = {
                 isPowerOffAnimating = true
@@ -151,8 +148,6 @@ fun ComposerScreen(
             uiState = uiState,
             viewModel = viewModel,
             redViewModel = redViewModel,
-            useOldVersion = useOldVersion,
-            onToggleVersion = { useOldVersion = it },
             powerScale = powerScale,
             onPowerClick = {
                 isPowerOffAnimating = true
@@ -168,8 +163,6 @@ fun ComposerPortrait(
     uiState: ComposerUiState,
     viewModel: ComposerViewModel,
     redViewModel: RedGlyphViewModel,
-    useOldVersion: Boolean,
-    onToggleVersion: (Boolean) -> Unit,
     powerScale: Float,
     onPowerClick: () -> Unit
 ) {
@@ -184,13 +177,11 @@ fun ComposerPortrait(
         ComposerHeader(
             uiState = uiState,
             viewModel = viewModel,
-            useOldVersion = useOldVersion,
-            onToggleVersion = onToggleVersion,
             powerScale = powerScale,
             onPowerClick = onPowerClick
         )
 
-        if (useOldVersion) {
+        if (uiState.useOldVersion) {
             ComposerScreenOld(uiState, viewModel, redViewModel)
         } else {
             Row(
@@ -201,7 +192,13 @@ fun ComposerPortrait(
             ) {
                 ControlsColumn(uiState, viewModel, Modifier.weight(1f))
                 GlyphsColumn(uiState, viewModel, redViewModel, Modifier.width(88.dp))
-                DraggableTimeline(uiState, viewModel, Modifier.weight(1.2f))
+                DraggableTimeline(
+                    uiState = uiState,
+                    viewModel = viewModel,
+                    modifier = Modifier
+                        .weight(1.2f)
+                        .fillMaxHeight(0.8f)
+                )
             }
         }
     }
@@ -212,8 +209,6 @@ fun ComposerLandscape(
     uiState: ComposerUiState,
     viewModel: ComposerViewModel,
     redViewModel: RedGlyphViewModel,
-    useOldVersion: Boolean,
-    onToggleVersion: (Boolean) -> Unit,
     powerScale: Float,
     onPowerClick: () -> Unit
 ) {
@@ -227,13 +222,11 @@ fun ComposerLandscape(
         ComposerHeader(
             uiState = uiState,
             viewModel = viewModel,
-            useOldVersion = useOldVersion,
-            onToggleVersion = onToggleVersion,
             powerScale = powerScale,
             onPowerClick = onPowerClick
         )
 
-        if (useOldVersion) {
+        if (uiState.useOldVersion) {
             ComposerScreenOldLandscape(uiState, viewModel, redViewModel)
         } else {
             Row(
@@ -250,7 +243,11 @@ fun ComposerLandscape(
                 }
 
                 // Right Panel: Timeline
-                DraggableTimeline(uiState, viewModel, Modifier.weight(1f))
+                DraggableTimeline(
+                    uiState = uiState,
+                    viewModel = viewModel,
+                    modifier = Modifier.weight(1f).fillMaxHeight()
+                )
             }
         }
     }
@@ -260,8 +257,6 @@ fun ComposerLandscape(
 private fun ComposerHeader(
     uiState: ComposerUiState,
     viewModel: ComposerViewModel,
-    useOldVersion: Boolean,
-    onToggleVersion: (Boolean) -> Unit,
     powerScale: Float,
     onPowerClick: () -> Unit
 ) {
@@ -290,7 +285,7 @@ private fun ComposerHeader(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     listOf("V2" to false, "V1" to true).forEach { (label, isV1) ->
-                        val selected = useOldVersion == isV1
+                        val selected = uiState.useOldVersion == isV1
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
@@ -299,7 +294,7 @@ private fun ComposerHeader(
                                         if (isV1) Color(0xFFFFEB3B) else Color(0xFFFFC1CC)
                                     } else Color.Transparent
                                 )
-                                .clickable { onToggleVersion(isV1) }
+                                .clickable { viewModel.toggleVersion(isV1) }
                                 .padding(horizontal = 10.dp, vertical = 4.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -351,20 +346,35 @@ private fun ControlsColumn(
     Column(
         modifier = modifier
             .fillMaxHeight(0.8f)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF111111))
-            .border(1.dp, Color(0xFF222222), RoundedCornerShape(20.dp))
-            .padding(12.dp),
+            .clip(RoundedCornerShape(24.dp))
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    colors = listOf(Color(0xFF141414), Color(0xFF0A0A0A))
+                )
+            )
+            .border(1.dp, Color(0xFF222222), RoundedCornerShape(24.dp))
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("CONTROLS", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "CONTROLS",
+            color = Color(0xFF666666),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 1.sp
+        )
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.weight(1f)
         ) {
-            Text("${uiState.durationMs.toInt()}ms", color = Color.Gray, fontSize = 8.sp)
+            Text(
+                "${uiState.durationMs.toInt()}ms",
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -378,11 +388,12 @@ private fun ControlsColumn(
                     steps = 18,
                     colors = SliderDefaults.colors(
                         thumbColor = Color.White,
-                        activeTrackColor = Color.White
+                        activeTrackColor = Color.White,
+                        inactiveTrackColor = Color(0xFF222222)
                     ),
                     modifier = Modifier
                         .graphicsLayer { rotationZ = -90f }
-                        .requiredWidth(320.dp)
+                        .requiredWidth(340.dp)
                 )
             }
         }
@@ -391,17 +402,19 @@ private fun ControlsColumn(
             onClick = viewModel::addStep,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(40.dp),
+                .height(48.dp)
+                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(14.dp)),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.White,
                 contentColor = Color.Black
             ),
-            shape = RoundedCornerShape(10.dp),
-            contentPadding = PaddingValues(0.dp)
+            shape = RoundedCornerShape(14.dp),
+            contentPadding = PaddingValues(0.dp),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
         ) {
-            Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("ADD STEP", fontWeight = FontWeight.Black, fontSize = 10.sp)
+            Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("ADD STEP", fontWeight = FontWeight.Black, fontSize = 11.sp)
         }
     }
 }
@@ -416,12 +429,18 @@ private fun GlyphsColumn(
     Column(
         modifier = modifier
             .fillMaxHeight(0.8f)
-            .padding(vertical = 8.dp),
+            .padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("GLYPH", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(14.dp))
+        Text(
+            "GLYPH",
+            color = Color(0xFF666666),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 1.sp
+        )
+        Spacer(Modifier.height(20.dp))
 
         repeat(7) { index ->
             val isRed = index == 6
@@ -429,30 +448,35 @@ private fun GlyphsColumn(
             val intensity = uiState.glyphIntensities[index]
 
             if (isRed) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Spacer(Modifier.width(4.dp))
                     HorizontalDivider(
-                        modifier = Modifier.width(54.dp),
+                        modifier = Modifier.width(60.dp),
                         thickness = 1.dp,
-                        color = Color(0xFF2A2A2A)
+                        color = Color(0xFF333333)
                     )
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
             }
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(4.dp)
+                        .size(6.dp)
                         .clip(CircleShape)
                         .background(if (isSelected) Color.White else Color.Transparent)
+                        .border(
+                            1.dp,
+                            if (isSelected) Color.White.copy(0.2f) else Color.Transparent,
+                            CircleShape
+                        )
                 )
 
                 GlyphScrollPicker(
@@ -467,7 +491,7 @@ private fun GlyphsColumn(
                 )
             }
 
-            if (!isRed) Spacer(Modifier.height(8.dp))
+            if (!isRed) Spacer(Modifier.height(10.dp))
         }
     }
 }
@@ -649,14 +673,19 @@ fun DraggableTimeline(
 
     Column(
         modifier = modifier
-            .fillMaxHeight(0.8f)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF0C0C0C))
-            .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(20.dp))
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color(0xFF080808))
+            .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(24.dp))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text("SEQUENCE", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "SEQUENCE",
+            color = Color(0xFF666666),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 1.sp
+        )
 
         Box(modifier = Modifier.weight(1f)) {
             if (uiState.currentSequenceSteps.isEmpty()) {
@@ -679,38 +708,34 @@ fun DraggableTimeline(
                                     scaleX = if (isDragging) 1.03f else 1f
                                     scaleY = if (isDragging) 1.03f else 1f
                                 }
-                                .pointerInput(index) {
-                                    detectDragGestures(
-                                        onDragStart = {
-                                            if (!uiState.isPlaying) draggingIndex = index
-                                        },
-                                        onDragEnd = {
-                                            val src = draggingIndex
-                                            if (src != null) {
-                                                val steps = (dragOffsetY / itemHeightPx).roundToInt()
-                                                val dst = (src + steps)
-                                                    .coerceIn(0, uiState.currentSequenceSteps.size - 1)
-                                                if (dst != src) viewModel.reorderSteps(src, dst)
-                                            }
-                                            draggingIndex = null
-                                            dragOffsetY = 0f
-                                        },
-                                        onDragCancel = {
-                                            draggingIndex = null
-                                            dragOffsetY = 0f
-                                        },
-                                        onDrag = { change, amount ->
-                                            change.consume()
-                                            if (!uiState.isPlaying) dragOffsetY += amount.y
-                                        }
-                                    )
-                                }
                         ) {
                             StepPreviewBox(
-                                step = step,
-                                onDelete = { viewModel.removeStep(index) },
-                                enabled = !uiState.isPlaying
-                            )
+                            step = step,
+                            onDelete = { viewModel.removeStep(index) },
+                            enabled = !uiState.isPlaying,
+                            onDragStart = {
+                                if (!uiState.isPlaying) draggingIndex = index
+                            },
+                            onDragEnd = {
+                                val src = draggingIndex
+                                if (src != null) {
+                                    val steps = (dragOffsetY / itemHeightPx).roundToInt()
+                                    val dst = (src + steps)
+                                        .coerceIn(0, uiState.currentSequenceSteps.size - 1)
+                                    if (dst != src) viewModel.reorderSteps(src, dst)
+                                }
+                                draggingIndex = null
+                                dragOffsetY = 0f
+                            },
+                            onDragCancel = {
+                                draggingIndex = null
+                                dragOffsetY = 0f
+                            },
+                            onDrag = { change, amount ->
+                                change.consume()
+                                if (!uiState.isPlaying) dragOffsetY += amount.y
+                            }
+                        )
                         }
                     }
                 }
@@ -764,17 +789,49 @@ fun EmptyTimelinePlaceholder() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(180.dp)
+            .height(200.dp)
             .clip(RoundedCornerShape(24.dp))
-            .background(Color(0xFF111111))
-            .border(BorderStroke(1.dp, Color(0xFF1A1A1A)), RoundedCornerShape(24.dp)),
+            .background(Color(0xFF0C0C0C))
+            .border(
+                BorderStroke(1.dp, Color(0xFF1A1A1A)),
+                RoundedCornerShape(24.dp)
+            ),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.Layers, null, tint = Color(0xFF222222), modifier = Modifier.size(48.dp))
-            Spacer(Modifier.height(12.dp))
-            Text("Timeline is empty", color = Color(0xFF333333), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            Text("Add steps to build sequence", color = Color(0xFF222222), fontSize = 11.sp)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF111111))
+                    .border(1.dp, Color(0xFF222222), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Layers,
+                    null,
+                    tint = Color(0xFF444444),
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "Timeline is empty",
+                color = Color(0xFF666666),
+                fontWeight = FontWeight.Black,
+                fontSize = 14.sp,
+                letterSpacing = 0.5.sp
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Add steps to build sequence",
+                color = Color(0xFF333333),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -935,7 +992,7 @@ fun ComposerScreenOld(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.9f),
+            .fillMaxHeight(0.8f),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Column(
@@ -1425,40 +1482,91 @@ fun DraggableTimelineHorizontal(
 fun StepPreviewBox(
     step: GlyphSequence,
     onDelete: () -> Unit,
-    enabled: Boolean
+    enabled: Boolean,
+    onDragStart: () -> Unit = {},
+    onDragEnd: () -> Unit = {},
+    onDragCancel: () -> Unit = {},
+    onDrag: (change: androidx.compose.ui.input.pointer.PointerInputChange, dragAmount: androidx.compose.ui.geometry.Offset) -> Unit = { _, _ -> },
+    modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .height(55.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF161616))
-            .border(1.dp, Color(0xFF222222), RoundedCornerShape(12.dp))
+            .height(64.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                    colors = listOf(Color(0xFF181818), Color(0xFF111111))
+                )
+            )
+            .border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(16.dp))
             .clickable(enabled = enabled) { showMenu = !showMenu },
         contentAlignment = Alignment.Center
     ) {
         Row(
             modifier = Modifier
-                .padding(8.dp)
+                .padding(horizontal = 14.dp, vertical = 10.dp)
                 .fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
-                Text("STEP", fontSize = 7.sp, color = Color.Gray, fontWeight = FontWeight.Black)
-                Text("${step.durationMs}ms", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    Icons.Default.DragHandle,
+                    contentDescription = "Drag to reorder",
+                    tint = Color(0xFF555555),
+                    modifier = Modifier
+                        .size(32.dp)
+                        .padding(4.dp)
+                        .pointerInput(Unit) {
+                            detectDragGestures(
+                                onDragStart = { onDragStart() },
+                                onDragEnd = { onDragEnd() },
+                                onDragCancel = { onDragCancel() },
+                                onDrag = { change, dragAmount -> onDrag(change, dragAmount) }
+                            )
+                        }
+                )
+
+                Column(verticalArrangement = Arrangement.Center) {
+                    Text(
+                        "STEP",
+                        fontSize = 8.sp,
+                        color = Color(0xFF666666),
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.5.sp
+                    )
+                    Text(
+                        "${step.durationMs.toInt()}ms",
+                        fontSize = 12.sp,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 repeat(7) { i ->
                     val intensityVal = step.channelIntensities[getChannelForIndex(i)] ?: 0
                     val finalIntensity = if (i == 6 && intensityVal > 0) 6 else intensityVal
+                    
                     Box(
                         modifier = Modifier
-                            .size(width = 5.dp, height = 20.dp)
-                            .clip(RoundedCornerShape(1.dp))
+                            .size(width = 6.dp, height = 24.dp)
+                            .clip(RoundedCornerShape(1.5.dp))
                             .background(intensityColor[finalIntensity])
+                            .border(
+                                0.5.dp,
+                                intensityBorder[finalIntensity].copy(alpha = 0.5f),
+                                RoundedCornerShape(1.5.dp)
+                            )
                     )
                 }
             }
@@ -1468,14 +1576,30 @@ fun StepPreviewBox(
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(Color(0xE6000000))
+                    .background(Color.Black.copy(alpha = 0.85f))
                     .clickable { showMenu = false },
                 contentAlignment = Alignment.Center
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    IconButton(onClick = { onDelete(); showMenu = false }, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Delete, null, tint = Color(0xFFFF5252), modifier = Modifier.size(16.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { onDelete(); showMenu = false },
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Color(0xFF221111), CircleShape)
+                            .border(1.dp, Color(0xFF442222), CircleShape)
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            null,
+                            tint = Color(0xFFFF5252),
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
+                    
+                    // Add more menu items if needed, like "Edit" or "Duplicate"
                 }
             }
         }

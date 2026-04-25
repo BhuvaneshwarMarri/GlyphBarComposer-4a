@@ -15,6 +15,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import com.smaarig.glyphbarcomposer.repository.GlyphRepository
+import com.smaarig.glyphbarcomposer.utils.PreferenceManager
 
 data class ComposerUiState(
     val glyphIntensities: List<Int> = listOf(0, 0, 0, 0, 0, 0, 0),
@@ -24,7 +25,8 @@ data class ComposerUiState(
     val isPlaying: Boolean = false,
     val isPaused: Boolean = false,
     val activePlaylistId: Long? = null,
-    val selectedChannelIndex: Int = 0
+    val selectedChannelIndex: Int = 0,
+    val useOldVersion: Boolean = true
 )
 
 class ComposerViewModel(
@@ -32,8 +34,9 @@ class ComposerViewModel(
     private val repository: GlyphRepository
 ) : AndroidViewModel(application) {
     private val glyphController = GlyphController.getInstance(application)
+    private val prefManager = PreferenceManager(application)
 
-    private val _uiState = MutableStateFlow(ComposerUiState())
+    private val _uiState = MutableStateFlow(ComposerUiState(useOldVersion = prefManager.useOldVersion))
     val uiState: StateFlow<ComposerUiState> = _uiState.asStateFlow()
 
     val allPlaylists = repository.allPlaylists
@@ -49,6 +52,11 @@ class ComposerViewModel(
         Glyph.Code_25111.A_6,
         Glyph.Code_22111.E1
     )
+
+    fun toggleVersion(isOld: Boolean) {
+        prefManager.useOldVersion = isOld
+        _uiState.update { it.copy(useOldVersion = isOld) }
+    }
 
     fun onIntensityChange(index: Int, newIntensity: Int) {
         if (_uiState.value.isPlaying) return

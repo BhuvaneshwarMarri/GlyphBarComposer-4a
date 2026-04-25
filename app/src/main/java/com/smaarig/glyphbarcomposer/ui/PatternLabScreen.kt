@@ -122,7 +122,7 @@ fun PatternLabPortrait(
                 val bg by animateColorAsState(
                     if (selected) {
                         when (index) {
-                            0 -> Color(0xFFB3E5FC) // Light Blue
+                            0 -> Color(0xFF0086EA) // Blue
                             1 -> Color(0xFFFFEB3B) // Yellow
                             else -> Color(0xFFFFC1CC) // Light Pink
                         }
