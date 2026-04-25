@@ -246,15 +246,12 @@ class GlyphController private constructor() {
         val newIntensities = channels.map { ch -> channelIntensities[ch] ?: 0 }
         _currentIntensities.value = newIntensities
 
-        // Auto-reset preview after duration
+        // Auto-reset hardware busy state after duration, but DON'T reset _currentIntensities
+        // unless they are all zero. The preview should show the live state.
         resetJob?.cancel()
         resetJob = controllerScope.launch {
             delay(durationMs.toLong())
-            if (_currentIntensities.value == newIntensities) {
-                _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
-            }
             _isHardwareBusy.value = false
-            // Logic in init block will restart battery visualization if needed
         }
 
         try {
@@ -287,13 +284,10 @@ class GlyphController private constructor() {
         val newIntensities = channels.map { ch -> if (activeChannels.contains(ch)) 3 else 0 }
         _currentIntensities.value = newIntensities
 
-        // Auto-reset preview after duration
+        // Auto-reset busy state only
         resetJob?.cancel()
         resetJob = controllerScope.launch {
             delay(durationMs.toLong())
-            if (_currentIntensities.value == newIntensities) {
-                _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
-            }
             _isHardwareBusy.value = false
         }
 
