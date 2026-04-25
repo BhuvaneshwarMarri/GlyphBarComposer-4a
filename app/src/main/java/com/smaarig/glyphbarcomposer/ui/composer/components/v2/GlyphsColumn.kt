@@ -5,11 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -36,41 +32,23 @@ fun GlyphsColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    Icons.Default.ChevronLeft,
-                    null,
-                    tint = Color(0xFF333333),
-                    modifier = Modifier.size(12.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "GLYPH",
-                    color = Color(0xFF666666),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp
-                )
-                Spacer(Modifier.width(8.dp))
-                Icon(
-                    Icons.Default.ChevronRight,
-                    null,
-                    tint = Color(0xFF333333),
-                    modifier = Modifier.size(12.dp)
-                )
-            }
-        }
+            // Invisible spacer to match the selection dot width (6dp) and alignment
+            Spacer(Modifier.size(6.dp))
 
+            Text(
+                "<- GLYPH ->",
+                color = Color(0xFF666666),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp,
+                modifier = Modifier.width(70.dp), // Matches GlyphScrollPicker width
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
 
         Spacer(Modifier.height(16.dp))
 
