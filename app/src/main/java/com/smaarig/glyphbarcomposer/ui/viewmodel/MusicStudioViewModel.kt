@@ -6,6 +6,7 @@ import android.media.audiofx.Visualizer
 import android.net.Uri
 import android.util.Log
 import androidx.core.net.toUri
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nothing.ketchum.Glyph
@@ -68,6 +69,7 @@ enum class BeatAlgorithm(val displayName: String, val description: String) {
 // UI State
 // ─────────────────────────────────────────────────────────────────────────────
 
+@Stable
 data class MusicStudioUiState(
     val audioUri: Uri? = null,
     val audioName: String? = null,

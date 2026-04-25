@@ -34,6 +34,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.smaarig.glyphbarcomposer.ui.theme.GlyphBarComposerTheme
 import com.smaarig.glyphbarcomposer.GlyphApplication
+import com.smaarig.glyphbarcomposer.ui.composer.ComposerScreen
+import com.smaarig.glyphbarcomposer.ui.library.LibraryScreen
+import com.smaarig.glyphbarcomposer.ui.patternlab.PatternLabScreen
+import com.smaarig.glyphbarcomposer.ui.studio.MusicStudioScreen
 import com.smaarig.glyphbarcomposer.ui.viewmodel.*
 import kotlinx.coroutines.delay
 

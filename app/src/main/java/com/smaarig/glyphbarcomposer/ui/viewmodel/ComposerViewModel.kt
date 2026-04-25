@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nothing.ketchum.Glyph
 import com.smaarig.glyphbarcomposer.controller.GlyphController
-import com.smaarig.glyphbarcomposer.data.AppDatabase
 import com.smaarig.glyphbarcomposer.data.Playlist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import com.smaarig.glyphbarcomposer.data.SequenceStep
@@ -75,10 +74,6 @@ class ComposerViewModel(
         _uiState.update { it.copy(selectedChannelIndex = index) }
     }
 
-    fun onIntensityChangeForSelected(intensity: Int) {
-        onIntensityChange(_uiState.value.selectedChannelIndex, intensity)
-    }
-
     fun reorderSteps(from: Int, to: Int) {
         val list = _uiState.value.currentSequenceSteps.toMutableList()
         if (from in list.indices && to in list.indices) {
@@ -92,22 +87,10 @@ class ComposerViewModel(
         _uiState.update { it.copy(durationMs = newDuration) }
     }
 
-    fun onSequenceNameChange(newName: String) {
-        _uiState.update { it.copy(sequenceName = newName) }
-    }
-
     fun addStep() {
         _uiState.update { state ->
             val newSteps = state.currentSequenceSteps + GlyphSequence(getIntensitiesMap(), state.durationMs.toInt())
             state.copy(currentSequenceSteps = newSteps)
-        }
-    }
-
-    fun insertStepAt(index: Int) {
-        _uiState.update { state ->
-            val mutableSteps = state.currentSequenceSteps.toMutableList()
-            mutableSteps.add(index, GlyphSequence(getIntensitiesMap(), state.durationMs.toInt()))
-            state.copy(currentSequenceSteps = mutableSteps)
         }
     }
 
@@ -117,17 +100,6 @@ class ComposerViewModel(
             val mutableSteps = state.currentSequenceSteps.toMutableList()
             if (index in mutableSteps.indices) {
                 mutableSteps.removeAt(index)
-            }
-            state.copy(currentSequenceSteps = mutableSteps)
-        }
-    }
-
-    fun updateStep(index: Int) {
-        if (_uiState.value.isPlaying) return
-        _uiState.update { state ->
-            val mutableSteps = state.currentSequenceSteps.toMutableList()
-            if (index in mutableSteps.indices) {
-                mutableSteps[index] = GlyphSequence(getIntensitiesMap(), state.durationMs.toInt())
             }
             state.copy(currentSequenceSteps = mutableSteps)
         }

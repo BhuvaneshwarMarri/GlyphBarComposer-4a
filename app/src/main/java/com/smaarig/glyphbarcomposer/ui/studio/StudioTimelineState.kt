@@ -27,6 +27,12 @@ class StudioTimelineState(
     /** Physical screen-pixel offset — used for scrollState.animateScrollTo(). */
     fun timeToPx(timeMs: Long): Float = with(density) { timeToDp(timeMs).toPx() }
 
+    /** Physical screen-pixel offset to time in ms. */
+    fun pxToTime(px: Float): Long {
+        val physPxPerMs = with(density) { (1.dp).toPx() } * pxPerMs
+        return (px / physPxPerMs).toLong()
+    }
+
     /**
      * Converts a raw gesture DELTA (dragAmount.x from detectDragGestures) to ms.
      */
