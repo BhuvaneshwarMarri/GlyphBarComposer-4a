@@ -20,7 +20,11 @@ fun TimelineCard(uiState: MusicStudioUiState, audioPositionMs: Int, viewModel: M
         StudioTimelineEditor(
             uiState = uiState,
             audioPositionMs = audioPositionMs,
-            viewModel = viewModel,
+            onSelectEvent = viewModel::selectEvent,
+            onMoveEvent = viewModel::updateEventPosition,
+            onResizeEvent = viewModel::updateEventStartAndDuration,
+            onDeleteEvent = viewModel::deleteMusicEvent,
+            onSeekMusic = viewModel::seekMusic,
             modifier = Modifier.height(280.dp)
         )
     }

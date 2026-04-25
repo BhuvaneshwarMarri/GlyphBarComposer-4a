@@ -525,12 +525,12 @@ object AudioAnalyzer {
         return -1
     }
 
-    private fun buildHannWindow(size: Int) = FloatArray(size) { i ->
+    internal fun buildHannWindow(size: Int) = FloatArray(size) { i ->
         (0.5 * (1.0 - cos(2.0 * PI * i / (size - 1)))).toFloat()
     }
 
     /** In-place iterative radix-2 FFT; returns magnitude spectrum [0..N/2). */
-    private fun performFFT(samples: ShortArray, window: FloatArray): FloatArray {
+    internal fun performFFT(samples: ShortArray, window: FloatArray): FloatArray {
         val n = FFT_SIZE
         
         // Use the middle of the window if it's larger than FFT_SIZE

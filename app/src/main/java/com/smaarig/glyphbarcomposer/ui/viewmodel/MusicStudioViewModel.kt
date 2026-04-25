@@ -490,6 +490,7 @@ class MusicStudioViewModel(
         _uiState.value = MusicStudioUiState()
         _audioPositionMs.value = 0
         _visualizerData.value = List(16) { 0f }
+        _composerIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
     }
 
     fun clearAllMusicEvents() { _uiState.update { it.copy(musicEvents = emptyList()) } }

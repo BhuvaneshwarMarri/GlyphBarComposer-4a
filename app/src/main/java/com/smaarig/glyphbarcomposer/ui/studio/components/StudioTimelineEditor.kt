@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,11 +27,36 @@ import com.smaarig.glyphbarcomposer.ui.studio.rememberStudioTimelineState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioViewModel
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.smaarig.glyphbarcomposer.data.MusicStudioEvent
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+
+@Preview(showBackground = true, backgroundColor = 0xFF000000, widthDp = 800, heightDp = 300)
+@Composable
+fun StudioTimelineEditorPreview() {
+    val uiState = MusicStudioUiState(
+        audioDurationMs = 10000,
+        musicEvents = listOf(
+            MusicStudioEvent(id = 1, projectId = 1, timestampMs = 1000, channelIntensities = mapOf(1 to 3), durationMs = 1000),
+            MusicStudioEvent(id = 2, projectId = 1, timestampMs = 3000, channelIntensities = mapOf(2 to 2), durationMs = 500)
+        )
+    )
+    StudioTimelineEditor(
+        uiState = uiState,
+        audioPositionMs = 2000
+    )
+}
+
 @Composable
 fun StudioTimelineEditor(
     uiState: MusicStudioUiState,
     audioPositionMs: Int,
-    viewModel: MusicStudioViewModel,
+    onSelectEvent: (MusicStudioEvent?) -> Unit = {},
+    onMoveEvent: (MusicStudioEvent, Long) -> Unit = { _, _ -> },
+    onResizeEvent: (MusicStudioEvent, Long, Int) -> Unit = { _, _, _ -> },
+    onDeleteEvent: (MusicStudioEvent) -> Unit = {},
+    onSeekMusic: (Float) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val timelineState = rememberStudioTimelineState()
@@ -49,7 +75,7 @@ fun StudioTimelineEditor(
     }
 
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().testTag("StudioTimelineEditor"),
         color = Color(0xFF080808),
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, Color(0xFF1A1A1A))
@@ -95,10 +121,10 @@ fun StudioTimelineEditor(
                             events = uiState.musicEvents,
                             state = timelineState,
                             selectedEventId = uiState.selectedEventId,
-                            onSelectEvent = viewModel::selectEvent,
-                            onMoveEvent = viewModel::updateEventPosition,
-                            onResizeEvent = viewModel::updateEventStartAndDuration,
-                            onDeleteEvent = viewModel::deleteMusicEvent,
+                            onSelectEvent = onSelectEvent,
+                            onMoveEvent = onMoveEvent,
+                            onResizeEvent = onResizeEvent,
+                            onDeleteEvent = onDeleteEvent,
                             modifier = Modifier.fillMaxWidth().height(TRACK_HEIGHT)
                         )
                     }
@@ -106,19 +132,28 @@ fun StudioTimelineEditor(
                     // Playhead
                     Box(
                         modifier = Modifier
+                            .testTag("Playhead")
                             .graphicsLayer {
-                                translationX = timelineState.timeToPx(audioPositionMs.toLong())
+                                translationX = timelineState.timeToPx(audioPositionMs.toLong()) - 10.dp.toPx()
                             }
-                            .width(2.dp)
+                            .width(20.dp) // Large hit target
                             .fillMaxHeight()
-                            .background(Color(0xFF00C853).copy(0.8f))
                             .pointerInput(Unit) {
                                 detectDragGestures { change, drag ->
                                     change.consume()
-                                    viewModel.seekMusic((audioPositionMs + timelineState.dragDeltaToMs(drag.x)).toFloat())
+                                    onSeekMusic((audioPositionMs + timelineState.dragDeltaToMs(drag.x)).toFloat())
                                 }
-                            }
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
+                        // The visual line
+                        Box(
+                            modifier = Modifier
+                                .width(2.dp)
+                                .fillMaxHeight()
+                                .background(Color(0xFF00C853).copy(0.8f))
+                        )
+
                         Box(
                             modifier = Modifier.align(Alignment.TopCenter).size(16.dp)
                                 .offset(y = (-2).dp).clip(CircleShape)

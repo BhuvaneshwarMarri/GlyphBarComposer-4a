@@ -16,6 +16,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.smaarig.glyphbarcomposer.data.MusicStudioEvent
 import com.smaarig.glyphbarcomposer.ui.getChannelForIndex
@@ -132,6 +133,7 @@ fun SequenceBlock(
             .width(widthDp)
             .fillMaxHeight()
             .padding(vertical = 4.dp)
+            .testTag("SequenceBlock_${event.id}")
             .graphicsLayer {
                 if (isDragging || isResizing) {
                     scaleX = 1.02f
@@ -191,6 +193,7 @@ fun SequenceBlock(
                 .fillMaxHeight()
                 .clip(RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp))
                 .background(Color.White.copy(0.05f))
+                .testTag("ResizeHandleLeft_${event.id}")
                 .pointerInput(event.id, state) {
                     detectDragGestures(
                         onDragStart = { isResizing = true; onClick() },
@@ -214,6 +217,7 @@ fun SequenceBlock(
                 .fillMaxHeight()
                 .clip(RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp))
                 .background(Color.White.copy(0.05f))
+                .testTag("ResizeHandleRight_${event.id}")
                 .pointerInput(event.id, state) {
                     detectDragGestures(
                         onDragStart = { isResizing = true; onClick() },
