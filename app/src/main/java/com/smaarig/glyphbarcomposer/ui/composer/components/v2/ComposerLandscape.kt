@@ -46,7 +46,7 @@ fun ComposerLandscape(
                     modifier = Modifier.weight(1.3f).fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    LandscapeGlyphsRow(uiState, viewModel, redViewModel, Modifier.weight(1f))
+                    LandscapeGlyphsRow(uiState, viewModel, Modifier.weight(1f))
                     LandscapeControlsRow(uiState, viewModel)
                 }
 

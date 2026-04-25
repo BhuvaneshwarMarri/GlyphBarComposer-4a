@@ -67,7 +67,17 @@ class ComposerViewModel(
             state.copy(glyphIntensities = newList)
         }
         
-        glyphController.applyGlyphStateWithIntensities(getIntensitiesMap(), 2000)
+        // Debounce physical Glyph update for 10ms to avoid flooding while scrolling
+        viewModelScope.launch {
+            delay(10)
+            val intensityMap = getIntensitiesMap()
+            glyphController.applyGlyphStateWithIntensities(intensityMap, 2000)
+            
+            // Sync physical Red Glyph if index 6 was changed
+            if (index == 6) {
+                glyphController.setRedGlyph(if (newIntensity > 0) 3 else 0)
+            }
+        }
     }
 
     fun setSelectedChannel(index: Int) {
@@ -88,10 +98,12 @@ class ComposerViewModel(
     }
 
     fun addStep() {
-        _uiState.update { state ->
-            val newSteps = state.currentSequenceSteps + GlyphSequence(getIntensitiesMap(), state.durationMs.toInt())
-            state.copy(currentSequenceSteps = newSteps)
-        }
+        val state = _uiState.value
+        val newSteps = state.currentSequenceSteps + GlyphSequence(getIntensitiesMap(), state.durationMs.toInt())
+        _uiState.update { it.copy(currentSequenceSteps = newSteps) }
+        
+        // Debug Log
+        android.util.Log.d("ComposerViewModel", "Step added. Total steps: ${newSteps.size}")
     }
 
     fun removeStep(index: Int) {

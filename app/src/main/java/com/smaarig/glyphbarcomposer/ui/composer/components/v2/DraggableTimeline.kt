@@ -88,14 +88,17 @@ fun DraggableTimeline(
             .background(Color(0xFF080808))
             .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(24.dp))
             .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             "SEQUENCE",
             color = Color(0xFF666666),
             fontSize = 10.sp,
             fontWeight = FontWeight.Black,
-            letterSpacing = 1.sp
+            letterSpacing = 1.sp,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
 
         Box(modifier = Modifier.weight(1f)) {
@@ -122,7 +125,9 @@ fun DraggableTimeline(
                         ) {
                             StepPreviewBox(
                             step = step,
+                            index = index,
                             onDelete = { viewModel.removeStep(index) },
+                            onLoad = { viewModel.loadStep(index) },
                             enabled = !uiState.isPlaying,
                             onDragStart = {
                                 if (!uiState.isPlaying) draggingIndex = index

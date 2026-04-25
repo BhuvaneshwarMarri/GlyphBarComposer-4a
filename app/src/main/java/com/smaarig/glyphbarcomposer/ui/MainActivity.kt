@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -219,10 +220,65 @@ fun NavHostContainer(
         factory = factory
     )
 
+    val screens = listOf(
+        Screen.Composer,
+        Screen.PatternLab,
+        Screen.MusicStudio,
+        Screen.Library
+    )
+
     NavHost(
         navController = navController,
         startDestination = Screen.SplashScreen.route,
-        modifier = modifier
+        modifier = modifier,
+        enterTransition = {
+            val initialState = initialState.destination.route
+            val targetState = targetState.destination.route
+            
+            val initialIdx = screens.indexOfFirst { it.route == initialState }
+            val targetIdx = screens.indexOfFirst { it.route == targetState }
+
+            if (initialIdx != -1 && targetIdx != -1) {
+                if (targetIdx > initialIdx) {
+                    // Slide to left (moving forward in list)
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(500, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(500))
+                } else {
+                    // Slide to right (moving backward in list)
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(500, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(500))
+                }
+            } else {
+                fadeIn(animationSpec = tween(500))
+            }
+        },
+        exitTransition = {
+            val initialState = initialState.destination.route
+            val targetState = targetState.destination.route
+            
+            val initialIdx = screens.indexOfFirst { it.route == initialState }
+            val targetIdx = screens.indexOfFirst { it.route == targetState }
+
+            if (initialIdx != -1 && targetIdx != -1) {
+                if (targetIdx > initialIdx) {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(500, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(500))
+                } else {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(500, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(500))
+                }
+            } else {
+                fadeOut(animationSpec = tween(500))
+            }
+        }
     ) {
         composable(Screen.SplashScreen.route) {
             SplashScreen(onTimeout = {

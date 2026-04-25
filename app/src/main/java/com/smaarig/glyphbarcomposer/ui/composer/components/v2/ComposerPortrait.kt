@@ -46,7 +46,7 @@ fun ComposerPortrait(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 ControlsColumn(uiState, viewModel, Modifier.weight(1f))
-                GlyphsColumn(uiState, viewModel, redViewModel, Modifier.width(88.dp))
+                GlyphsColumn(uiState, viewModel, Modifier.width(88.dp))
                 DraggableTimeline(
                     uiState = uiState,
                     viewModel = viewModel,

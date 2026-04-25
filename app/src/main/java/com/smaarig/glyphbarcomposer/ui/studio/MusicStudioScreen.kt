@@ -8,6 +8,7 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -111,28 +112,83 @@ fun MusicStudioScreen(
     }
 
     Box(modifier = modifier.fillMaxSize().background(Color.Transparent)) {
-        if (uiState.audioUri == null) {
-            ProjectSetupView(
-                uiState = uiState,
-                onPickFile = { fileLauncher.launch("audio/*") },
-                onAlgorithmSelect = { viewModel.setAlgorithm(it) },
-                onToggleRedGlyph = { viewModel.toggleRedGlyph(it) },
-                onBpmChange = viewModel::setBpmOverride
-            )
-        } else {
-            if (isLandscape) {
-                Row(
-                    modifier = Modifier.fillMaxSize().padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(24.dp)
-                ) {
+        AnimatedContent(
+            targetState = uiState.audioUri == null,
+            transitionSpec = {
+                (fadeIn(animationSpec = tween(600, delayMillis = 100)) + 
+                 scaleIn(initialScale = 0.95f, animationSpec = tween(600)))
+                    .togetherWith(fadeOut(animationSpec = tween(400)) + 
+                                  scaleOut(targetScale = 1.05f, animationSpec = tween(400)))
+            },
+            label = "StudioContentTransition"
+        ) { isSetup ->
+            if (isSetup) {
+                ProjectSetupView(
+                    uiState = uiState,
+                    onPickFile = { fileLauncher.launch("audio/*") },
+                    onAlgorithmSelect = { viewModel.setAlgorithm(it) },
+                    onToggleRedGlyph = { viewModel.toggleRedGlyph(it) },
+                    onBpmChange = viewModel::setBpmOverride
+                )
+            } else {
+                if (isLandscape) {
+                    Row(
+                        modifier = Modifier.fillMaxSize().padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(24.dp)
+                        ) {
+                            StudioHeader(uiState, viewModel, onSaveClick = { showSaveDialog = true })
+                            
+                            StudioPlayerCard(
+                                uiState = uiState,
+                                audioPositionMs = audioPositionMs,
+                                onPlayPause = viewModel::toggleMusicPlayback,
+                                onSeek = viewModel::seekMusic,
+                                onChangeAudio = { fileLauncher.launch("audio/*") }
+                            )
+
+                            AnalyzerCard(uiState, viewModel)
+                        }
+
+                        Column(
+                            modifier = Modifier
+                                .weight(1.2f)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(24.dp)
+                        ) {
+                            TimelineCard(uiState, audioPositionMs, viewModel)
+                            
+                            ComposerPanel(
+                                intensities = composerIntensities,
+                                liveIntensities = liveGlyphIntensities,
+                                isPlaying = uiState.isAudioPlaying,
+                                isReady = uiState.isAnalysisComplete,
+                                isSelected = uiState.selectedEventId != null,
+                                defaultDuration = uiState.defaultDurationMs,
+                                onIntensityChange = viewModel::onComposerIntensityChange,
+                                onDurationChange = viewModel::setDefaultDuration,
+                                onClear = viewModel::clearComposer,
+                                onInsert = viewModel::addMusicEvent
+                            )
+                            
+                            Spacer(Modifier.height(80.dp))
+                        }
+                    }
+                } else {
                     Column(
                         modifier = Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 20.dp, vertical = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(28.dp)
                     ) {
                         StudioHeader(uiState, viewModel, onSaveClick = { showSaveDialog = true })
-                        
+
                         StudioPlayerCard(
                             uiState = uiState,
                             audioPositionMs = audioPositionMs,
@@ -142,16 +198,9 @@ fun MusicStudioScreen(
                         )
 
                         AnalyzerCard(uiState, viewModel)
-                    }
-
-                    Column(
-                        modifier = Modifier
-                            .weight(1.2f)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(24.dp)
-                    ) {
-                        TimelineCard(uiState, audioPositionMs, viewModel)
                         
+                        TimelineCard(uiState, audioPositionMs, viewModel)
+
                         ComposerPanel(
                             intensities = composerIntensities,
                             liveIntensities = liveGlyphIntensities,
@@ -165,45 +214,8 @@ fun MusicStudioScreen(
                             onInsert = viewModel::addMusicEvent
                         )
                         
-                        Spacer(Modifier.height(80.dp))
+                        Spacer(Modifier.height(120.dp))
                     }
-                }
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp, vertical = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(28.dp)
-                ) {
-                    StudioHeader(uiState, viewModel, onSaveClick = { showSaveDialog = true })
-
-                    StudioPlayerCard(
-                        uiState = uiState,
-                        audioPositionMs = audioPositionMs,
-                        onPlayPause = viewModel::toggleMusicPlayback,
-                        onSeek = viewModel::seekMusic,
-                        onChangeAudio = { fileLauncher.launch("audio/*") }
-                    )
-
-                    AnalyzerCard(uiState, viewModel)
-                    
-                    TimelineCard(uiState, audioPositionMs, viewModel)
-
-                    ComposerPanel(
-                        intensities = composerIntensities,
-                        liveIntensities = liveGlyphIntensities,
-                        isPlaying = uiState.isAudioPlaying,
-                        isReady = uiState.isAnalysisComplete,
-                        isSelected = uiState.selectedEventId != null,
-                        defaultDuration = uiState.defaultDurationMs,
-                        onIntensityChange = viewModel::onComposerIntensityChange,
-                        onDurationChange = viewModel::setDefaultDuration,
-                        onClear = viewModel::clearComposer,
-                        onInsert = viewModel::addMusicEvent
-                    )
-                    
-                    Spacer(Modifier.height(120.dp))
                 }
             }
         }

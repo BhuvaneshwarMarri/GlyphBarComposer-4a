@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -31,7 +32,9 @@ import com.smaarig.glyphbarcomposer.ui.intensityColor
 @Composable
 fun StepPreviewBox(
     step: GlyphSequence,
+    index: Int,
     onDelete: () -> Unit,
+    onLoad: () -> Unit,
     enabled: Boolean,
     onDragStart: () -> Unit = {},
     onDragEnd: () -> Unit = {},
@@ -44,81 +47,83 @@ fun StepPreviewBox(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(64.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(Color(0xFF181818), Color(0xFF111111))
-                )
-            )
-            .border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(16.dp))
+            .height(88.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF0F0F0F))
+            .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(12.dp))
             .clickable(enabled = enabled) { showMenu = !showMenu },
         contentAlignment = Alignment.Center
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 14.dp, vertical = 10.dp)
+                .padding(start = 4.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)
                 .fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    Icons.Default.DragHandle,
-                    contentDescription = "Drag to reorder",
-                    tint = Color(0xFF555555),
-                    modifier = Modifier
-                        .size(32.dp)
-                        .padding(4.dp)
-                        .pointerInput(Unit) {
-                            detectDragGestures(
-                                onDragStart = { onDragStart() },
-                                onDragEnd = { onDragEnd() },
-                                onDragCancel = { onDragCancel() },
-                                onDrag = { change, dragAmount -> onDrag(change, dragAmount) }
-                            )
-                        }
-                )
+            // Left part: Drag Handle
+            Icon(
+                Icons.Default.DragHandle,
+                contentDescription = "Drag to reorder",
+                tint = Color(0xFF333333),
+                modifier = Modifier
+                    .size(28.dp)
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { onDragStart() },
+                            onDragEnd = { onDragEnd() },
+                            onDragCancel = { onDragCancel() },
+                            onDrag = { change, dragAmount -> onDrag(change, dragAmount) }
+                        )
+                    }
+            )
 
-                Column(verticalArrangement = Arrangement.Center) {
-                    Text(
-                        "STEP",
-                        fontSize = 8.sp,
-                        color = Color(0xFF666666),
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 0.5.sp
-                    )
-                    Text(
-                        "${step.durationMs.toInt()}ms",
-                        fontSize = 12.sp,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
+            // Middle part: V1 style info
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    "STEP ${index + 1}",
+                    color = Color(0xFF555555),
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.5.sp
+                )
+                Text(
+                    "${step.durationMs}ms",
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(2.5.dp)) {
+                    repeat(7) { i ->
+                        val intensityVal = step.channelIntensities[getChannelForIndex(i)] ?: 0
+                        val finalIntensity = if (i == 6 && intensityVal > 0) 6 else intensityVal
+                        Box(
+                            modifier = Modifier
+                                .size(width = 4.dp, height = 16.dp)
+                                .clip(RoundedCornerShape(1.dp))
+                                .background(intensityColor[finalIntensity])
+                        )
+                    }
                 }
             }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
+            
+            // Right part: Quick actions or indicator
+            IconButton(
+                onClick = onLoad,
+                modifier = Modifier.size(32.dp),
+                enabled = enabled
             ) {
-                repeat(7) { i ->
-                    val intensityVal = step.channelIntensities[getChannelForIndex(i)] ?: 0
-                    val finalIntensity = if (i == 6 && intensityVal > 0) 6 else intensityVal
-                    
-                    Box(
-                        modifier = Modifier
-                            .size(width = 6.dp, height = 24.dp)
-                            .clip(RoundedCornerShape(1.5.dp))
-                            .background(intensityColor[finalIntensity])
-                            .border(
-                                0.5.dp,
-                                intensityBorder[finalIntensity].copy(alpha = 0.5f),
-                                RoundedCornerShape(1.5.dp)
-                            )
-                    )
-                }
+                Icon(
+                    Icons.Default.Refresh,
+                    null,
+                    tint = Color(0xFF444444),
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
 

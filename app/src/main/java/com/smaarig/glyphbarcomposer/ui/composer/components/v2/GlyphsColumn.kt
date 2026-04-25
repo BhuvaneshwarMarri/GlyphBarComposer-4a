@@ -3,8 +3,13 @@ package com.smaarig.glyphbarcomposer.ui.composer.components.v2
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -17,13 +22,11 @@ import androidx.compose.ui.unit.sp
 import com.smaarig.glyphbarcomposer.ui.composer.components.common.GlyphScrollPicker
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
-import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
 
 @Composable
 fun GlyphsColumn(
     uiState: ComposerUiState,
     viewModel: ComposerViewModel,
-    redViewModel: RedGlyphViewModel,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -33,14 +36,43 @@ fun GlyphsColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            "GLYPH",
-            color = Color(0xFF666666),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 1.sp
-        )
-        Spacer(Modifier.height(20.dp))
+        
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    Icons.Default.ChevronLeft,
+                    null,
+                    tint = Color(0xFF333333),
+                    modifier = Modifier.size(12.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "GLYPH",
+                    color = Color(0xFF666666),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp
+                )
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    Icons.Default.ChevronRight,
+                    null,
+                    tint = Color(0xFF333333),
+                    modifier = Modifier.size(12.dp)
+                )
+            }
+        }
+
+
+        Spacer(Modifier.height(16.dp))
 
         repeat(7) { index ->
             val isRed = index == 6
@@ -84,7 +116,6 @@ fun GlyphsColumn(
                     onIntensityChange = { newVal ->
                         viewModel.onIntensityChange(index, newVal)
                         viewModel.setSelectedChannel(index)
-                        if (isRed) redViewModel.setRed(newVal > 0)
                     },
                     isRed = isRed,
                     enabled = !uiState.isPlaying

@@ -1,5 +1,6 @@
 package com.smaarig.glyphbarcomposer.ui.composer.components.common
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -7,11 +8,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.smaarig.glyphbarcomposer.ui.intensityColor
@@ -43,11 +44,12 @@ fun GlyphScrollPicker(
         }
     }
 
-    LaunchedEffect(listState.isScrollInProgress) {
-        if (!listState.isScrollInProgress) {
-            val settled = listState.firstVisibleItemIndex
-            val newVal = states[settled % states.size]
-            if (newVal != intensity) onIntensityChange(newVal)
+    val settledIdx = remember { derivedStateOf { listState.firstVisibleItemIndex } }
+
+    LaunchedEffect(settledIdx.value) {
+        val newVal = states[settledIdx.value % states.size]
+        if (newVal != intensity) {
+            onIntensityChange(newVal)
         }
     }
 
@@ -55,35 +57,61 @@ fun GlyphScrollPicker(
 
     Box(
         modifier = Modifier
-            .width(cellWidth)
-            .height(44.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF111111))
-            .border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(8.dp)),
+            .width(cellWidth + 16.dp) // Extra width for side indicators
+            .height(44.dp),
         contentAlignment = Alignment.Center
     ) {
-        LazyRow(
-            state = listState,
-            flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(0.dp),
-            userScrollEnabled = enabled
-        ) {
-            items(infiniteCount) { idx ->
-                val level = states[idx % states.size]
-                val colorIdx = if (isRed && level > 0) 6 else level
+        // Scroll indicators (dotted texture)
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val dotRadius = 0.8.dp.toPx()
+            val dotSpacing = 5.dp.toPx()
+            val startX = 6.dp.toPx()
+            val endX = size.width - 6.dp.toPx()
+            
+            // Draw 7 dots to match the 7 glyphs theme
+            for (i in 0 until 7) {
+                val y = (size.height / 2) - (3 * dotSpacing) + (i * dotSpacing)
+                drawCircle(Color(0xFF444444), radius = dotRadius, center = Offset(startX, y))
+                drawCircle(Color(0xFF444444), radius = dotRadius, center = Offset(endX, y))
+            }
+        }
 
-                Box(
-                    modifier = Modifier
-                        .width(cellWidth)
-                        .fillMaxHeight(),
-                    contentAlignment = Alignment.Center
-                ) {
+        Box(
+            modifier = Modifier
+                .width(cellWidth)
+                .height(44.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFF111111))
+                .border(
+                    width = 1.dp,
+                    color = if (enabled) Color(0xFF3A3A3A) else Color(0xFF222222),
+                    shape = RoundedCornerShape(8.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            LazyRow(
+                state = listState,
+                flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(0.dp),
+                userScrollEnabled = enabled
+            ) {
+                items(infiniteCount) { idx ->
+                    val level = states[idx % states.size]
+                    val colorIdx = if (isRed && level > 0) 6 else level
+
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .background(intensityColor[colorIdx])
-                    )
+                            .width(cellWidth)
+                            .fillMaxHeight(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(intensityColor[colorIdx])
+                        )
+                    }
                 }
             }
         }
