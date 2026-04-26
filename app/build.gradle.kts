@@ -17,8 +17,8 @@ android {
         applicationId = "com.smaarig.glyphbarcomposer"
         minSdk = 33
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -34,11 +34,23 @@ android {
             enableAndroidTestCoverage = false
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+    splits {
+        abi {
+            isEnable = true
+            reset()
+
+            // Generate a single, highly optimized APK just for modern 64-bit devices like the Nothing Phone 4a
+            include("arm64-v8a")
+
+            isUniversalApk = false // Keep false so it doesn't generate the bloated fallback
         }
     }
     compileOptions {
