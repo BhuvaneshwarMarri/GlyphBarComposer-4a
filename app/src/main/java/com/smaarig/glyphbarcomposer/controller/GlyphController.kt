@@ -21,7 +21,7 @@ class GlyphController private constructor() {
     private var batteryJob: Job? = null
 
     // ── Global State for Preview ──────────────────────────────────────────
-    private val _currentIntensities = MutableStateFlow(listOf(0, 0, 0, 0, 0, 0))
+    private val _currentIntensities = MutableStateFlow(listOf(0, 0, 0, 0, 0, 0, 0))
     val currentIntensities = _currentIntensities.asStateFlow()
 
     // ── Global State for Battery Feature ──────────────────────────────────
@@ -34,7 +34,8 @@ class GlyphController private constructor() {
 
     private val channels = listOf(
         Glyph.Code_25111.A_1, Glyph.Code_25111.A_2, Glyph.Code_25111.A_3,
-        Glyph.Code_25111.A_4, Glyph.Code_25111.A_5, Glyph.Code_25111.A_6
+        Glyph.Code_25111.A_4, Glyph.Code_25111.A_5, Glyph.Code_25111.A_6,
+        Glyph.Code_22111.E1 // Red glyph (channel 24)
     )
 
     init {
@@ -49,8 +50,9 @@ class GlyphController private constructor() {
                 .collect { (enabled, charging, level, busy) ->
                     Log.d(TAG, "Battery Update: enabled=$enabled, charging=$charging, level=$level, busy=$busy")
                     if (enabled && charging && !busy) {
+                        // Start battery visualization (it will auto-stop after 3s in the function)
                         startBatteryVisualization(level)
-                    } else if (batteryJob != null) {
+                    } else if (!charging && batteryJob != null) {
                         stopBatteryVisualization()
                     }
                 }
@@ -65,49 +67,51 @@ class GlyphController private constructor() {
         Log.d(TAG, "updateBatteryProgress: level=$level, charging=$charging")
     }
 
-    private fun startBatteryVisualization(level: Int) {
+    fun showBatteryPeek(durationMs: Long = 3000) {
+        if (!_isBatteryFeatureEnabled.value) return
+        startBatteryVisualization(_batteryLevel.value, durationMs)
+    }
+
+    private fun startBatteryVisualization(level: Int, autoOffDelay: Long = 3000) {
         batteryJob?.cancel()
         batteryJob = controllerScope.launch {
-            while (isActive) {
-                if (!_isHardwareBusy.value) {
-                    // Smooth progress (18 steps: 6 segments * 3 intensities)
-                    val progressIndex = (level * 18 / 100).coerceIn(0, 18)
-                    val fullSegments = progressIndex / 3
-                    val partialIntensity = progressIndex % 3
-                    
-                    val reversedChannels = channels.reversed() // [A6, A5, A4, A3, A2, A1]
-                    val intensities = mutableMapOf<Int, Int>()
-                    
-                    reversedChannels.forEachIndexed { index, ch ->
-                        intensities[ch] = when {
-                            index < fullSegments -> 3
-                            index == fullSegments && partialIntensity > 0 -> partialIntensity
-                            else -> 0
-                        }
-                    }
-                    
-                    // Directly update preview and hardware
-                    val previewList = channels.map { ch -> intensities[ch] ?: 0 }
-                    _currentIntensities.value = previewList
-                    
-                    try {
-                        mGlyphManager?.openSession()
-                        val builder = mGlyphManager?.glyphFrameBuilder ?: break
-                        intensities.forEach { (channel, state) ->
-                            if (state > 0) {
-                                val sdkIntensity = stateToSdkIntensity(state)
-                                if (state == 3) builder.buildChannel(channel)
-                                else builder.buildChannel(channel, sdkIntensity)
-                            }
-                        }
-                        builder.buildPeriod(2000)
-                        mGlyphManager?.toggle(builder.build())
-                        Log.d(TAG, "Battery Frame Toggled: $intensities")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error in battery visualization: ${e.message}")
+            if (!_isHardwareBusy.value) {
+                // Smooth progress (18 steps: 6 segments * 3 intensities)
+                val progressIndex = (level * 18 / 100).coerceIn(0, 18)
+                val fullSegments = progressIndex / 3
+                val partialIntensity = progressIndex % 3
+                
+                val reversedChannels = channels.take(6).reversed() // [A6, A5, A4, A3, A2, A1]
+                val intensities = mutableMapOf<Int, Int>()
+                
+                reversedChannels.forEachIndexed { index, ch ->
+                    intensities[ch] = when {
+                        index < fullSegments -> 3
+                        index == fullSegments && partialIntensity > 0 -> partialIntensity
+                        else -> 0
                     }
                 }
-                delay(2000) // Update every 2 seconds
+
+                // Red glyph (7th channel) represents 15% charging
+                val redGlyph = channels[6]
+                intensities[redGlyph] = if (level <= 15) 3 else 0
+                
+                // Update preview and hardware
+                val previewList = channels.map { ch -> intensities[ch] ?: 0 }
+                _currentIntensities.value = previewList
+                
+                try {
+                    mGlyphManager?.openSession()
+                    val sdkIntensities = channels.map { ch -> stateToSdkIntensity(intensities[ch] ?: 0) }
+                    val frameColors = IntArray(7) { i -> if (i < sdkIntensities.size) sdkIntensities[i] else 0 }
+                    mGlyphManager?.setFrameColors(frameColors)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in battery visualization: ${e.message}")
+                }
+
+                // Auto-off after specific delay (default 3s)
+                delay(autoOffDelay)
+                stopBatteryVisualization()
             }
         }
     }
@@ -115,7 +119,7 @@ class GlyphController private constructor() {
     private fun stopBatteryVisualization() {
         batteryJob?.cancel()
         batteryJob = null
-        _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0)
+        _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
         if (!_isHardwareBusy.value) {
             turnOffGlyphs()
         }
@@ -143,9 +147,9 @@ class GlyphController private constructor() {
 
         private fun stateToSdkIntensity(state: Int): Int {
             return when (state) {
-                1 -> 100
-                2 -> 180
-                3 -> 255
+                1, 4 -> 500   // Low
+                2, 5 -> 1500  // Medium
+                3, 6 -> 4000  // High / Full (SDK DEFAULT_LIGHT)
                 else -> 0
             }
         }
@@ -193,8 +197,40 @@ class GlyphController private constructor() {
     }
 
     fun turnOffGlyphs() {
-        mGlyphManager?.turnOff()
-        _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0)
+        try {
+            mGlyphManager?.openSession()
+            mGlyphManager?.turnOff()
+            // Safety: also reset via setFrameColors
+            mGlyphManager?.setFrameColors(IntArray(7) { 0 })
+        } catch (e: Exception) {}
+        _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
+    }
+
+    fun setRedGlyph(state: Int) {
+        val intensities = _currentIntensities.value.toMutableList()
+        if (intensities.size >= 7) {
+            intensities[6] = state
+            _currentIntensities.value = intensities
+        }
+        
+        try {
+            mGlyphManager?.openSession()
+            val sdkIntensity = stateToSdkIntensity(state)
+            
+            // Using the undocumented API suggested by user for red glyph hardware sync
+            // We pass all current intensities to keep them in sync
+            val intensities = _currentIntensities.value
+            val frameColors = IntArray(7) { i ->
+                if (i == 6) sdkIntensity 
+                else if (i < intensities.size) stateToSdkIntensity(intensities[i])
+                else 0
+            }
+            mGlyphManager?.setFrameColors(frameColors)
+            
+            Log.d(TAG, "Red Glyph Set via setFrameColors: $sdkIntensity, Full: ${frameColors.contentToString()}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in setRedGlyph: ${e.message}")
+        }
     }
 
     fun applyGlyphStateWithIntensities(channelIntensities: Map<Int, Int>, durationMs: Int) {
@@ -210,45 +246,29 @@ class GlyphController private constructor() {
         val newIntensities = channels.map { ch -> channelIntensities[ch] ?: 0 }
         _currentIntensities.value = newIntensities
 
-        // Auto-reset preview after duration
+        // Auto-reset hardware busy state after duration, but DON'T reset _currentIntensities
+        // unless they are all zero. The preview should show the live state.
         resetJob?.cancel()
         resetJob = controllerScope.launch {
             delay(durationMs.toLong())
-            if (_currentIntensities.value == newIntensities) {
-                _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0)
-            }
             _isHardwareBusy.value = false
-            // Logic in init block will restart battery visualization if needed
         }
 
         try {
-            val builder = mGlyphManager!!.glyphFrameBuilder
-            var anyActive = false
-
-            for ((channel, state) in channelIntensities) {
-                val sdkIntensity = stateToSdkIntensity(state)
-                if (sdkIntensity > 0) {
-                    anyActive = true
-                    if (state == 3 || sdkIntensity >= 255) {
-                        builder.buildChannel(channel)
-                    } else {
-                        builder.buildChannel(channel, sdkIntensity)
-                    }
-                }
+            mGlyphManager?.openSession()
+            
+            // Using setFrameColors for the entire 7-glyph set to ensure perfect hardware sync
+            val frameColors = IntArray(7) { i ->
+                if (i < newIntensities.size) stateToSdkIntensity(newIntensities[i]) else 0
             }
-
-            if (!anyActive) {
+            mGlyphManager?.setFrameColors(frameColors)
+            
+            Log.i(TAG, "Glyph Frame via setFrameColors: ${frameColors.contentToString()}")
+            
+            // If all are zero, we explicitly turn off to be safe
+            if (newIntensities.all { it == 0 }) {
                 mGlyphManager?.turnOff()
-                return
             }
-
-            try {
-                mGlyphManager?.openSession()
-            } catch (e: Exception) {}
-
-            builder.buildPeriod(durationMs)
-            mGlyphManager?.toggle(builder.build())
-            Log.i(TAG, "Glyph Frame Applied: $channelIntensities")
         } catch (e: Exception) {
             Log.e(TAG, "Error in applyGlyphStateWithIntensities: ${e.message}", e)
         }
@@ -264,32 +284,25 @@ class GlyphController private constructor() {
         val newIntensities = channels.map { ch -> if (activeChannels.contains(ch)) 3 else 0 }
         _currentIntensities.value = newIntensities
 
-        // Auto-reset preview after duration
+        // Auto-reset busy state only
         resetJob?.cancel()
         resetJob = controllerScope.launch {
             delay(durationMs.toLong())
-            if (_currentIntensities.value == newIntensities) {
-                _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0)
-            }
             _isHardwareBusy.value = false
         }
 
         try {
+            mGlyphManager?.openSession()
+            
+            // Map active channels to intensities for setFrameColors
+            val frameColors = IntArray(7) { i ->
+                if (activeChannels.contains(channels[i])) 255 else 0
+            }
+            mGlyphManager?.setFrameColors(frameColors)
+            
             if (activeChannels.isEmpty()) {
                 mGlyphManager?.turnOff()
-                return
             }
-
-            try {
-                mGlyphManager?.openSession()
-            } catch (e: Exception) {}
-
-            val builder = mGlyphManager!!.glyphFrameBuilder
-            for (channel in activeChannels) {
-                builder.buildChannel(channel)
-            }
-            builder.buildPeriod(durationMs)
-            mGlyphManager?.toggle(builder.build())
         } catch (e: Exception) {
             Log.e(TAG, "Error in applyGlyphState: ${e.message}")
         }
@@ -311,7 +324,7 @@ class GlyphController private constructor() {
                 Log.e(TAG, "Error in GlyphManager unInit: ${e.message}")
             }
             mGlyphManager = null
-            _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0)
+            _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
         }
         sInstance = null
     }

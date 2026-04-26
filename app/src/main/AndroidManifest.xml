@@ -9,6 +9,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
+        android:name=".GlyphApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -27,10 +28,119 @@
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.GlyphBarComposer">
+
+            <!-- App launcher -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+                DIRECT APP-TO-APP SHARE (ACTION_SEND):
+                When your app shares directly to another instance of itself via the share sheet,
+                Android delivers ACTION_SEND with the custom MIME. This handles that case.
+            -->
+            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.glyphbar.sequence" />
+            </intent-filter>
+
+            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.glyphbar.studio" />
+            </intent-filter>
+
+            <!--
+                OPEN FILE (ACTION_VIEW) — custom MIME type.
+                Used when the file is opened from a content URI with the correct MIME.
+            -->
+            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:mimeType="application/vnd.glyphbar.sequence" />
+            </intent-filter>
+
+            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:mimeType="application/vnd.glyphbar.studio" />
+            </intent-filter>
+
+            <!--
+                OPEN FILE (ACTION_VIEW) — octet-stream fallback.
+                WhatsApp, Telegram, and Gmail all re-label unknown files as
+                application/octet-stream. We catch those here.
+                Note: pathPattern cannot filter by extension when MIME is octet-stream
+                because the system picks MIME before path. We accept all octet-stream
+                content URIs and detect the type from JSON content inside MainActivity.
+            -->
+            <intent-filter android:label="Glyphbar Composer" android:priority="500">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" />
+            </intent-filter>
+
+            <!--
+                ACTION_SEND fallback for octet-stream (e.g. forwarded via WhatsApp).
+            -->
+            <intent-filter android:label="Glyphbar Composer" android:priority="500">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+
+            <!--
+                FILE MANAGER fallback — content scheme with .glyph / .gstudio extension.
+                Each scheme gets its OWN intent-filter to avoid Android merging them incorrectly.
+            -->
+            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:host="*" android:scheme="content" android:mimeType="*/*" android:pathPattern=".*\\.glyph" />
+            </intent-filter>
+
+            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:host="*" android:scheme="content" android:mimeType="*/*" android:pathPattern=".*\\.gstudio" />
+            </intent-filter>
+
+            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:host="*" android:scheme="file" android:mimeType="*/*" android:pathPattern=".*\\.glyph" />
+            </intent-filter>
+
+            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:host="*" android:scheme="file" android:mimeType="*/*" android:pathPattern=".*\\.gstudio" />
+            </intent-filter>
+
+            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/json" />
+            </intent-filter>
+
+            <!-- Open from file manager / email / Drive as application/json -->
+            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:mimeType="application/json" />
+            </intent-filter>
+
+
         </activity>
 
         <service
@@ -41,6 +151,16 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Battery monitoring for Glyph lights" />
         </service>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

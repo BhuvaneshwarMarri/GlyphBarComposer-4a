@@ -9,6 +9,7 @@ import androidx.core.app.NotificationCompat
 import com.smaarig.glyphbarcomposer.R
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.ui.MainActivity
+import com.smaarig.glyphbarcomposer.utils.EnhancedGestureManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.combine
 
@@ -16,6 +17,7 @@ class BatteryService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private lateinit var glyphController: GlyphController
     private lateinit var batteryMonitor: BatteryMonitor
+    private lateinit var gestureManager: EnhancedGestureManager
 
     companion object {
         private const val CHANNEL_ID = "battery_sync_channel"
@@ -30,6 +32,10 @@ class BatteryService : Service() {
         isRunning = true
         glyphController = GlyphController.getInstance(this)
         batteryMonitor = BatteryMonitor(this)
+        gestureManager = EnhancedGestureManager(this) {
+            glyphController.showBatteryPeek()
+        }
+        gestureManager.start()
         
         createNotificationChannel()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -59,6 +65,7 @@ class BatteryService : Service() {
         isRunning = false
         serviceScope.cancel()
         batteryMonitor.unregister()
+        gestureManager.stop()
         glyphController.updateBatteryProgress(0, false) // Turn off battery lights
     }
 

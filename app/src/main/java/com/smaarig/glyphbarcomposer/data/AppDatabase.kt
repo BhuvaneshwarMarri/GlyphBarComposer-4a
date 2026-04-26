@@ -11,11 +11,11 @@ import androidx.room.TypeConverters
         Playlist::class, 
         SequenceStep::class, 
         EventBinding::class, 
-        MusicSyncProject::class, 
-        MusicSyncEvent::class,
+        MusicStudioProject::class, 
+        MusicStudioEvent::class,
         ContactBinding::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

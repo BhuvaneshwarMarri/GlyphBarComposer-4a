@@ -28,19 +28,22 @@ interface PlaylistDao {
     @Delete
     suspend fun deleteEventBinding(binding: EventBinding)
 
-    // Music Sync
+    // Music Studio
     @Insert
-    suspend fun insertMusicProject(project: MusicSyncProject): Long
+    suspend fun insertMusicProject(project: MusicStudioProject): Long
 
     @Insert
-    suspend fun insertMusicEvents(events: List<MusicSyncEvent>)
+    suspend fun insertMusicEvents(events: List<MusicStudioEvent>)
 
     @Transaction
-    @Query("SELECT * FROM music_sync_projects")
+    @Query("SELECT * FROM music_studio_projects")
     fun getAllMusicProjects(): Flow<List<MusicProjectWithEvents>>
 
     @Delete
-    suspend fun deleteMusicProject(project: MusicSyncProject)
+    suspend fun deleteMusicProject(project: MusicStudioProject)
+
+    @Update
+    suspend fun updateMusicProject(project: MusicStudioProject)
 
     // Contact Ringtone Bindings
     @Insert(onConflict = OnConflictStrategy.REPLACE)
