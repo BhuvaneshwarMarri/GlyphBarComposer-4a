@@ -70,4 +70,9 @@ This project uses the **Dot-style font** created by
 👉 Dmitriy Sychiov  
 
 - 👤 Profile: https://fontstruct.com/fontstructors/1104892/sychoff  
-- 🔗 Font: https://fontstruct.com/fontstructions/show/2146737/nothing-font-1  
+- 🔗 Font: https://fontstruct.com/fontstructions/show/2146737/nothing-font-1
+
+## App Reports
+- Koodous Report link: https://koodous.com/apks/77902e410203cf77bf3c0c0e87425a8c171fff7aa8a60cbd6f2be6305b7d7b37/general-information
+
+- VirusTotal Report link: https://www.virustotal.com/en/file/77902e410203cf77bf3c0c0e87425a8c171fff7aa8a60cbd6f2be6305b7d7b37/analysis/ #VTMobile
