@@ -55,3 +55,19 @@ Current Version: **2.0**
 - Major refactor to modular architecture.
 - Smooth directional navigation and UX polished.
 - Unified hardware synchronization logic.
+
+
+## 🕶️ Mentions & Credits
+
+### 🎵 Music Visualizer Inspiration  
+The **Vibe Check mode** in Music Studio is inspired by  
+👉 Better Nothing Glyph Visualizer  
+
+🔗 Repository: https://github.com/Aleks-Levet/better-nothing-music-visualizer  
+
+### 🔤 Dot Font  
+This project uses the **Dot-style font** created by  
+👉 Dmitriy Sychiov  
+
+- 👤 Profile: https://fontstruct.com/fontstructors/1104892/sychoff  
+- 🔗 Font: https://fontstruct.com/fontstructions/show/2146737/nothing-font-1  
