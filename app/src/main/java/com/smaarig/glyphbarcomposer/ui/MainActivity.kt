@@ -358,7 +358,7 @@ fun SplashScreen(onTimeout: () -> Unit) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "GLYPHBAR COMPOSER",
+                text = "GB4Aura",
                 color = Color.White,
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.ExtraBold

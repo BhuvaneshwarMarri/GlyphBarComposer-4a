@@ -1,4 +1,4 @@
-# GlyphBar Composer v2.0
+# GB4Aura v2.0
 
 A powerful, modular Android application designed for Nothing Phone users to compose, synchronize, and visualize custom Glyph lighting patterns.
 

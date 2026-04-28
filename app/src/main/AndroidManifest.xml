@@ -17,7 +17,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.GlyphBarComposer">
+        android:theme="@style/Theme.GlyphBarComposer"
+        android:usesCleartextTraffic="false">
 
         <meta-data
             android:name="NothingKey"
@@ -40,13 +41,13 @@
                 When your app shares directly to another instance of itself via the share sheet,
                 Android delivers ACTION_SEND with the custom MIME. This handles that case.
             -->
-            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+            <intent-filter android:label="GB4Aura" android:priority="1000">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/vnd.glyphbar.sequence" />
             </intent-filter>
 
-            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+            <intent-filter android:label="GB4Aura" android:priority="1000">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/vnd.glyphbar.studio" />
@@ -56,14 +57,14 @@
                 OPEN FILE (ACTION_VIEW) — custom MIME type.
                 Used when the file is opened from a content URI with the correct MIME.
             -->
-            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+            <intent-filter android:label="GB4Aura" android:priority="1000">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="content" android:mimeType="application/vnd.glyphbar.sequence" />
             </intent-filter>
 
-            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+            <intent-filter android:label="GB4Aura" android:priority="1000">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -78,7 +79,7 @@
                 because the system picks MIME before path. We accept all octet-stream
                 content URIs and detect the type from JSON content inside MainActivity.
             -->
-            <intent-filter android:label="Glyphbar Composer" android:priority="500">
+            <intent-filter android:label="GB4Aura" android:priority="500">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -88,7 +89,7 @@
             <!--
                 ACTION_SEND fallback for octet-stream (e.g. forwarded via WhatsApp).
             -->
-            <intent-filter android:label="Glyphbar Composer" android:priority="500">
+            <intent-filter android:label="GB4Aura" android:priority="500">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/octet-stream" />
@@ -98,42 +99,42 @@
                 FILE MANAGER fallback — content scheme with .glyph / .gstudio extension.
                 Each scheme gets its OWN intent-filter to avoid Android merging them incorrectly.
             -->
-            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+            <intent-filter android:label="GB4Aura" android:priority="1000">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:host="*" android:scheme="content" android:mimeType="*/*" android:pathPattern=".*\\.glyph" />
             </intent-filter>
 
-            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+            <intent-filter android:label="GB4Aura" android:priority="1000">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:host="*" android:scheme="content" android:mimeType="*/*" android:pathPattern=".*\\.gstudio" />
             </intent-filter>
 
-            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+            <intent-filter android:label="GB4Aura" android:priority="1000">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:host="*" android:scheme="file" android:mimeType="*/*" android:pathPattern=".*\\.glyph" />
             </intent-filter>
 
-            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+            <intent-filter android:label="GB4Aura" android:priority="1000">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:host="*" android:scheme="file" android:mimeType="*/*" android:pathPattern=".*\\.gstudio" />
             </intent-filter>
 
-            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+            <intent-filter android:label="GB4Aura" android:priority="1000">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/json" />
             </intent-filter>
 
             <!-- Open from file manager / email / Drive as application/json -->
-            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+            <intent-filter android:label="GB4Aura" android:priority="1000">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
