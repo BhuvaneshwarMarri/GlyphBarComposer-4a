@@ -1,6 +1,14 @@
 package com.smaarig.glyphbarcomposer.service
 
 import android.app.Notification
+import android.app.NotificationChannel
+import android.content.Context
+import android.media.MediaMetadata
+import android.media.session.MediaController
+import android.media.session.MediaSessionManager
+import android.media.session.PlaybackState
+import android.os.Process
+import android.os.SystemClock
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -22,10 +30,79 @@ class GlyphNotificationListenerService : NotificationListenerService() {
     private var lastProgressSbn: StatusBarNotification? = null
     private var lastProgressPlaylistId: Long? = null
 
+    private var mediaSessionManager: MediaSessionManager? = null
+    private val activeMediaControllers = mutableMapOf<String, MediaController>()
+    private var progressPollingJob: Job? = null
+
+    companion object {
+        private var instance: GlyphNotificationListenerService? = null
+
+        fun getActiveChannels(packageName: String): List<NotificationChannel> {
+            val service = instance
+            if (service == null) {
+                Log.w("GlyphNotificationService", "Service instance not available")
+                return emptyList()
+            }
+            return try {
+                service.getNotificationChannels(packageName, Process.myUserHandle())
+            } catch (e: Exception) {
+                Log.e("GlyphNotificationService", "Failed to get channels for $packageName: ${e.message}")
+                emptyList()
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         glyphController = GlyphController.getInstance(this)
+        mediaSessionManager = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
         Log.d(TAG, "Notification Listener Service Created")
+    }
+
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        instance = this
+        Log.d(TAG, "Notification Listener Connected")
+        setupMediaSessionListener()
+    }
+
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        instance = null
+        Log.d(TAG, "Notification Listener Disconnected")
+        stopProgressPolling()
+    }
+
+    private fun setupMediaSessionListener() {
+        val listener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
+            activeMediaControllers.clear()
+            controllers?.forEach { controller ->
+                activeMediaControllers[controller.packageName] = controller
+            }
+            Log.d(TAG, "Media Sessions Updated: ${activeMediaControllers.keys}")
+            
+            // If we have a tracked progress hook, restart polling if needed
+            val sbn = lastProgressSbn
+            if (sbn != null && activeMediaControllers.containsKey(sbn.packageName)) {
+                startProgressPolling()
+            }
+        }
+
+        try {
+            mediaSessionManager?.addOnActiveSessionsChangedListener(
+                listener,
+                android.content.ComponentName(this, GlyphNotificationListenerService::class.java)
+            )
+            
+            // Initial load
+            mediaSessionManager?.getActiveSessions(
+                android.content.ComponentName(this, GlyphNotificationListenerService::class.java)
+            )?.forEach { controller ->
+                activeMediaControllers[controller.packageName] = controller
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to setup MediaSession listener: ${e.message}")
+        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -38,7 +115,7 @@ class GlyphNotificationListenerService : NotificationListenerService() {
             val repository = app.repository
 
             // Only fetch ENABLED hooks for this package
-            val hooks = repository.getHooksForPackage(packageName).filter { it.hook.isEnabled }
+            val hooks = repository.getHooksForPackage(packageName)
 
             if (hooks.isEmpty()) {
                 Log.d(TAG, "No active hooks for: $packageName")
@@ -71,7 +148,7 @@ class GlyphNotificationListenerService : NotificationListenerService() {
                 if (hook.isProgressSync) {
                     lastProgressSbn = sbn
                     lastProgressPlaylistId = playlist.id
-                    handleProgressNotification(sbn, playlist.id)
+                    startProgressPolling()
                 } else {
                     val playlistWithSteps = repository.getPlaylistWithSteps(playlist.id)
                     playlistWithSteps?.let {
@@ -98,7 +175,82 @@ class GlyphNotificationListenerService : NotificationListenerService() {
             Log.d(TAG, "Progress notification removed, turning off glyphs")
             lastProgressSbn = null
             lastProgressPlaylistId = null
+            stopProgressPolling()
             glyphController?.turnOffGlyphs()
+        }
+    }
+
+    private fun startProgressPolling() {
+        progressPollingJob?.cancel()
+        progressPollingJob = serviceScope.launch {
+            while (isActive) {
+                val sbn = lastProgressSbn ?: break
+                val playlistId = lastProgressPlaylistId ?: break
+                
+                val controller = activeMediaControllers[sbn.packageName]
+                if (controller != null) {
+                    handleMediaProgress(controller, playlistId)
+                } else {
+                    // Fallback to legacy extras if no MediaSession
+                    handleLegacyProgress(sbn, playlistId)
+                }
+                delay(1000)
+            }
+        }
+    }
+
+    private fun stopProgressPolling() {
+        progressPollingJob?.cancel()
+        progressPollingJob = null
+    }
+
+    private fun handleMediaProgress(controller: MediaController, playlistId: Long) {
+        val metadata = controller.metadata
+        val state = controller.playbackState
+        
+        if (metadata == null || state == null) return
+        
+        val duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
+        var position = state.position
+
+        // Standard interpolation for media position
+        if (state.state == PlaybackState.STATE_PLAYING && state.playbackSpeed > 0) {
+            val timeDiff = SystemClock.elapsedRealtime() - state.lastPositionUpdateTime
+            position += (timeDiff * state.playbackSpeed).toLong()
+        }
+        
+        if (duration <= 0) return
+        
+        val percentage = (position * 100 / duration).toInt().coerceIn(0, 100)
+        applyProgressToGlyphs(percentage, playlistId)
+    }
+
+    private fun handleLegacyProgress(sbn: StatusBarNotification, playlistId: Long) {
+        val extras = sbn.notification.extras
+        val progress = extras.getInt(Notification.EXTRA_PROGRESS, -1)
+        val progressMax = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0)
+
+        if (progressMax > 0 && progress >= 0) {
+            val percentage = (progress * 100 / progressMax)
+            applyProgressToGlyphs(percentage, playlistId)
+        }
+    }
+
+    private fun applyProgressToGlyphs(percentage: Int, playlistId: Long) {
+        serviceScope.launch {
+            val app = application as GlyphApplication
+            val playlistWithSteps = app.repository.getPlaylistWithSteps(playlistId)
+            playlistWithSteps?.let {
+                val steps = it.steps.sortedBy { s -> s.stepIndex }
+                if (steps.isNotEmpty()) {
+                    val stepIndex = (percentage * (steps.size - 1) / 100).coerceIn(0, steps.size - 1)
+                    val targetStep = steps[stepIndex]
+                    glyphController?.applyGlyphStateWithIntensities(
+                        targetStep.channelIntensities,
+                        1000 // Polling interval
+                    )
+                }
+            }
         }
     }
 
@@ -117,40 +269,6 @@ class GlyphNotificationListenerService : NotificationListenerService() {
                 notification.category == Notification.CATEGORY_PROGRESS ||
                         notification.extras.containsKey(Notification.EXTRA_PROGRESS)
             else -> true
-        }
-    }
-
-    /**
-     * Maps the notification's progress value (0–100) to a step in the playlist
-     * and applies that glyph state. Only fires when progressMax > 0.
-     */
-    private fun handleProgressNotification(sbn: StatusBarNotification, playlistId: Long) {
-        val extras = sbn.notification.extras
-        val progress    = extras.getInt(Notification.EXTRA_PROGRESS, -1)
-        val progressMax = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0)
-
-        if (progressMax <= 0 || progress < 0) {
-            Log.d(TAG, "Progress data unavailable for ${sbn.packageName}")
-            return
-        }
-
-        val percentage = (progress * 100) / progressMax
-        Log.d(TAG, "Progress Update: $percentage% for ${sbn.packageName}")
-
-        serviceScope.launch {
-            val app = application as GlyphApplication
-            val playlistWithSteps = app.repository.getPlaylistWithSteps(playlistId)
-            playlistWithSteps?.let {
-                val steps = it.steps.sortedBy { s -> s.stepIndex }
-                if (steps.isNotEmpty()) {
-                    val stepIndex = (percentage * (steps.size - 1) / 100).coerceIn(0, steps.size - 1)
-                    val targetStep = steps[stepIndex]
-                    glyphController?.applyGlyphStateWithIntensities(
-                        targetStep.channelIntensities,
-                        targetStep.durationMs
-                    )
-                }
-            }
         }
     }
 
@@ -197,7 +315,7 @@ class GlyphNotificationListenerService : NotificationListenerService() {
         
         if (sbn != null && playlistId != null) {
             Log.d(TAG, "Restoring progress bar for ${sbn.packageName}")
-            handleProgressNotification(sbn, playlistId)
+            startProgressPolling()
         } else {
             Log.d(TAG, "No active progress, turning off glyphs")
             glyphController?.turnOffGlyphs()
@@ -207,6 +325,8 @@ class GlyphNotificationListenerService : NotificationListenerService() {
     override fun onDestroy() {
         super.onDestroy()
         activeJobs.values.forEach { it.cancel() }
+        stopProgressPolling()
         serviceScope.cancel()
+        instance = null
     }
 }

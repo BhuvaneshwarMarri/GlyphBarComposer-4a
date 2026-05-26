@@ -12,6 +12,7 @@ import com.smaarig.glyphbarcomposer.data.NotificationHook
 import com.smaarig.glyphbarcomposer.data.NotificationHookWithPlaylist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import com.smaarig.glyphbarcomposer.repository.GlyphRepository
+import com.smaarig.glyphbarcomposer.service.GlyphNotificationListenerService
 import com.smaarig.glyphbarcomposer.utils.AppNotificationChannel
 import com.smaarig.glyphbarcomposer.utils.AppNotificationChannelHelper
 import com.smaarig.glyphbarcomposer.utils.PROGRESS_ONLY_PACKAGES
@@ -128,10 +129,24 @@ class HooksViewModel(
         _isLoadingChannels.value = true
         viewModelScope.launch {
             val channels = withContext(Dispatchers.IO) {
-                AppNotificationChannelHelper.getChannelsForPackage(
-                    getApplication<Application>().applicationContext,
-                    packageName
-                )
+                // Try the high-privilege Listener Service first
+                val platformChannels = GlyphNotificationListenerService.getActiveChannels(packageName)
+                if (platformChannels.isNotEmpty()) {
+                    platformChannels.map { ch ->
+                        AppNotificationChannel(
+                            id = ch.id,
+                            name = ch.name?.toString() ?: ch.id,
+                            description = ch.description,
+                            importance = ch.importance
+                        )
+                    }.sortedBy { it.name }
+                } else {
+                    // Fall back to manual context-based lookup if service isn't connected or fails
+                    AppNotificationChannelHelper.getChannelsForPackage(
+                        getApplication<Application>().applicationContext,
+                        packageName
+                    )
+                }
             }
             _selectedAppChannels.value = channels
             _isLoadingChannels.value = false
