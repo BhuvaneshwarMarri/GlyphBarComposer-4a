@@ -11,6 +11,7 @@ class GlyphRepository(private val playlistDao: PlaylistDao) {
     val allMusicProjects: Flow<List<MusicProjectWithEvents>> = playlistDao.getAllMusicProjects()
     val allEventBindings: Flow<List<EventBindingWithPlaylist>> = playlistDao.getAllEventBindings()
     val allContactBindings: Flow<List<ContactBindingWithPlaylist>> = playlistDao.getAllContactBindings()
+    val allNotificationHooks: Flow<List<NotificationHookWithPlaylist>> = playlistDao.getAllNotificationHooks()
 
     suspend fun savePlaylist(playlist: Playlist, steps: List<SequenceStep>) {
         Log.d(TAG, "Saving playlist: ${playlist.name} with ${steps.size} steps")
@@ -59,6 +60,20 @@ class GlyphRepository(private val playlistDao: PlaylistDao) {
     suspend fun deleteContactBinding(binding: ContactBinding) {
         Log.d(TAG, "Deleting contact binding for ID: ${binding.contactId}")
         playlistDao.deleteContactBinding(binding)
+    }
+
+    suspend fun saveNotificationHook(hook: NotificationHook) {
+        Log.d(TAG, "Saving notification hook for package: ${hook.packageName}")
+        playlistDao.insertNotificationHook(hook)
+    }
+
+    suspend fun deleteNotificationHook(hook: NotificationHook) {
+        Log.d(TAG, "Deleting notification hook for package: ${hook.packageName}")
+        playlistDao.deleteNotificationHook(hook)
+    }
+
+    suspend fun getHooksForPackage(packageName: String): List<NotificationHookWithPlaylist> {
+        return playlistDao.getHooksForPackage(packageName)
     }
 
     suspend fun getPlaylistWithSteps(playlistId: Long): PlaylistWithSteps? {

@@ -27,6 +27,9 @@ class GlyphViewModelFactory(
             modelClass.isAssignableFrom(RedGlyphViewModel::class.java) -> {
                 RedGlyphViewModel(application) as T
             }
+            modelClass.isAssignableFrom(HooksViewModel::class.java) -> {
+                HooksViewModel(application, repository) as T
+            }
             else -> throw IllegalArgumentException("Unknown ViewModel class")
         }
     }

@@ -14,7 +14,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Pattern
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,6 +38,7 @@ import androidx.navigation.compose.rememberNavController
 import com.smaarig.glyphbarcomposer.ui.theme.GlyphBarComposerTheme
 import com.smaarig.glyphbarcomposer.GlyphApplication
 import com.smaarig.glyphbarcomposer.ui.composer.ComposerScreen
+import com.smaarig.glyphbarcomposer.ui.hooks.HooksScreen
 import com.smaarig.glyphbarcomposer.ui.library.LibraryScreen
 import com.smaarig.glyphbarcomposer.ui.patternlab.PatternLabScreen
 import com.smaarig.glyphbarcomposer.ui.studio.MusicStudioScreen
@@ -65,6 +68,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Composer : Screen("composer", "Composer", Icons.Default.MusicNote)
     object PatternLab : Screen("pattern_lab", "Patterns", Icons.Default.Pattern)
     object MusicStudio : Screen("music_studio", "Music Studio", Icons.Default.GraphicEq)
+    object Hooks : Screen("hooks", "Hooks", Icons.Default.Link)
     object Library : Screen("library", "Library", Icons.Default.LibraryMusic)
 }
 
@@ -131,6 +135,7 @@ fun MainApp() {
         Screen.Composer,
         Screen.PatternLab,
         Screen.MusicStudio,
+        Screen.Hooks,
         Screen.Library
     )
 
@@ -224,6 +229,7 @@ fun NavHostContainer(
         Screen.Composer,
         Screen.PatternLab,
         Screen.MusicStudio,
+        Screen.Hooks,
         Screen.Library
     )
 
@@ -307,6 +313,13 @@ fun NavHostContainer(
                 factory = factory
             )
             MusicStudioScreen(viewModel = viewModel)
+        }
+        composable(Screen.Hooks.route) {
+            val viewModel: HooksViewModel = viewModel(
+                viewModelStoreOwner = activity,
+                factory = factory
+            )
+            HooksScreen(viewModel = viewModel)
         }
         composable(Screen.Library.route) {
             val viewModel: LibraryViewModel = viewModel(

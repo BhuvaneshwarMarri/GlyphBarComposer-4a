@@ -64,6 +64,25 @@ interface PlaylistDao {
     @Query("SELECT * FROM contact_bindings WHERE contactId = :contactId LIMIT 1")
     suspend fun getContactBinding(contactId: String): ContactBindingWithPlaylist?
 
+    // Notification Hooks
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertNotificationHook(hook: NotificationHook)
+
+    @Transaction
+    @Query("SELECT * FROM notification_hooks")
+    fun getAllNotificationHooks(): Flow<List<NotificationHookWithPlaylist>>
+
+    @Transaction
+    @Query("SELECT * FROM notification_hooks")
+    suspend fun getNotificationHooksList(): List<NotificationHookWithPlaylist>
+
+    @Delete
+    suspend fun deleteNotificationHook(hook: NotificationHook)
+
+    @Transaction
+    @Query("SELECT * FROM notification_hooks WHERE packageName = :packageName AND isEnabled = 1")
+    suspend fun getHooksForPackage(packageName: String): List<NotificationHookWithPlaylist>
+
     @Transaction
     @Query("SELECT * FROM playlists WHERE id = :playlistId LIMIT 1")
     suspend fun getPlaylistWithSteps(playlistId: Long): PlaylistWithSteps?

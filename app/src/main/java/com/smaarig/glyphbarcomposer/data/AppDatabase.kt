@@ -13,9 +13,10 @@ import androidx.room.TypeConverters
         EventBinding::class, 
         MusicStudioProject::class, 
         MusicStudioEvent::class,
-        ContactBinding::class
+        ContactBinding::class,
+        NotificationHook::class
     ],
-    version = 7,
+    version = 10,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

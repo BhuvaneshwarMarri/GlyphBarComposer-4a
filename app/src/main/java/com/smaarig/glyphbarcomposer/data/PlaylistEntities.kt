@@ -6,7 +6,8 @@ import com.smaarig.glyphbarcomposer.model.GlyphSequence
 @Entity(tableName = "playlists")
 data class Playlist(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String
+    val name: String,
+    val isProgressSequence: Boolean = false
 )
 
 @Entity(
