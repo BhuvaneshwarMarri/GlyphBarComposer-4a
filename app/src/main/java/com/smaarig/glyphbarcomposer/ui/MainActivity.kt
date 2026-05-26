@@ -153,7 +153,7 @@ fun MainApp() {
                             .fillMaxWidth()
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                     ) {
-                        GlyphPreviewBar()
+                        GlyphPreviewBar(modifier = Modifier, currentRoute = currentRoute)
                     }
                 }
             ) { innerPadding ->
@@ -178,7 +178,7 @@ fun MainApp() {
                             .fillMaxWidth()
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                     ) {
-                        GlyphPreviewBar()
+                        GlyphPreviewBar(modifier = Modifier, currentRoute = currentRoute)
                     }
                 }
             }
