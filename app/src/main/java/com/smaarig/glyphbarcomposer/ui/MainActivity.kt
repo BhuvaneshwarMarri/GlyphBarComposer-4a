@@ -143,7 +143,7 @@ fun MainApp() {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF0A0A0A))
+                .background(Color.Black)
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
         ) {
             ModernNavigationRail(navController, screens)
@@ -153,7 +153,7 @@ fun MainApp() {
                 containerColor = Color.Transparent,
                 topBar = {
                     Surface(
-                        color = Color(0xFF0A0A0A),
+                        color = Color.Black,
                         modifier = Modifier
                             .fillMaxWidth()
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
@@ -174,11 +174,11 @@ fun MainApp() {
     } else {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
-            containerColor = Color(0xFF0A0A0A),
+            containerColor = Color.Black,
             topBar = {
                 if (!isSplashScreen) {
                     Surface(
-                        color = Color(0xFF0A0A0A),
+                        color = Color.Black,
                         modifier = Modifier
                             .fillMaxWidth()
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
@@ -366,7 +366,7 @@ fun SplashScreen(onTimeout: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0E0E0E)),
+            .background(Color.Black),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

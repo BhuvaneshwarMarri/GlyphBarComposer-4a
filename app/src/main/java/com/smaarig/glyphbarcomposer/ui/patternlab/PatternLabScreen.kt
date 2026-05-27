@@ -92,6 +92,7 @@ fun PatternLabPortrait(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color.Black)
             .padding(horizontal = 16.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
@@ -152,6 +153,7 @@ fun PatternLabLandscape(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color.Black)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {

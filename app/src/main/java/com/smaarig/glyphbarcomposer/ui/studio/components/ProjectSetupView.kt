@@ -37,7 +37,7 @@ fun ProjectSetupView(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF050505))
+            .background(Color.Black)
             .verticalScroll(rememberScrollState())
             .padding(if (isLandscape) 24.dp else 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -238,7 +238,7 @@ fun StudioLogoSection() {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier.size(120.dp)
-                .clip(CircleShape).background(Color(0xFF0F0F0F))
+                .clip(CircleShape).background(Color.Black)
                 .border(1.dp, Color(0xFF222222), CircleShape),
             contentAlignment = Alignment.Center
         ) {

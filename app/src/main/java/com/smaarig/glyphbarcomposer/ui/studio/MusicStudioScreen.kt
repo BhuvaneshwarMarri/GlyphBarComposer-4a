@@ -111,7 +111,7 @@ fun MusicStudioScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize().background(Color.Transparent)) {
+    Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
         AnimatedContent(
             targetState = uiState.audioUri == null,
             transitionSpec = {
@@ -133,7 +133,7 @@ fun MusicStudioScreen(
             } else {
                 if (isLandscape) {
                     Row(
-                        modifier = Modifier.fillMaxSize().padding(16.dp),
+                        modifier = Modifier.fillMaxSize().background(Color.Black).padding(16.dp),
                         horizontalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
                         Column(
@@ -183,6 +183,7 @@ fun MusicStudioScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
+                            .background(Color.Black)
                             .verticalScroll(rememberScrollState())
                             .padding(horizontal = 16.dp, vertical = 24.dp),
                         verticalArrangement = Arrangement.spacedBy(28.dp)

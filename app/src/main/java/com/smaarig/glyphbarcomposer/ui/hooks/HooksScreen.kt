@@ -103,7 +103,7 @@ fun HooksScreen(viewModel: HooksViewModel) {
     }
 
     Scaffold(
-        containerColor = Color(0xFF0A0A0A),
+        containerColor = Color.Black,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->

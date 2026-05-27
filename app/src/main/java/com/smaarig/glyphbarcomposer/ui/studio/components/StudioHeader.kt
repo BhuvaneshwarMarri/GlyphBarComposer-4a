@@ -31,7 +31,6 @@ fun StudioHeader(
 ) {
     ScreenHeader(
         title = "MUSIC STUDIO",
-        icon = Icons.Default.GraphicEq,
         subtitle = "Sync patterns to audio",
         modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
         actions = {

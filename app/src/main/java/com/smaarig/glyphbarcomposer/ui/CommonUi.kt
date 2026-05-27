@@ -68,7 +68,6 @@ val intensityBorder = listOf(
 fun ScreenHeader(
     title: String,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
     subtitle: String? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
@@ -82,15 +81,6 @@ fun ScreenHeader(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f)
         ) {
-            if (icon != null) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-            }
             Column {
                 Text(
                     title.uppercase(),
@@ -300,7 +290,7 @@ fun ModernNavigationRail(navController: NavHostController, screens: List<Screen>
     val currentRoute = navBackStackEntry?.destination?.route
 
     NavigationRail(
-        containerColor = Color(0xFF111111),
+        containerColor = Color.Black,
         header = {
             Column(
                 modifier = Modifier

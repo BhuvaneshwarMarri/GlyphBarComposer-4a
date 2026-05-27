@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -106,6 +107,7 @@ fun HookItem(
         Surface(
             color = Color(0xFF111111),
             shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, if (hook.isEnabled) Color(0xFF00C853) else Color(0xFF222222)),
             modifier = Modifier
                 .fillMaxWidth()
                 .offset { IntOffset(animatedOffset.roundToInt(), 0) }

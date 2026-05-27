@@ -88,7 +88,7 @@ fun LibraryPortrait(
     onSharePlaylist: (PlaylistWithSteps) -> Unit,
     onShareStudio: (MusicProjectWithEvents) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+    Column(modifier = Modifier.fillMaxSize().background(Color.Black).padding(16.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         LibraryHeader(
             onStopAll = {
                 composerViewModel.stopPlayback()
@@ -152,7 +152,7 @@ fun LibraryLandscape(
     onSharePlaylist: (PlaylistWithSteps) -> Unit,
     onShareStudio: (MusicProjectWithEvents) -> Unit
 ) {
-    Row(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+    Row(modifier = Modifier.fillMaxSize().background(Color.Black).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
         Column(modifier = Modifier.width(220.dp), verticalArrangement = Arrangement.spacedBy(32.dp)) {
             LibraryHeader(
                 onStopAll = {

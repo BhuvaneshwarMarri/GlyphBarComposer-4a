@@ -31,7 +31,6 @@ import com.smaarig.glyphbarcomposer.ui.ScreenHeader
 fun PatternLabHeader(uiState: PatternLabUiState, viewModel: PatternLabViewModel) {
     ScreenHeader(
         title = "PATTERN LAB",
-        icon = Icons.Default.Pattern,
         modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
         actions = {
             if (uiState.isPlaying) {
