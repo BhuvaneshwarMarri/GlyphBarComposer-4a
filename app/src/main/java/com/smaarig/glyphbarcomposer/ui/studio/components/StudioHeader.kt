@@ -20,35 +20,20 @@ import androidx.compose.ui.unit.sp
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioViewModel
 
+import androidx.compose.material.icons.filled.GraphicEq
+import com.smaarig.glyphbarcomposer.ui.ScreenHeader
+
 @Composable
 fun StudioHeader(
     uiState: MusicStudioUiState, 
     viewModel: MusicStudioViewModel,
     onSaveClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column {
-            Text(
-                "MUSIC STUDIO",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.White,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 2.sp,
-                fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
-            )
-            Text(
-                "Sync patterns to audio",
-                color = Color.Gray,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.5.sp
-            )
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    ScreenHeader(
+        title = "MUSIC STUDIO",
+        icon = Icons.Default.GraphicEq,
+        subtitle = "Sync patterns to audio",
+        actions = {
             if (uiState.musicEvents.isNotEmpty()) {
                 IconButton(
                     onClick = { if (!uiState.showSaveSuccess && !uiState.isSaving) onSaveClick() },
@@ -80,5 +65,5 @@ fun StudioHeader(
                 Icon(Icons.Default.DeleteSweep, null, tint = Color(0xFFFF5252), modifier = Modifier.size(20.dp))
             }
         }
-    }
+    )
 }

@@ -146,10 +146,11 @@ class GlyphController private constructor() {
         }
 
         private fun stateToSdkIntensity(state: Int): Int {
-            return when (state) {
-                1, 4 -> 500   // Low
-                2, 5 -> 1500  // Medium
-                3, 6 -> 4000  // High / Full (SDK DEFAULT_LIGHT)
+            return when {
+                state >= 10 -> state.coerceIn(0, 4095)
+                state == 1 || state == 4 -> 500   // Low
+                state == 2 || state == 5 -> 1500  // Medium
+                state == 3 || state == 6 -> 4000  // High / Full (SDK DEFAULT_LIGHT)
                 else -> 0
             }
         }
@@ -305,6 +306,59 @@ class GlyphController private constructor() {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error in applyGlyphState: ${e.message}")
+        }
+    }
+
+    fun applySmoothProgress(percentage: Int) {
+        if (mGlyphManager == null) return
+        
+        // 18 steps total across 6 glyphs: 6 segments * 3 intensities (or continuous intensity)
+        // For truly smooth, we map 0-100 to 0 - (6 * 4095)
+        val totalRange = 6 * 4095
+        val progress = (percentage * totalRange / 100).coerceIn(0, totalRange)
+        
+        val fullSegments = progress / 4095
+        val partialIntensity = progress % 4095
+        
+        val reversedChannels = channels.take(6).reversed() // [A6, A5, A4, A3, A2, A1]
+        val intensities = mutableMapOf<Int, Int>()
+        
+        reversedChannels.forEachIndexed { index, ch ->
+            intensities[ch] = when {
+                index < fullSegments -> 4095
+                index == fullSegments -> partialIntensity
+                else -> 0
+            }
+        }
+        
+        // Update Global State for Preview (approximate intensities for preview 0-3)
+        val previewList = channels.map { ch -> 
+            val raw = intensities[ch] ?: 0
+            if (raw == 0) 0 else if (raw < 1365) 1 else if (raw < 2730) 2 else 3
+        }.toMutableList()
+        // Keep red glyph state from current intensities
+        if (_currentIntensities.value.size >= 7) {
+            previewList.add(_currentIntensities.value[6])
+        } else {
+            previewList.add(0)
+        }
+        _currentIntensities.value = previewList
+
+        try {
+            mGlyphManager?.openSession()
+            val frameColors = IntArray(7) { i ->
+                if (i < 6) {
+                    val ch = channels[i]
+                    intensities[ch] ?: 0
+                } else {
+                    // Red glyph sync
+                    val state = if (_currentIntensities.value.size >= 7) _currentIntensities.value[6] else 0
+                    stateToSdkIntensity(state)
+                }
+            }
+            mGlyphManager?.setFrameColors(frameColors)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in smooth progress: ${e.message}")
         }
     }
 

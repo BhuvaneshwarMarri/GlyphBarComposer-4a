@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.sp
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
 
+import androidx.compose.material.icons.filled.MusicNote
+import com.smaarig.glyphbarcomposer.ui.ScreenHeader
+
 @Composable
 fun ComposerHeader(
     uiState: ComposerUiState,
@@ -31,21 +34,10 @@ fun ComposerHeader(
     powerScale: Float,
     onPowerClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "COMPOSER",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color.White,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 2.sp,
-            fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
-        )
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    ScreenHeader(
+        title = "COMPOSER",
+        icon = Icons.Default.MusicNote,
+        actions = {
             Box(
                 modifier = Modifier
                     .padding(end = 8.dp)
@@ -104,5 +96,5 @@ fun ComposerHeader(
                 )
             }
         }
-    }
+    )
 }

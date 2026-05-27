@@ -20,44 +20,28 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smaarig.glyphbarcomposer.ui.theme.nothingFont
 
+import com.smaarig.glyphbarcomposer.ui.ScreenHeader
+
 @Composable
 fun HooksHeader(onAddClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                Icons.Default.Link,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(28.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                "HOOKS",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.White,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 2.sp,
-                fontFamily = nothingFont
-            )
+    ScreenHeader(
+        title = "HOOKS",
+        icon = Icons.Default.Link,
+        actions = {
+            IconButton(
+                onClick = onAddClick,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .size(36.dp)
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Add Hook",
+                    tint = Color.Black,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
-
-        IconButton(
-            onClick = onAddClick,
-            modifier = Modifier
-                .clip(CircleShape)
-                .background(Color.White)
-                .size(36.dp)
-        ) {
-            Icon(
-                Icons.Default.Add,
-                contentDescription = "Add Hook",
-                tint = Color.Black,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
+    )
 }

@@ -14,19 +14,18 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 import com.smaarig.glyphbarcomposer.GlyphApplication
 import com.smaarig.glyphbarcomposer.controller.GlyphController
+import com.smaarig.glyphbarcomposer.data.NotificationHookWithPlaylist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import kotlinx.coroutines.*
-import kotlin.collections.filter
 
 class GlyphNotificationListenerService : NotificationListenerService() {
+
     private val TAG = "GlyphNotificationService"
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    // Track active sequence jobs per hook so they don't stack
     private val activeJobs = mutableMapOf<Long, Job>()
     private var glyphController: GlyphController? = null
 
-    // Tracking for progress-sync restoration
     private var lastProgressSbn: StatusBarNotification? = null
     private var lastProgressPlaylistId: Long? = null
 
@@ -38,50 +37,85 @@ class GlyphNotificationListenerService : NotificationListenerService() {
         private var instance: GlyphNotificationListenerService? = null
 
         fun getActiveChannels(packageName: String): List<NotificationChannel> {
-            val service = instance
-            if (service == null) {
-                Log.w("GlyphNotificationService", "Service instance not available")
-                return emptyList()
-            }
             return try {
-                service.getNotificationChannels(packageName, Process.myUserHandle())
+                instance?.getNotificationChannels(packageName, Process.myUserHandle())
+                    ?: emptyList()
             } catch (e: Exception) {
                 Log.e("GlyphNotificationService", "Failed to get channels for $packageName: ${e.message}")
                 emptyList()
             }
+        }
+
+        /**
+         * Called when a hook is deleted or toggled OFF.
+         * Cancels any active glyph sequence job for that hook and turns off glyphs
+         * if no progress tracking is running.
+         */
+        fun cancelHookPlayback(hookId: Long) {
+            val svc = instance ?: return
+            svc.activeJobs[hookId]?.cancel()
+            svc.activeJobs.remove(hookId)
+            // Only turn off glyphs if we're not in the middle of progress tracking
+            if (svc.lastProgressSbn == null) {
+                svc.glyphController?.turnOffGlyphs()
+            }
+            Log.d("GlyphNotificationService", "Cancelled playback for hook $hookId")
+        }
+
+        /**
+         * Directly triggers the glyph sequence for a hook — used by the "Test" button.
+         * Returns true if the service was available and the sequence was dispatched.
+         */
+        fun triggerTestForHook(hookWithPlaylist: NotificationHookWithPlaylist, context: Context): Boolean {
+            val svc = instance ?: return false
+            val hook = hookWithPlaylist.hook
+            val playlist = hookWithPlaylist.playlist ?: return false
+
+            svc.serviceScope.launch {
+                val app = svc.application as GlyphApplication
+                val playlistWithSteps = app.repository.getPlaylistWithSteps(playlist.id) ?: return@launch
+
+                if (hook.isProgressSync) {
+                    // Simulate 50% progress for testing
+                    svc.applyProgressToGlyphs(50, playlist.id)
+                } else {
+                    svc.activeJobs[hook.id]?.cancel()
+                    svc.activeJobs[hook.id] = svc.serviceScope.launch {
+                        svc.playSequence(playlistWithSteps)
+                    }
+                }
+            }
+            return true
         }
     }
 
     override fun onCreate() {
         super.onCreate()
         glyphController = GlyphController.getInstance(this)
-        mediaSessionManager = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
-        Log.d(TAG, "Notification Listener Service Created")
+        mediaSessionManager = getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
+        Log.d(TAG, "Service Created")
     }
 
     override fun onListenerConnected() {
         super.onListenerConnected()
         instance = this
-        Log.d(TAG, "Notification Listener Connected")
+        Log.d(TAG, "Listener Connected")
         setupMediaSessionListener()
     }
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
         instance = null
-        Log.d(TAG, "Notification Listener Disconnected")
+        Log.d(TAG, "Listener Disconnected")
         stopProgressPolling()
     }
 
     private fun setupMediaSessionListener() {
+        val componentName = android.content.ComponentName(this, GlyphNotificationListenerService::class.java)
+
         val listener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
             activeMediaControllers.clear()
-            controllers?.forEach { controller ->
-                activeMediaControllers[controller.packageName] = controller
-            }
-            Log.d(TAG, "Media Sessions Updated: ${activeMediaControllers.keys}")
-            
-            // If we have a tracked progress hook, restart polling if needed
+            controllers?.forEach { activeMediaControllers[it.packageName] = it }
             val sbn = lastProgressSbn
             if (sbn != null && activeMediaControllers.containsKey(sbn.packageName)) {
                 startProgressPolling()
@@ -89,74 +123,59 @@ class GlyphNotificationListenerService : NotificationListenerService() {
         }
 
         try {
-            mediaSessionManager?.addOnActiveSessionsChangedListener(
-                listener,
-                android.content.ComponentName(this, GlyphNotificationListenerService::class.java)
-            )
-            
-            // Initial load
-            mediaSessionManager?.getActiveSessions(
-                android.content.ComponentName(this, GlyphNotificationListenerService::class.java)
-            )?.forEach { controller ->
-                activeMediaControllers[controller.packageName] = controller
-            }
+            mediaSessionManager?.addOnActiveSessionsChangedListener(listener, componentName)
+            mediaSessionManager?.getActiveSessions(componentName)
+                ?.forEach { activeMediaControllers[it.packageName] = it }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to setup MediaSession listener: ${e.message}")
+            Log.e(TAG, "MediaSession setup failed: ${e.message}")
         }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         super.onNotificationPosted(sbn)
         val packageName = sbn.packageName
-        Log.d(TAG, "Notification Posted from: $packageName")
+        Log.d(TAG, "Notification from: $packageName")
 
         serviceScope.launch {
             val app = application as GlyphApplication
-            val repository = app.repository
-
-            // Only fetch ENABLED hooks for this package
-            val hooks = repository.getHooksForPackage(packageName)
-
-            if (hooks.isEmpty()) {
-                Log.d(TAG, "No active hooks for: $packageName")
+            val hooks = try {
+                app.repository.getHooksForPackage(packageName)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching hooks for $packageName: ${e.message}")
                 return@launch
             }
+
+            if (hooks.isEmpty()) return@launch
 
             for (hookWithPlaylist in hooks) {
                 val hook = hookWithPlaylist.hook
                 val playlist = hookWithPlaylist.playlist ?: continue
 
-                Log.d(TAG, "Evaluating hook ${hook.id} | type=${hook.notificationType} | channelId=${hook.notificationChannelId}")
-
-                // --- Notification channel ID matching (most precise) ---
+                // Channel ID matching (highest priority)
                 if (!hook.notificationChannelId.isNullOrEmpty()) {
                     val sbnChannelId = sbn.notification.channelId
-                    if (sbnChannelId != hook.notificationChannelId) {
-                        Log.d(TAG, "Channel mismatch: got=$sbnChannelId expected=${hook.notificationChannelId}")
-                        continue
-                    }
+                    if (sbnChannelId != hook.notificationChannelId) continue
                 } else if (hook.notificationType != "ALL") {
-                    // Fall back to category matching only if no channel ID is set
-                    if (!matchesCategory(sbn, hook.notificationType)) {
-                        Log.d(TAG, "Category mismatch for $packageName: expected ${hook.notificationType}")
-                        continue
-                    }
+                    if (!matchesCategory(sbn, hook.notificationType)) continue
                 }
 
-                Log.d(TAG, "Hook matched! Triggering for ${hook.packageName}")
+                Log.d(TAG, "Hook ${hook.id} matched for $packageName")
 
                 if (hook.isProgressSync) {
                     lastProgressSbn = sbn
                     lastProgressPlaylistId = playlist.id
                     startProgressPolling()
                 } else {
-                    val playlistWithSteps = repository.getPlaylistWithSteps(playlist.id)
-                    playlistWithSteps?.let {
-                        // Cancel any existing sequence for this hook before starting a new one
-                        activeJobs[hook.id]?.cancel()
-                        activeJobs[hook.id] = serviceScope.launch {
-                            playSequence(it)
-                        }
+                    val playlistWithSteps = try {
+                        app.repository.getPlaylistWithSteps(playlist.id)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error fetching playlist ${playlist.id}: ${e.message}")
+                        null
+                    } ?: continue
+
+                    activeJobs[hook.id]?.cancel()
+                    activeJobs[hook.id] = serviceScope.launch {
+                        playSequence(playlistWithSteps)
                     }
                 }
             }
@@ -165,14 +184,13 @@ class GlyphNotificationListenerService : NotificationListenerService() {
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         super.onNotificationRemoved(sbn)
-        Log.d(TAG, "Notification Removed: ${sbn.packageName}")
-        
-        // If the removed notification was our tracked progress notification, turn off glyphs
-        if (sbn.packageName == lastProgressSbn?.packageName && 
-            sbn.id == lastProgressSbn?.id && 
-            sbn.tag == lastProgressSbn?.tag) {
-            
-            Log.d(TAG, "Progress notification removed, turning off glyphs")
+        Log.d(TAG, "Notification removed: ${sbn.packageName}")
+
+        if (sbn.packageName == lastProgressSbn?.packageName &&
+            sbn.id == lastProgressSbn?.id &&
+            sbn.tag == lastProgressSbn?.tag
+        ) {
+            Log.d(TAG, "Progress notification removed — turning off glyphs")
             lastProgressSbn = null
             lastProgressPlaylistId = null
             stopProgressPolling()
@@ -184,14 +202,13 @@ class GlyphNotificationListenerService : NotificationListenerService() {
         progressPollingJob?.cancel()
         progressPollingJob = serviceScope.launch {
             while (isActive) {
-                val sbn = lastProgressSbn ?: break
+                val sbn       = lastProgressSbn ?: break
                 val playlistId = lastProgressPlaylistId ?: break
-                
                 val controller = activeMediaControllers[sbn.packageName]
+
                 if (controller != null) {
                     handleMediaProgress(controller, playlistId)
                 } else {
-                    // Fallback to legacy extras if no MediaSession
                     handleLegacyProgress(sbn, playlistId)
                 }
                 delay(1000)
@@ -205,66 +222,63 @@ class GlyphNotificationListenerService : NotificationListenerService() {
     }
 
     private fun handleMediaProgress(controller: MediaController, playlistId: Long) {
-        val metadata = controller.metadata
-        val state = controller.playbackState
-        
-        if (metadata == null || state == null) return
-        
+        val metadata = controller.metadata ?: return
+        val state    = controller.playbackState ?: return
+
         val duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
         var position = state.position
 
-        // Standard interpolation for media position
         if (state.state == PlaybackState.STATE_PLAYING && state.playbackSpeed > 0) {
             val timeDiff = SystemClock.elapsedRealtime() - state.lastPositionUpdateTime
             position += (timeDiff * state.playbackSpeed).toLong()
         }
-        
+
         if (duration <= 0) return
-        
         val percentage = (position * 100 / duration).toInt().coerceIn(0, 100)
         applyProgressToGlyphs(percentage, playlistId)
     }
 
     private fun handleLegacyProgress(sbn: StatusBarNotification, playlistId: Long) {
-        val extras = sbn.notification.extras
-        val progress = extras.getInt(Notification.EXTRA_PROGRESS, -1)
+        val extras      = sbn.notification.extras
+        val progress    = extras.getInt(Notification.EXTRA_PROGRESS, -1)
         val progressMax = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0)
-
         if (progressMax > 0 && progress >= 0) {
-            val percentage = (progress * 100 / progressMax)
-            applyProgressToGlyphs(percentage, playlistId)
+            applyProgressToGlyphs(progress * 100 / progressMax, playlistId)
         }
     }
 
-    private fun applyProgressToGlyphs(percentage: Int, playlistId: Long) {
+    internal fun applyProgressToGlyphs(percentage: Int, playlistId: Long) {
         serviceScope.launch {
             val app = application as GlyphApplication
-            val playlistWithSteps = app.repository.getPlaylistWithSteps(playlistId)
-            playlistWithSteps?.let {
-                val steps = it.steps.sortedBy { s -> s.stepIndex }
-                if (steps.isNotEmpty()) {
-                    val stepIndex = (percentage * (steps.size - 1) / 100).coerceIn(0, steps.size - 1)
-                    val targetStep = steps[stepIndex]
-                    glyphController?.applyGlyphStateWithIntensities(
-                        targetStep.channelIntensities,
-                        1000 // Polling interval
-                    )
-                }
+            val hook = app.repository.getHooksForPackage(lastProgressSbn?.packageName ?: "").find { it.playlist?.id == playlistId }?.hook
+            
+            if (hook?.isProgressSync == true) {
+                glyphController?.applySmoothProgress(percentage)
+            } else {
+                val playlistWithSteps = try {
+                    app.repository.getPlaylistWithSteps(playlistId)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error applying progress: ${e.message}")
+                    null
+                } ?: return@launch
+
+                val steps = playlistWithSteps.steps.sortedBy { it.stepIndex }
+                if (steps.isEmpty()) return@launch
+
+                val stepIndex = (percentage * (steps.size - 1) / 100).coerceIn(0, steps.size - 1)
+                glyphController?.applyGlyphStateWithIntensities(steps[stepIndex].channelIntensities, 1000)
             }
         }
     }
 
-    /**
-     * Category-based matching as a fallback when no specific channel ID is configured.
-     */
     private fun matchesCategory(sbn: StatusBarNotification, categoryId: String): Boolean {
         val notification = sbn.notification
         return when (categoryId) {
-            "MESSAGES" -> notification.category == Notification.CATEGORY_MESSAGE
-            "CALLS"    -> notification.category == Notification.CATEGORY_CALL || notification.fullScreenIntent != null
-            "SOCIAL"   -> notification.category == Notification.CATEGORY_SOCIAL
-            "ALERTS"   -> notification.category == Notification.CATEGORY_ALARM || notification.category == Notification.CATEGORY_REMINDER
-            "SYSTEM"   -> notification.category == Notification.CATEGORY_SYSTEM || notification.category == Notification.CATEGORY_STATUS
+            "MESSAGES"           -> notification.category == Notification.CATEGORY_MESSAGE
+            "CALLS"              -> notification.category == Notification.CATEGORY_CALL || notification.fullScreenIntent != null
+            "SOCIAL"             -> notification.category == Notification.CATEGORY_SOCIAL
+            "ALERTS"             -> notification.category == Notification.CATEGORY_ALARM || notification.category == Notification.CATEGORY_REMINDER
+            "SYSTEM"             -> notification.category == Notification.CATEGORY_SYSTEM || notification.category == Notification.CATEGORY_STATUS
             "DOWNLOADS","PROGRESS" ->
                 notification.category == Notification.CATEGORY_PROGRESS ||
                         notification.extras.containsKey(Notification.EXTRA_PROGRESS)
@@ -272,52 +286,33 @@ class GlyphNotificationListenerService : NotificationListenerService() {
         }
     }
 
-    /**
-     * Plays all steps in order, with strict duration limits:
-     * - Max total duration: 1.5 seconds.
-     * - If the sequence is larger than 1.5s, it's trimmed to exactly 1.0 second.
-     * - Turns off glyphs (or restores progress) after playing.
-     */
-    private suspend fun playSequence(playlistWithSteps: PlaylistWithSteps) {
+    internal suspend fun playSequence(playlistWithSteps: PlaylistWithSteps) {
         val steps = playlistWithSteps.steps.sortedBy { it.stepIndex }
         val rawTotalDuration = steps.sumOf { it.durationMs.toLong() }
-        
-        // Requirement: max 1.5s, larger trimmed to 1s.
-        val allowedDuration = if (rawTotalDuration > 1500) 1000L else rawTotalDuration
-        
+        val allowedDuration  = if (rawTotalDuration > 1500) 1000L else rawTotalDuration
+
         Log.d(TAG, "Playing sequence: raw=${rawTotalDuration}ms, allowed=${allowedDuration}ms")
 
         var elapsed = 0L
         for (step in steps) {
-            yield() // Check for cancellation
-            
+            yield()
             val remaining = allowedDuration - elapsed
             if (remaining <= 0) break
-            
             val durationToPlay = minOf(step.durationMs.toLong(), remaining)
-            
-            glyphController?.applyGlyphStateWithIntensities(
-                step.channelIntensities,
-                durationToPlay.toInt()
-            )
-            
+            glyphController?.applyGlyphStateWithIntensities(step.channelIntensities, durationToPlay.toInt())
             delay(durationToPlay)
             elapsed += durationToPlay
         }
-        
-        // After playing the sequence, turn off or restore progress
+
         restoreProgressOrTurnOff()
     }
 
     private fun restoreProgressOrTurnOff() {
-        val sbn = lastProgressSbn
+        val sbn       = lastProgressSbn
         val playlistId = lastProgressPlaylistId
-        
         if (sbn != null && playlistId != null) {
-            Log.d(TAG, "Restoring progress bar for ${sbn.packageName}")
             startProgressPolling()
         } else {
-            Log.d(TAG, "No active progress, turning off glyphs")
             glyphController?.turnOffGlyphs()
         }
     }

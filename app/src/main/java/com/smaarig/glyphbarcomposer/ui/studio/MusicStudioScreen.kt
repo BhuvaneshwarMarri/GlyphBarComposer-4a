@@ -184,7 +184,7 @@ fun MusicStudioScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 20.dp, vertical = 24.dp),
+                            .padding(horizontal = 16.dp, vertical = 24.dp),
                         verticalArrangement = Arrangement.spacedBy(28.dp)
                     ) {
                         StudioHeader(uiState, viewModel, onSaveClick = { showSaveDialog = true })

@@ -18,31 +18,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import androidx.compose.material.icons.filled.LibraryMusic
+import com.smaarig.glyphbarcomposer.ui.ScreenHeader
+
 @Composable
 fun LibraryHeader(onStopAll: () -> Unit, isAnyPlaying: Boolean) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column {
-            Text(
-                "LIBRARY",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.White,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 2.sp,
-                fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
-            )
-        }
-
-        if (isAnyPlaying) {
-            IconButton(
-                onClick = onStopAll,
-                modifier = Modifier.clip(CircleShape).background(Color(0x1AFF5252))
-            ) {
-                Icon(Icons.Default.Stop, null, tint = Color(0xFFFF5252), modifier = Modifier.size(20.dp))
+    ScreenHeader(
+        title = "LIBRARY",
+        icon = Icons.Default.LibraryMusic,
+        actions = {
+            if (isAnyPlaying) {
+                IconButton(
+                    onClick = onStopAll,
+                    modifier = Modifier.clip(CircleShape).background(Color(0x1AFF5252))
+                ) {
+                    Icon(Icons.Default.Stop, null, tint = Color(0xFFFF5252), modifier = Modifier.size(20.dp))
+                }
             }
         }
-    }
+    )
 }

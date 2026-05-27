@@ -1,10 +1,10 @@
 package com.smaarig.glyphbarcomposer.ui.hooks
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,6 +12,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -37,9 +38,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.smaarig.glyphbarcomposer.data.NotificationHook
 import com.smaarig.glyphbarcomposer.data.NotificationHookWithPlaylist
-import com.smaarig.glyphbarcomposer.data.Playlist
 import com.smaarig.glyphbarcomposer.ui.hooks.components.EmptyHooksView
 import com.smaarig.glyphbarcomposer.ui.hooks.components.HookItem
 import com.smaarig.glyphbarcomposer.ui.hooks.components.HooksHeader
@@ -51,10 +50,6 @@ import kotlinx.coroutines.launch
 
 // ─── Sheet navigation state ──────────────────────────────────────────────────
 
-/**
- * Which bottom sheet is currently visible.
- * Null = none, AppPicker = choose an app, HookConfig = configure the hook for an already-chosen app.
- */
 private sealed interface SheetState {
     data object AppPicker : SheetState
     data class HookConfig(val app: AppInfo) : SheetState
@@ -71,17 +66,27 @@ fun HooksScreen(viewModel: HooksViewModel) {
     val playlists           by viewModel.allPlaylists.collectAsState()
     val channels            by viewModel.selectedAppChannels.collectAsState()
     val isLoadingChannels   by viewModel.isLoadingChannels.collectAsState()
+    val testResult          by viewModel.testHookResult.collectAsState()
 
     val context = LocalContext.current
     val scope   = rememberCoroutineScope()
 
-    // Single sheet state machine — drives which sheet (if any) is shown
     var sheetState by remember { mutableStateOf<SheetState?>(null) }
 
     val pickerSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val configSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // ── Dismiss helpers ──────────────────────────────────────────────────────
+    // Show test result snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(testResult) {
+        val msg = testResult ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(
+            message = msg,
+            duration = SnackbarDuration.Short
+        )
+        viewModel.clearTestResult()
+    }
+
     fun dismissPickerSheet() {
         scope.launch { pickerSheetState.hide() }.invokeOnCompletion {
             if (!pickerSheetState.isVisible) sheetState = null
@@ -97,8 +102,20 @@ fun HooksScreen(viewModel: HooksViewModel) {
         }
     }
 
-    // ── Main scaffold ────────────────────────────────────────────────────────
-    Scaffold(containerColor = Color(0xFF0A0A0A)) { innerPadding ->
+    Scaffold(
+        containerColor = Color(0xFF0A0A0A),
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = Color(0xFF1E1E1E),
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+        }
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -107,43 +124,41 @@ fun HooksScreen(viewModel: HooksViewModel) {
         ) {
             HooksHeader(onAddClick = { sheetState = SheetState.AppPicker })
 
-            if (!isPermissionGranted) {
-                PermissionBanner { viewModel.openPermissionSettings(context) }
-                Spacer(Modifier.height(16.dp))
+            AnimatedVisibility(
+                visible = !isPermissionGranted,
+                enter = fadeIn(tween(300)) + slideInVertically { -it },
+                exit = fadeOut(tween(200))
+            ) {
+                Column {
+                    PermissionBanner { viewModel.openPermissionSettings(context) }
+                    Spacer(Modifier.height(16.dp))
+                }
             }
 
             if (hooks.isEmpty()) {
                 EmptyHooksView()
             } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    items(hooks, key = { it.hook.id }) { hookWithPlaylist ->
-                        HookItem(
-                            hookWithPlaylist = hookWithPlaylist,
-                            onDelete  = { viewModel.deleteHook(hookWithPlaylist.hook) },
-                            onToggle  = { enabled -> viewModel.toggleHook(hookWithPlaylist.hook, enabled) }
-                        )
-                    }
-                }
+                HooksList(
+                    hooks = hooks,
+                    onDelete = { viewModel.deleteHook(it.hook) },
+                    onToggle = { hook, enabled -> viewModel.toggleHook(hook.hook, enabled) },
+                    onTest   = { viewModel.testHook(it, context) }
+                )
             }
         }
     }
 
-    // ── Sheet 1: App Picker ──────────────────────────────────────────────────
+    // Sheet 1: App Picker
     if (sheetState == SheetState.AppPicker) {
         ModalBottomSheet(
             onDismissRequest = { sheetState = null },
             sheetState       = pickerSheetState,
-            containerColor   = Color(0xFF1A1A1A),
+            containerColor   = Color(0xFF141414),
             dragHandle       = { BottomSheetDefaults.DragHandle(color = Color(0xFF444444)) }
         ) {
             AppPickerSheet(
                 apps = installedApps,
                 onAppSelected = { app ->
-                    // Dismiss picker, load channels, open config sheet
                     scope.launch { pickerSheetState.hide() }.invokeOnCompletion {
                         viewModel.loadChannelsForApp(app.packageName)
                         sheetState = SheetState.HookConfig(app)
@@ -154,7 +169,7 @@ fun HooksScreen(viewModel: HooksViewModel) {
         }
     }
 
-    // ── Sheet 2: Hook Config (channel + playlist picker) ─────────────────────
+    // Sheet 2: Hook Config
     val configApp = (sheetState as? SheetState.HookConfig)?.app
     if (configApp != null) {
         ModalBottomSheet(
@@ -163,7 +178,7 @@ fun HooksScreen(viewModel: HooksViewModel) {
                 sheetState = null
             },
             sheetState     = configSheetState,
-            containerColor = Color(0xFF1A1A1A),
+            containerColor = Color(0xFF141414),
             dragHandle     = { BottomSheetDefaults.DragHandle(color = Color(0xFF444444)) }
         ) {
             HookAddSheet(
@@ -173,11 +188,11 @@ fun HooksScreen(viewModel: HooksViewModel) {
                 playlists         = playlists,
                 onConfirm         = { channelId, channelName, playlistId, isProgressSync ->
                     viewModel.addHook(
-                        packageName           = configApp.packageName,
-                        appName               = configApp.appName,
-                        playlistId            = playlistId,
-                        isProgressSync        = isProgressSync,
-                        notificationChannelId = channelId,
+                        packageName             = configApp.packageName,
+                        appName                 = configApp.appName,
+                        playlistId              = playlistId,
+                        isProgressSync          = isProgressSync,
+                        notificationChannelId   = channelId,
                         notificationChannelName = channelName
                     )
                     dismissConfigSheet()
@@ -187,32 +202,51 @@ fun HooksScreen(viewModel: HooksViewModel) {
         }
     }
 
-    // Refresh permission state each time the screen becomes visible (e.g. returning from Settings)
+    // Lifecycle: re-check permission on resume
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.checkPermission()
-            }
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.checkPermission()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+}
+
+// ─── Hooks list with stable keys and no re-composition stutter ───────────────
+
+@Composable
+private fun HooksList(
+    hooks: List<NotificationHookWithPlaylist>,
+    onDelete: (NotificationHookWithPlaylist) -> Unit,
+    onToggle: (NotificationHookWithPlaylist, Boolean) -> Unit,
+    onTest:   (NotificationHookWithPlaylist) -> Unit
+) {
+    val listState = rememberLazyListState()
+
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(bottom = 24.dp)
+    ) {
+        items(
+            items = hooks,
+            key   = { it.hook.id }
+        ) { hookWithPlaylist ->
+            HookItem(
+                hookWithPlaylist = hookWithPlaylist,
+                onDelete  = { onDelete(hookWithPlaylist) },
+                onToggle  = { enabled -> onToggle(hookWithPlaylist, enabled) },
+                onTest    = { onTest(hookWithPlaylist) },
+                modifier  = Modifier.animateItem(tween(250))
+            )
         }
     }
 }
 
 // ─── App Picker Sheet ────────────────────────────────────────────────────────
 
-/**
- * Full-height bottom sheet listing all installed apps.
- *
- * Interaction model:
- *  - Tap the info/settings icon (ⓘ) on any app row → opens [HookAddSheet] for that app.
- *  - Long-press anywhere on the row → same as tapping the info icon.
- *
- * A search bar at the top lets users filter quickly.
- */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AppPickerSheet(
@@ -222,6 +256,7 @@ private fun AppPickerSheet(
 ) {
     var query by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
+    val listState = rememberLazyListState()
 
     val filtered = remember(query, apps) {
         if (query.isBlank()) apps
@@ -231,11 +266,10 @@ private fun AppPickerSheet(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.92f)           // Occupy most of the screen
+            .fillMaxHeight(0.92f)
             .padding(horizontal = 16.dp)
             .navigationBarsPadding()
     ) {
-        // Header
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -254,7 +288,6 @@ private fun AppPickerSheet(
 
         Spacer(Modifier.height(8.dp))
 
-        // Search bar
         OutlinedTextField(
             value         = query,
             onValueChange = { query = it },
@@ -263,46 +296,51 @@ private fun AppPickerSheet(
             trailingIcon  = if (query.isNotEmpty()) {
                 { IconButton(onClick = { query = "" }) { Icon(Icons.Default.Clear, contentDescription = "Clear", tint = Color(0xFF888888)) } }
             } else null,
-            singleLine    = true,
+            singleLine      = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
             shape  = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor   = Color(0xFF444444),
-                unfocusedBorderColor = Color(0xFF2A2A2A),
-                focusedTextColor     = Color.White,
-                unfocusedTextColor   = Color.White,
-                cursorColor          = Color.White,
-                focusedContainerColor   = Color(0xFF222222),
-                unfocusedContainerColor = Color(0xFF1E1E1E)
+                focusedBorderColor      = Color(0xFF444444),
+                unfocusedBorderColor    = Color(0xFF2A2A2A),
+                focusedTextColor        = Color.White,
+                unfocusedTextColor      = Color.White,
+                cursorColor             = Color.White,
+                focusedContainerColor   = Color(0xFF1E1E1E),
+                unfocusedContainerColor = Color(0xFF1A1A1A)
             ),
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(6.dp))
 
-        // Tip text
         Text(
-            "Tap any app row to configure its notification hook",
+            "Tap an app to set up its notification hook",
             style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF666666),
+            color = Color(0xFF555555),
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
         if (filtered.isEmpty()) {
-            Box(Modifier.fillMaxWidth().padding(top = 40.dp), contentAlignment = Alignment.Center) {
-                Text("No apps found", color = Color(0xFF555555))
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 48.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("No apps found", color = Color(0xFF444444))
             }
         } else {
             LazyColumn(
+                state = listState,
                 verticalArrangement = Arrangement.spacedBy(2.dp),
-                contentPadding      = PaddingValues(bottom = 16.dp)
+                contentPadding = PaddingValues(bottom = 16.dp)
             ) {
                 items(filtered, key = { it.packageName }) { app ->
                     AppPickerRow(
-                        app           = app,
-                        onInfoClick   = { onAppSelected(app) },
-                        modifier      = Modifier.animateItem()
+                        app         = app,
+                        onInfoClick = { onAppSelected(app) },
+                        modifier    = Modifier.animateItem(tween(200))
                     )
                 }
             }
@@ -323,43 +361,34 @@ private fun AppPickerRow(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .combinedClickable(
-                onClick      = { /* tap anywhere = same as info icon */ onInfoClick() },
-                onLongClick  = { onInfoClick() }
-            )
+            .combinedClickable(onClick = onInfoClick, onLongClick = onInfoClick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment    = Alignment.CenterVertically,
+        verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // App icon
         AppIcon(app = app, size = 42.dp)
 
-        // App name + badge
         Column(Modifier.weight(1f)) {
             Text(
-                text     = app.appName,
-                style    = MaterialTheme.typography.bodyMedium,
+                text       = app.appName,
+                style      = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                color    = Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                color      = Color.White,
+                maxLines   = 1,
+                overflow   = TextOverflow.Ellipsis
             )
             if (app.isProgressOnly) {
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text  = "Media / Progress sync only",
+                    text  = "Progress sync only",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF888888)
+                    color = Color(0xFF00BFA5)
                 )
             }
         }
 
-        // Progress-only badge chip
         if (app.isProgressOnly) {
-            Surface(
-                shape = CircleShape,
-                color = Color(0xFF2A2A2A)
-            ) {
+            Surface(shape = CircleShape, color = Color(0xFF00BFA5).copy(alpha = 0.12f)) {
                 Text(
                     text     = "Media",
                     style    = MaterialTheme.typography.labelSmall,
@@ -369,22 +398,18 @@ private fun AppPickerRow(
             }
         }
 
-        // Info / settings icon — primary action
-        IconButton(
-            onClick  = onInfoClick,
-            modifier = Modifier.size(36.dp)
-        ) {
+        IconButton(onClick = onInfoClick, modifier = Modifier.size(36.dp)) {
             Icon(
-                imageVector       = Icons.Outlined.Info,
-                contentDescription = "Configure hooks for ${app.appName}",
-                tint              = Color(0xFF888888),
-                modifier          = Modifier.size(20.dp)
+                imageVector        = Icons.Outlined.Info,
+                contentDescription = "Configure ${app.appName}",
+                tint               = Color(0xFF666666),
+                modifier           = Modifier.size(20.dp)
             )
         }
     }
 }
 
-// ─── App Icon helper ─────────────────────────────────────────────────────────
+// ─── App Icon ────────────────────────────────────────────────────────────────
 
 @Composable
 private fun AppIcon(app: AppInfo, size: androidx.compose.ui.unit.Dp) {
@@ -395,21 +420,20 @@ private fun AppIcon(app: AppInfo, size: androidx.compose.ui.unit.Dp) {
         modifier = Modifier
             .size(size)
             .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xFF2A2A2A)),
+            .background(Color(0xFF222222)),
         contentAlignment = Alignment.Center
     ) {
         if (bitmap != null) {
             androidx.compose.foundation.Image(
-                bitmap              = bitmap,
-                contentDescription  = app.appName,
-                modifier            = Modifier.size(size)
+                bitmap             = bitmap,
+                contentDescription = app.appName,
+                modifier           = Modifier.size(size)
             )
         } else {
-            // Fallback: first letter of app name
             Text(
-                text  = app.appName.firstOrNull()?.uppercase() ?: "?",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color(0xFF888888),
+                text       = app.appName.firstOrNull()?.uppercase() ?: "?",
+                style      = MaterialTheme.typography.bodyLarge,
+                color      = Color(0xFF888888),
                 fontWeight = FontWeight.Bold
             )
         }

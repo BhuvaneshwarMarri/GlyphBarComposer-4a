@@ -22,36 +22,30 @@ import androidx.compose.ui.unit.sp
 import com.smaarig.glyphbarcomposer.ui.viewmodel.PatternLabUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.PatternLabViewModel
 
+import androidx.compose.material.icons.filled.Pattern
+import com.smaarig.glyphbarcomposer.ui.ScreenHeader
+
 @Composable
 fun PatternLabHeader(uiState: PatternLabUiState, viewModel: PatternLabViewModel) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            "PATTERN LAB",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color.White,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 2.sp,
-            fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
-        )
-        
-        if (uiState.isPlaying) {
-            IconButton(
-                onClick = viewModel::togglePreview,
-                modifier = Modifier.clip(CircleShape).background(Color(0x1AFF5252))
-            ) {
-                Icon(Icons.Default.Stop, null, tint = Color(0xFFFF5252))
-            }
-        } else if ((uiState.previewSteps.isNotEmpty() || uiState.selectedPlaylistA != null || uiState.selectedPlaylistB != null)) {
-            IconButton(
-                onClick = viewModel::togglePreview,
-                modifier = Modifier.clip(CircleShape).background(Color(0x1A00C853))
-            ) {
-                Icon(Icons.Default.PlayArrow, null, tint = Color(0xFF00C853))
+    ScreenHeader(
+        title = "PATTERN LAB",
+        icon = Icons.Default.Pattern,
+        actions = {
+            if (uiState.isPlaying) {
+                IconButton(
+                    onClick = viewModel::togglePreview,
+                    modifier = Modifier.clip(CircleShape).background(Color(0x1AFF5252))
+                ) {
+                    Icon(Icons.Default.Stop, null, tint = Color(0xFFFF5252))
+                }
+            } else if ((uiState.previewSteps.isNotEmpty() || uiState.selectedPlaylistA != null || uiState.selectedPlaylistB != null)) {
+                IconButton(
+                    onClick = viewModel::togglePreview,
+                    modifier = Modifier.clip(CircleShape).background(Color(0x1A00C853))
+                ) {
+                    Icon(Icons.Default.PlayArrow, null, tint = Color(0xFF00C853))
+                }
             }
         }
-    }
+    )
 }

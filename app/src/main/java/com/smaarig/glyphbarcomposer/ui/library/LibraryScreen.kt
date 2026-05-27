@@ -88,7 +88,7 @@ fun LibraryPortrait(
     onSharePlaylist: (PlaylistWithSteps) -> Unit,
     onShareStudio: (MusicProjectWithEvents) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         LibraryHeader(
             onStopAll = {
                 composerViewModel.stopPlayback()
