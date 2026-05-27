@@ -158,7 +158,7 @@ class HooksViewModel(
     fun addHook(
         packageName: String,
         appName: String,
-        playlistId: Long,
+        playlistId: Long?,
         isProgressSync: Boolean,
         notificationType: String = "ALL",
         notificationChannelId: String? = null,
@@ -221,7 +221,7 @@ class HooksViewModel(
             _testHookResult.value = "Hook is disabled — enable it first"
             return
         }
-        if (playlist == null) {
+        if (playlist == null && !hook.isProgressSync) {
             _testHookResult.value = "No playlist assigned to this hook"
             return
         }
@@ -242,11 +242,13 @@ class HooksViewModel(
                     }
                 }
 
+                val content = if (hook.isProgressSync) "Progress Sync Test" else "Trigger Test — ${playlist?.name}"
+
                 // Build a dummy notification that mimics the target app
                 val notification = NotificationCompat.Builder(context, testChannelId)
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
                     .setContentTitle("Test: ${hook.appName}")
-                    .setContentText("Glyph hook test — ${playlist.name}")
+                    .setContentText(content)
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                     .setAutoCancel(true)
                     .build()
@@ -259,12 +261,12 @@ class HooksViewModel(
                 // since the posted notification is from our package (not the target app).
                 // This gives immediate feedback regardless of channel matching.
                 val triggered = GlyphNotificationListenerService.triggerTestForHook(
-                    hookWithPlaylist,
-                    context
+                    hookWithPlaylist
                 )
 
                 _testHookResult.value = if (triggered) {
-                    "✓ Triggered \"${playlist.name}\" for ${hook.appName}"
+                    val label = if (hook.isProgressSync) "Progress" else "\"${playlist?.name}\""
+                    "✓ Triggered $label for ${hook.appName}"
                 } else {
                     "Notification posted — make sure Glyph permission is granted"
                 }

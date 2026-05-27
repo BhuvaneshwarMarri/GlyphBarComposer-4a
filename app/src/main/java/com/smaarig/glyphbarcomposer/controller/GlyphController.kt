@@ -198,6 +198,11 @@ class GlyphController private constructor() {
     }
 
     fun turnOffGlyphs() {
+        batteryJob?.cancel()
+        batteryJob = null
+        resetJob?.cancel()
+        resetJob = null
+        
         try {
             mGlyphManager?.openSession()
             mGlyphManager?.turnOff()
@@ -205,6 +210,7 @@ class GlyphController private constructor() {
             mGlyphManager?.setFrameColors(IntArray(7) { 0 })
         } catch (e: Exception) {}
         _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
+        _isHardwareBusy.value = false
     }
 
     fun setRedGlyph(state: Int) {

@@ -27,6 +27,7 @@ fun HooksHeader(onAddClick: () -> Unit) {
     ScreenHeader(
         title = "HOOKS",
         icon = Icons.Default.Link,
+        modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
         actions = {
             IconButton(
                 onClick = onAddClick,

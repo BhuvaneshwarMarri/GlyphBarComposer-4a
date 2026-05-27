@@ -16,7 +16,7 @@ import androidx.room.TypeConverters
         ContactBinding::class,
         NotificationHook::class
     ],
-    version = 10,
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

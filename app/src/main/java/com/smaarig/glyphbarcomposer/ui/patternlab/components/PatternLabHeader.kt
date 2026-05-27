@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
@@ -18,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smaarig.glyphbarcomposer.ui.viewmodel.PatternLabUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.PatternLabViewModel
@@ -30,6 +32,7 @@ fun PatternLabHeader(uiState: PatternLabUiState, viewModel: PatternLabViewModel)
     ScreenHeader(
         title = "PATTERN LAB",
         icon = Icons.Default.Pattern,
+        modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
         actions = {
             if (uiState.isPlaying) {
                 IconButton(

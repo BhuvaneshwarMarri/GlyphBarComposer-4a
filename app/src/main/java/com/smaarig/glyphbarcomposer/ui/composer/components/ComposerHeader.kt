@@ -37,6 +37,7 @@ fun ComposerHeader(
     ScreenHeader(
         title = "COMPOSER",
         icon = Icons.Default.MusicNote,
+        modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
         actions = {
             Box(
                 modifier = Modifier

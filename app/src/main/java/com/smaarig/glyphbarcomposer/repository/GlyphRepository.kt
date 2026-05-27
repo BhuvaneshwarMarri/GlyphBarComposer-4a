@@ -79,4 +79,8 @@ class GlyphRepository(private val playlistDao: PlaylistDao) {
     suspend fun getPlaylistWithSteps(playlistId: Long): PlaylistWithSteps? {
         return playlistDao.getPlaylistWithSteps(playlistId)
     }
+
+    suspend fun getNotificationHookSync(hookId: Long): NotificationHook? {
+        return playlistDao.getNotificationHookById(hookId)
+    }
 }

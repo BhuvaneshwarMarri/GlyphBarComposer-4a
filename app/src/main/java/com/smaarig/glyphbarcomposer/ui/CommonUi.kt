@@ -74,8 +74,7 @@ fun ScreenHeader(
 ) {
     Row(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp, bottom = 16.dp),
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {

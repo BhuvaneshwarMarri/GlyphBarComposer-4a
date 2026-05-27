@@ -56,7 +56,7 @@ fun HookAddSheet(
     onConfirm: (
         channelId: String?,
         channelName: String?,
-        playlistId: Long,
+        playlistId: Long?,
         isProgressSync: Boolean
     ) -> Unit,
     onDismiss: () -> Unit
@@ -70,24 +70,37 @@ fun HookAddSheet(
     var isProgressSync      by remember { mutableStateOf(isProgressOnly) }
 
     // Pre-select "All notifications" for non-progress-only apps when channels load
+    // And auto-detect progress-sync from channel names
     LaunchedEffect(channels) {
         if (channels.isEmpty() && !isLoadingChannels && !isProgressOnly) {
             selectedChannelId   = null
             selectedChannelName = null
+        }
+        
+        // Auto-detect progress sync based on channel names
+        val progressKeywords = listOf("progress", "download", "upload", "sync", "transfer", "media", "playback")
+        val hasProgressChannel = channels.any { ch ->
+            val name = ch.name?.lowercase() ?: ""
+            progressKeywords.any { it in name }
+        }
+        if (hasProgressChannel && !isProgressSync) {
+            isProgressSync = true
         }
     }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .padding(horizontal = 16.dp, vertical = 16.dp)
             .navigationBarsPadding()
     ) {
         // ── Header ──────────────────────────────────────────────────────────
         Text(
             text = "Add Hook — ${selectedApp.appName}",
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.Black,
+            color = Color.White,
+            fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
         )
 
         if (isProgressOnly) {
@@ -242,7 +255,9 @@ fun HookAddSheet(
                         name     = pl.name,
                         subtitle = "${pwSteps.steps.size} step${if (pwSteps.steps.size != 1) "s" else ""}",
                         selected = selectedPlaylistId == pl.id,
-                        onClick  = { selectedPlaylistId = pl.id }
+                        onClick  = { 
+                            selectedPlaylistId = if (selectedPlaylistId == pl.id) null else pl.id 
+                        }
                     )
                 }
             }
@@ -262,10 +277,9 @@ fun HookAddSheet(
 
             Button(
                 onClick  = {
-                    val playlistId = selectedPlaylistId ?: return@Button
-                    onConfirm(selectedChannelId, selectedChannelName, playlistId, isProgressSync)
+                    onConfirm(selectedChannelId, selectedChannelName, selectedPlaylistId, isProgressSync)
                 },
-                enabled  = selectedPlaylistId != null,
+                enabled  = isProgressSync || selectedPlaylistId != null,
                 modifier = Modifier.weight(1f)
             ) { Text("Add Hook") }
         }

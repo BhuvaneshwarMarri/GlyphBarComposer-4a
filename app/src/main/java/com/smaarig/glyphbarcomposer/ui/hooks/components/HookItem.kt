@@ -14,9 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -91,8 +89,8 @@ fun HookItem(
                 modifier = Modifier
                     .fillMaxHeight()
                     .width(80.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFB71C1C)),
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xFFB71C1C).copy(alpha = 0.8f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -106,8 +104,8 @@ fun HookItem(
 
         // Main card
         Surface(
-            color = Color(0xFF1C1C1C),
-            shape = RoundedCornerShape(12.dp),
+            color = Color(0xFF111111),
+            shape = RoundedCornerShape(24.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .offset { IntOffset(animatedOffset.roundToInt(), 0) }
@@ -127,93 +125,96 @@ fun HookItem(
                     }
                 )
         ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Circular App Icon
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(if (hook.isEnabled) Color(0xFF1A1A1A) else Color(0xFF0A0A0A)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    // App icon or fallback
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF2A2A2A)),
-                        contentAlignment = Alignment.Center
+                    if (appIcon != null) {
+                        androidx.compose.foundation.Image(
+                            bitmap = appIcon,
+                            contentDescription = hook.appName,
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black)
+                        )
+                    } else {
+                        Text(
+                            text = hook.appName.firstOrNull()?.uppercase() ?: "?",
+                            color = Color(0xFF888888),
+                            fontWeight = FontWeight.Black,
+                            fontSize = 20.sp
+                        )
+                    }
+                }
+
+                Spacer(Modifier.width(16.dp))
+
+                // Info
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = hook.appName,
+                        color = if (hook.isEnabled) Color.White else Color.Gray,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 16.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    
+                    val subtitle = when {
+                        hook.notificationChannelName != null -> hook.notificationChannelName
+                        playlist != null -> playlist.name
+                        else -> "Notification Hook"
+                    }
+                    
+                    Text(
+                        text = subtitle,
+                        color = if (hook.isEnabled) Color.Gray else Color(0xFF444444),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                // Actions
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Test button
+                    IconButton(
+                        onClick = {
+                            if (!isTesting) {
+                                isTesting = true
+                                onTest()
+                                scope.launch {
+                                    delay(1500)
+                                    isTesting = false
+                                }
+                            }
+                        },
+                        enabled = !isTesting && hook.isEnabled,
+                        modifier = Modifier.size(36.dp).scale(testScale)
                     ) {
-                        if (appIcon != null) {
-                            androidx.compose.foundation.Image(
-                                bitmap = appIcon,
-                                contentDescription = hook.appName,
-                                modifier = Modifier.size(44.dp)
+                        if (isTesting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = Color(0xFFFFD54F),
+                                strokeWidth = 2.dp
                             )
                         } else {
-                            Text(
-                                text = hook.appName.firstOrNull()?.uppercase() ?: "?",
-                                color = Color(0xFF888888),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
-                        }
-                    }
-
-                    // Info
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = hook.appName,
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(Modifier.height(2.dp))
-
-                        // Channel badge
-                        val channelLabel = when {
-                            hook.notificationChannelName != null -> hook.notificationChannelName
-                            hook.notificationType == "ALL" -> "All notifications"
-                            else -> hook.notificationType.lowercase().replaceFirstChar { it.uppercase() }
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
                             Icon(
-                                if (hook.isProgressSync) Icons.Filled.NotificationsActive else Icons.Outlined.Notifications,
-                                contentDescription = null,
-                                tint = if (hook.isProgressSync) Color(0xFF00BFA5) else Color(0xFF666666),
-                                modifier = Modifier.size(12.dp)
+                                imageVector = Icons.Default.Science,
+                                contentDescription = "Test",
+                                tint = if (hook.isEnabled) Color(0xFFFFD54F).copy(alpha = 0.7f) else Color(0xFF333333),
+                                modifier = Modifier.size(20.dp)
                             )
-                            Text(
-                                text = channelLabel,
-                                color = Color(0xFF888888),
-                                fontSize = 11.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-
-                        // Playlist name
-                        if (playlist != null) {
-                            Spacer(Modifier.height(1.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.PlayArrow,
-                                    contentDescription = null,
-                                    tint = Color(0xFF555555),
-                                    modifier = Modifier.size(11.dp)
-                                )
-                                Text(
-                                    text = playlist.name,
-                                    color = Color(0xFF666666),
-                                    fontSize = 11.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
                         }
                     }
 
@@ -233,93 +234,14 @@ fun HookItem(
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = Color(0xFF00BFA5),
-                            uncheckedThumbColor = Color(0xFF888888),
-                            uncheckedTrackColor = Color(0xFF333333),
-                            uncheckedBorderColor = Color(0xFF444444)
-                        )
+                            uncheckedThumbColor = Color(0xFF555555),
+                            uncheckedTrackColor = Color(0xFF1A1A1A),
+                            uncheckedBorderColor = Color(0xFF333333)
+                        ),
+                        modifier = Modifier.scale(0.85f)
                     )
-                }
-
-                // Progress sync badge + Test button row
-                Spacer(Modifier.height(10.dp))
-                HorizontalDivider(color = Color(0xFF252525), thickness = 0.5.dp)
-                Spacer(Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    // Tags row
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (hook.isProgressSync) {
-                            HookChip(label = "Progress Sync", color = Color(0xFF00BFA5))
-                        }
-                        if (!hook.isEnabled) {
-                            HookChip(label = "Disabled", color = Color(0xFF666666))
-                        }
-                        if (hook.notificationChannelId != null) {
-                            HookChip(label = "Channel", color = Color(0xFF7B61FF))
-                        }
-                    }
-
-                    // Test button
-                    OutlinedButton(
-                        onClick = {
-                            if (!isTesting) {
-                                isTesting = true
-                                onTest()
-                                scope.launch {
-                                    delay(1500)
-                                    isTesting = false
-                                }
-                            }
-                        },
-                        enabled = !isTesting && hook.isEnabled,
-                        modifier = Modifier
-                            .height(30.dp)
-                            .scale(testScale),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color(0xFFFFD54F),
-                            disabledContentColor = Color(0xFF555555)
-                        ),
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp,
-                            if (!isTesting && hook.isEnabled) Color(0xFF555533) else Color(0xFF333333)
-                        ),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        if (isTesting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(12.dp),
-                                color = Color(0xFFFFD54F),
-                                strokeWidth = 1.5.dp
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text("Testing…", fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                        } else {
-                            Text("Test", fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                        }
-                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun HookChip(label: String, color: Color) {
-    Surface(
-        shape = CircleShape,
-        color = color.copy(alpha = 0.12f)
-    ) {
-        Text(
-            text = label,
-            color = color,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-        )
     }
 }

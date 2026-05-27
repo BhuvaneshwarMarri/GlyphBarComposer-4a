@@ -83,6 +83,9 @@ interface PlaylistDao {
     @Query("SELECT * FROM notification_hooks WHERE packageName = :packageName AND isEnabled = 1")
     suspend fun getHooksForPackage(packageName: String): List<NotificationHookWithPlaylist>
 
+    @Query("SELECT * FROM notification_hooks WHERE id = :hookId LIMIT 1")
+    suspend fun getNotificationHookById(hookId: Long): NotificationHook?
+
     @Transaction
     @Query("SELECT * FROM playlists WHERE id = :playlistId LIMIT 1")
     suspend fun getPlaylistWithSteps(playlistId: Long): PlaylistWithSteps?

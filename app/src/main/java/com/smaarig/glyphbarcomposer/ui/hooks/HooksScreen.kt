@@ -60,7 +60,7 @@ private sealed interface SheetState {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HooksScreen(viewModel: HooksViewModel) {
-    val hooks               by viewModel.allHooks.collectAsState()
+    val hooks by viewModel.allHooks.collectAsState(initial = emptyList())
     val isPermissionGranted by viewModel.isPermissionGranted.collectAsState()
     val installedApps       by viewModel.installedApps.collectAsState()
     val playlists           by viewModel.allPlaylists.collectAsState()
@@ -104,6 +104,7 @@ fun HooksScreen(viewModel: HooksViewModel) {
 
     Scaffold(
         containerColor = Color(0xFF0A0A0A),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
                 Snackbar(
@@ -111,7 +112,7 @@ fun HooksScreen(viewModel: HooksViewModel) {
                     containerColor = Color(0xFF1E1E1E),
                     contentColor = Color.White,
                     shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
         }
@@ -227,8 +228,8 @@ private fun HooksList(
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(bottom = 24.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(bottom = 120.dp)
     ) {
         items(
             items = hooks,

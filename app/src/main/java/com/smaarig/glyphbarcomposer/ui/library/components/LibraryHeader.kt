@@ -26,6 +26,7 @@ fun LibraryHeader(onStopAll: () -> Unit, isAnyPlaying: Boolean) {
     ScreenHeader(
         title = "LIBRARY",
         icon = Icons.Default.LibraryMusic,
+        modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
         actions = {
             if (isAnyPlaying) {
                 IconButton(
