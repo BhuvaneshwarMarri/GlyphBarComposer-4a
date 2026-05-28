@@ -72,7 +72,7 @@ fun ComposerScreenOld(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.8f),
+            .fillMaxHeight(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Column(
@@ -211,5 +211,7 @@ fun ComposerScreenOld(
             Text("TIMELINE", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             DraggableTimelineHorizontal(uiState, viewModel, onSaveRequest = { showSaveDialog = true })
         }
+
+        Spacer(Modifier.height(120.dp))
     }
 }

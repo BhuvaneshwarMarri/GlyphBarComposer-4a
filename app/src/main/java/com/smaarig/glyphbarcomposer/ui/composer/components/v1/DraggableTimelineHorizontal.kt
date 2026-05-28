@@ -44,8 +44,8 @@ fun DraggableTimelineHorizontal(
             .clip(RoundedCornerShape(20.dp))
             .background(Color(0xFF0C0C0C))
             .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(20.dp))
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Box(
             modifier = Modifier
@@ -135,6 +135,8 @@ fun DraggableTimelineHorizontal(
                 }
             }
         }
+
+        Spacer(Modifier.height(4.dp))
 
         if (uiState.currentSequenceSteps.isNotEmpty()) {
             Row(

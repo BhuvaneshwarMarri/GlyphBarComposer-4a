@@ -6,43 +6,74 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Pattern
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.smaarig.glyphbarcomposer.ui.theme.GlyphBarComposerTheme
 import com.smaarig.glyphbarcomposer.GlyphApplication
 import com.smaarig.glyphbarcomposer.ui.composer.ComposerScreen
 import com.smaarig.glyphbarcomposer.ui.hooks.HooksScreen
 import com.smaarig.glyphbarcomposer.ui.library.LibraryScreen
 import com.smaarig.glyphbarcomposer.ui.patternlab.PatternLabScreen
 import com.smaarig.glyphbarcomposer.ui.studio.MusicStudioScreen
-import com.smaarig.glyphbarcomposer.ui.viewmodel.*
+import com.smaarig.glyphbarcomposer.ui.theme.GlyphBarComposerTheme
+import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.GlyphViewModelFactory
+import com.smaarig.glyphbarcomposer.ui.viewmodel.HooksViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.LibraryViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.PatternLabViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -68,7 +99,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Composer : Screen("composer", "Composer", Icons.Default.MusicNote)
     object PatternLab : Screen("pattern_lab", "Patterns", Icons.Default.Pattern)
     object MusicStudio : Screen("music_studio", "Music Studio", Icons.Default.GraphicEq)
-    object Hooks : Screen("hooks", "Hooks", Icons.Default.Link)
+    object Hooks : Screen("hooks", "Hooks", Icons.Default.NotificationsActive)
     object Library : Screen("library", "Library", Icons.Default.LibraryMusic)
 }
 
@@ -114,7 +145,8 @@ fun MainApp() {
                     uri,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
-            } catch (_: SecurityException) { }
+            } catch (_: SecurityException) {
+            }
 
             libraryViewModel.importItem(context, uri)
 
@@ -240,7 +272,7 @@ fun NavHostContainer(
         enterTransition = {
             val initialState = initialState.destination.route
             val targetState = targetState.destination.route
-            
+
             val initialIdx = screens.indexOfFirst { it.route == initialState }
             val targetIdx = screens.indexOfFirst { it.route == targetState }
 
@@ -265,7 +297,7 @@ fun NavHostContainer(
         exitTransition = {
             val initialState = initialState.destination.route
             val targetState = targetState.destination.route
-            
+
             val initialIdx = screens.indexOfFirst { it.route == initialState }
             val targetIdx = screens.indexOfFirst { it.route == targetState }
 
