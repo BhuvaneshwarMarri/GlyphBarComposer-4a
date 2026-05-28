@@ -15,7 +15,13 @@ class GlyphRepository(private val playlistDao: PlaylistDao) {
 
     suspend fun savePlaylist(playlist: Playlist, steps: List<SequenceStep>) {
         Log.d(TAG, "Saving playlist: ${playlist.name} with ${steps.size} steps")
-        val id = playlistDao.insertPlaylist(playlist)
+        val id = if (playlist.id != 0L) {
+            playlistDao.insertPlaylist(playlist)
+            playlistDao.deleteStepsForPlaylist(playlist.id)
+            playlist.id
+        } else {
+            playlistDao.insertPlaylist(playlist)
+        }
         val stepsWithId = steps.map { it.copy(playlistId = id) }
         playlistDao.insertSteps(stepsWithId)
     }
@@ -27,7 +33,13 @@ class GlyphRepository(private val playlistDao: PlaylistDao) {
 
     suspend fun saveMusicProject(project: MusicStudioProject, events: List<MusicStudioEvent>) {
         Log.d(TAG, "Saving music project: ${project.name} with ${events.size} events")
-        val id = playlistDao.insertMusicProject(project)
+        val id = if (project.id != 0L) {
+            playlistDao.insertMusicProject(project)
+            playlistDao.deleteEventsForProject(project.id)
+            project.id
+        } else {
+            playlistDao.insertMusicProject(project)
+        }
         val eventsWithId = events.map { it.copy(projectId = id) }
         playlistDao.insertMusicEvents(eventsWithId)
     }

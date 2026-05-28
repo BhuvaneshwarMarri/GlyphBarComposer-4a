@@ -9,10 +9,10 @@ interface PlaylistDao {
     @Query("SELECT * FROM playlists")
     fun getAllPlaylists(): Flow<List<PlaylistWithSteps>>
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlaylist(playlist: Playlist): Long
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSteps(steps: List<SequenceStep>)
 
     @Delete
@@ -29,10 +29,10 @@ interface PlaylistDao {
     suspend fun deleteEventBinding(binding: EventBinding)
 
     // Music Studio
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMusicProject(project: MusicStudioProject): Long
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMusicEvents(events: List<MusicStudioEvent>)
 
     @Transaction
@@ -89,4 +89,10 @@ interface PlaylistDao {
     @Transaction
     @Query("SELECT * FROM playlists WHERE id = :playlistId LIMIT 1")
     suspend fun getPlaylistWithSteps(playlistId: Long): PlaylistWithSteps?
+
+    @Query("DELETE FROM sequence_steps WHERE playlistId = :playlistId")
+    suspend fun deleteStepsForPlaylist(playlistId: Long)
+
+    @Query("DELETE FROM music_studio_events WHERE projectId = :projectId")
+    suspend fun deleteEventsForProject(projectId: Long)
 }

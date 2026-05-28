@@ -337,7 +337,8 @@ fun NavHostContainer(
             LibraryScreen(
                 viewModel = viewModel,
                 composerViewModel = composerViewModel,
-                musicStudioViewModel = musicStudioViewModel
+                musicStudioViewModel = musicStudioViewModel,
+                navController = navController
             )
         }
     }

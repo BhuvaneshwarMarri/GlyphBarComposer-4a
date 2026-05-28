@@ -77,6 +77,7 @@ data class MusicStudioUiState(
     val isAudioPlaying: Boolean = false,
     val musicEvents: List<MusicStudioEvent> = emptyList(),
     val activeProjectId: Long? = null,
+    val editingProjectId: Long? = null,
     val isAnalyzing: Boolean = false,
     val isAnalysisComplete: Boolean = false,
     val musicProjectSaved: Boolean = false,
@@ -578,23 +579,78 @@ class MusicStudioViewModel(
         _uiState.update { it.copy(isSaving = true) }
 
         viewModelScope.launch {
-            val dir = File(getApplication<Application>().getExternalFilesDir(null), "MusicStudio").apply { mkdirs() }
-            val file = File(dir, "audio_${System.currentTimeMillis()}.mp3")
-            try {
-                getApplication<Application>().contentResolver.openInputStream(uri)?.use { ins ->
-                    FileOutputStream(file).use { out -> ins.copyTo(out) }
+            val finalAudioPath: String
+            if (state.editingProjectId != null) {
+                // Keep existing path if editing
+                val existingProject = repository.allMusicProjects.first().find { it.project.id == state.editingProjectId }
+                finalAudioPath = existingProject?.project?.localAudioPath ?: ""
+            } else {
+                val dir = File(getApplication<Application>().getExternalFilesDir(null), "MusicStudio").apply { mkdirs() }
+                val file = File(dir, "audio_${System.currentTimeMillis()}.mp3")
+                try {
+                    getApplication<Application>().contentResolver.openInputStream(uri)?.use { ins ->
+                        FileOutputStream(file).use { out -> ins.copyTo(out) }
+                    }
+                    finalAudioPath = file.absolutePath
+                } catch (e: Exception) {
+                    _uiState.update { it.copy(isSaving = false) }
+                    return@launch
                 }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(isSaving = false) }
-                return@launch
             }
+            
             repository.saveMusicProject(
-                MusicStudioProject(0, projectName.ifBlank { state.audioName ?: "Untitled" }, file.absolutePath, null),
+                MusicStudioProject(
+                    id = state.editingProjectId ?: 0,
+                    name = projectName.ifBlank { state.audioName ?: "Untitled" },
+                    localAudioPath = finalAudioPath,
+                    localGlyphPath = null
+                ),
                 state.musicEvents
             )
-            _uiState.update { it.copy(isSaving = false, musicProjectSaved = true, showSaveSuccess = true) }
+            _uiState.update { it.copy(isSaving = false, musicProjectSaved = true, showSaveSuccess = true, editingProjectId = null) }
             delay(3000)
             _uiState.update { it.copy(showSaveSuccess = false) }
+        }
+    }
+
+    fun editMusicProject(project: MusicProjectWithEvents) {
+        stopMusicStudio()
+        mediaPlayer?.release()
+        releaseVisualizer()
+        
+        val f = File(project.project.localAudioPath)
+        if (!f.exists()) {
+            Log.e("MusicStudioViewModel", "Audio file not found at ${project.project.localAudioPath}")
+            return
+        }
+
+        try {
+            mediaPlayer = MediaPlayer().apply {
+                setDataSource(f.absolutePath)
+                setOnPreparedListener { mp ->
+                    _uiState.update {
+                        it.copy(
+                            audioUri = f.absolutePath.toUri(),
+                            audioName = project.project.name,
+                            audioDurationMs = mp.duration,
+                            isAudioPlaying = false,
+                            musicEvents = project.events,
+                            editingProjectId = project.project.id,
+                            isAnalysisComplete = true,
+                            isAnalyzing = false
+                        )
+                    }
+                    _audioPositionMs.value = 0
+                    // Extract waveform for UI
+                    viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+                        val waveform = AudioProcessor.extractWaveform(getApplication(), f.absolutePath.toUri(), mp.duration)
+                        _uiState.update { it.copy(waveform = waveform) }
+                    }
+                }
+                prepareAsync()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

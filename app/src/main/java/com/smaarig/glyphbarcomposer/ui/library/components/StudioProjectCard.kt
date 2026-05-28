@@ -7,7 +7,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AudioFile
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MusicOff
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -28,6 +34,8 @@ fun StudioProjectCard(
     isAudioMissing: Boolean,
     onPlay: () -> Unit,
     onDelete: () -> Unit,
+    onEdit: () -> Unit,
+    onExportOgg: () -> Unit,
     onShare: () -> Unit
 ) {
     Surface(
@@ -71,6 +79,14 @@ fun StudioProjectCard(
             }
             IconButton(onClick = onShare) {
                 Icon(Icons.Default.Share, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
+            }
+            if (!isAudioMissing) {
+                IconButton(onClick = onExportOgg) {
+                    Icon(Icons.Default.AudioFile, null, tint = Color(0xFF00BFA5), modifier = Modifier.size(20.dp))
+                }
+            }
+            IconButton(onClick = onEdit) {
+                Icon(Icons.Default.Edit, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.DeleteOutline, null, tint = Color.Gray.copy(0.4f))

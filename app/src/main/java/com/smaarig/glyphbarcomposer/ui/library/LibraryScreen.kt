@@ -1,14 +1,16 @@
 package com.smaarig.glyphbarcomposer.ui.library
 
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,9 +21,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.smaarig.glyphbarcomposer.data.MusicProjectWithEvents
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import com.smaarig.glyphbarcomposer.ui.AppOrientation
+import com.smaarig.glyphbarcomposer.ui.Screen
 import com.smaarig.glyphbarcomposer.ui.library.components.*
 import com.smaarig.glyphbarcomposer.ui.rememberAppOrientation
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
@@ -35,43 +39,99 @@ fun LibraryScreen(
     viewModel: LibraryViewModel,
     composerViewModel: ComposerViewModel,
     musicStudioViewModel: MusicStudioViewModel,
+    navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
     val playlists by viewModel.allPlaylists.collectAsStateWithLifecycle(emptyList())
     val studioProjects by viewModel.allMusicProjects.collectAsStateWithLifecycle(emptyList())
     val compState by composerViewModel.uiState.collectAsStateWithLifecycle()
     val studioState by musicStudioViewModel.uiState.collectAsStateWithLifecycle()
+    val isExporting by viewModel.isExporting.collectAsStateWithLifecycle()
+    val exportError by viewModel.exportError.collectAsStateWithLifecycle()
+
     val orientation = rememberAppOrientation()
     val context = LocalContext.current
 
     var selectedTab by remember { mutableIntStateOf(0) }
 
-    if (orientation == AppOrientation.Landscape) {
-        LibraryLandscape(
-            selectedTab = selectedTab,
-            onTabSelect = { selectedTab = it },
-            playlists = playlists,
-            studioProjects = studioProjects,
-            compState = compState,
-            studioState = studioState,
-            composerViewModel = composerViewModel,
-            musicStudioViewModel = musicStudioViewModel,
-            onSharePlaylist = { viewModel.exportPlaylist(context, it) },
-            onShareStudio = { viewModel.exportMusicProject(context, it) }
-        )
-    } else {
-        LibraryPortrait(
-            selectedTab = selectedTab,
-            onTabSelect = { selectedTab = it },
-            playlists = playlists,
-            studioProjects = studioProjects,
-            compState = compState,
-            studioState = studioState,
-            composerViewModel = composerViewModel,
-            musicStudioViewModel = musicStudioViewModel,
-            onSharePlaylist = { viewModel.exportPlaylist(context, it) },
-            onShareStudio = { viewModel.exportMusicProject(context, it) }
-        )
+    LaunchedEffect(exportError) {
+        exportError?.let {
+            // Show error message if needed
+            viewModel.clearExportError()
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (orientation == AppOrientation.Landscape) {
+            LibraryLandscape(
+                selectedTab = selectedTab,
+                onTabSelect = { selectedTab = it },
+                playlists = playlists,
+                studioProjects = studioProjects,
+                compState = compState,
+                studioState = studioState,
+                composerViewModel = composerViewModel,
+                musicStudioViewModel = musicStudioViewModel,
+                onEditSequence = {
+                    composerViewModel.editPlaylist(it)
+                    navController.navigate(Screen.Composer.route)
+                },
+                onEditStudio = {
+                    musicStudioViewModel.editMusicProject(it)
+                    navController.navigate(Screen.MusicStudio.route)
+                },
+                onExportOgg = { viewModel.exportAsOgg(context, it) },
+                onSharePlaylist = { viewModel.exportPlaylist(context, it) },
+                onShareStudio = { viewModel.exportMusicProject(context, it) }
+            )
+        } else {
+            LibraryPortrait(
+                selectedTab = selectedTab,
+                onTabSelect = { selectedTab = it },
+                playlists = playlists,
+                studioProjects = studioProjects,
+                compState = compState,
+                studioState = studioState,
+                composerViewModel = composerViewModel,
+                musicStudioViewModel = musicStudioViewModel,
+                onEditSequence = {
+                    composerViewModel.editPlaylist(it)
+                    navController.navigate(Screen.Composer.route)
+                },
+                onEditStudio = {
+                    musicStudioViewModel.editMusicProject(it)
+                    navController.navigate(Screen.MusicStudio.route)
+                },
+                onExportOgg = { viewModel.exportAsOgg(context, it) },
+                onSharePlaylist = { viewModel.exportPlaylist(context, it) },
+                onShareStudio = { viewModel.exportMusicProject(context, it) }
+            )
+        }
+
+        if (isExporting) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .clickable(enabled = false) {},
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    color = Color(0xFF111111),
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(1.dp, Color(0xFF222222))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFF00C853))
+                        Spacer(Modifier.height(16.dp))
+                        Text("Exporting OGG...", color = Color.White, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -85,6 +145,9 @@ fun LibraryPortrait(
     studioState: MusicStudioUiState,
     composerViewModel: ComposerViewModel,
     musicStudioViewModel: MusicStudioViewModel,
+    onEditSequence: (PlaylistWithSteps) -> Unit,
+    onEditStudio: (MusicProjectWithEvents) -> Unit,
+    onExportOgg: (MusicProjectWithEvents) -> Unit,
     onSharePlaylist: (PlaylistWithSteps) -> Unit,
     onShareStudio: (MusicProjectWithEvents) -> Unit
 ) {
@@ -131,9 +194,9 @@ fun LibraryPortrait(
 
         Box(modifier = Modifier.weight(1f)) {
             if (selectedTab == 0) {
-                SequencesTab(compState.isPlaying, compState.isPaused, compState.activePlaylistId, playlists, composerViewModel, onSharePlaylist)
+                SequencesTab(compState.isPlaying, compState.isPaused, compState.activePlaylistId, playlists, composerViewModel, onEditSequence, onSharePlaylist)
             } else {
-                StudioTab(studioState.isAudioPlaying, studioState.activeProjectId, studioProjects, musicStudioViewModel, onShareStudio)
+                StudioTab(studioState.isAudioPlaying, studioState.activeProjectId, studioProjects, musicStudioViewModel, onEditStudio, onExportOgg, onShareStudio)
             }
         }
     }
@@ -149,6 +212,9 @@ fun LibraryLandscape(
     studioState: MusicStudioUiState,
     composerViewModel: ComposerViewModel,
     musicStudioViewModel: MusicStudioViewModel,
+    onEditSequence: (PlaylistWithSteps) -> Unit,
+    onEditStudio: (MusicProjectWithEvents) -> Unit,
+    onExportOgg: (MusicProjectWithEvents) -> Unit,
     onSharePlaylist: (PlaylistWithSteps) -> Unit,
     onShareStudio: (MusicProjectWithEvents) -> Unit
 ) {
@@ -170,10 +236,11 @@ fun LibraryLandscape(
 
         Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
             if (selectedTab == 0) {
-                SequencesTab(compState.isPlaying, compState.isPaused, compState.activePlaylistId, playlists, composerViewModel, onSharePlaylist)
+                SequencesTab(compState.isPlaying, compState.isPaused, compState.activePlaylistId, playlists, composerViewModel, onEditSequence, onSharePlaylist)
             } else {
-                StudioTab(studioState.isAudioPlaying, studioState.activeProjectId, studioProjects, musicStudioViewModel, onShareStudio)
+                StudioTab(studioState.isAudioPlaying, studioState.activeProjectId, studioProjects, musicStudioViewModel, onEditStudio, onExportOgg, onShareStudio)
             }
         }
     }
 }
+

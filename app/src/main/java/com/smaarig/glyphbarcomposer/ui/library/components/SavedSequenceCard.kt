@@ -8,10 +8,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -31,6 +32,7 @@ fun SavedSequenceCard(
     isPaused: Boolean,
     onPlay: () -> Unit,
     onDelete: () -> Unit,
+    onEdit: () -> Unit,
     onShare: () -> Unit
 ) {
     Surface(
@@ -61,6 +63,9 @@ fun SavedSequenceCard(
             }
             IconButton(onClick = onShare) {
                 Icon(Icons.Default.Share, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
+            }
+            IconButton(onClick = onEdit) {
+                Icon(Icons.Default.Edit, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.DeleteOutline, null, tint = Color.Gray.copy(0.4f))

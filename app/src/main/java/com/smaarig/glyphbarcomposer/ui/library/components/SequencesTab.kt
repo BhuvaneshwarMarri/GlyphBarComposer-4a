@@ -21,6 +21,7 @@ fun SequencesTab(
     activeId: Long?,
     playlists: List<PlaylistWithSteps>,
     viewModel: ComposerViewModel,
+    onEdit: (PlaylistWithSteps) -> Unit,
     onShare: (PlaylistWithSteps) -> Unit
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -45,6 +46,7 @@ fun SequencesTab(
                     isPaused = isPaused,
                     onPlay = { viewModel.playSequence(playlist) }, 
                     onDelete = { viewModel.deletePlaylist(playlist.playlist) },
+                    onEdit = { onEdit(playlist) },
                     onShare = { onShare(playlist) }
                 )
             }

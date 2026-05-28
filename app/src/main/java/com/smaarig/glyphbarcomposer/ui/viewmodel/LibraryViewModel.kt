@@ -15,8 +15,13 @@ import com.smaarig.glyphbarcomposer.repository.GlyphRepository
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import com.smaarig.glyphbarcomposer.data.*
+import com.smaarig.glyphbarcomposer.utils.AudioProcessor
 import com.smaarig.glyphbarcomposer.utils.ZipUtils
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -33,6 +38,12 @@ class LibraryViewModel(
 
     val allPlaylists: Flow<List<PlaylistWithSteps>> = repository.allPlaylists
     val allMusicProjects: Flow<List<MusicProjectWithEvents>> = repository.allMusicProjects
+
+    private val _isExporting = MutableStateFlow(false)
+    val isExporting: StateFlow<Boolean> = _isExporting.asStateFlow()
+
+    private val _exportError = MutableStateFlow<String?>(null)
+    val exportError: StateFlow<String?> = _exportError.asStateFlow()
 
     // ── Delete ───────────────────────────────────────────────────────────────
 
@@ -114,6 +125,33 @@ class LibraryViewModel(
         } catch (e: Exception) {
             Log.e(TAG, "exportMusicProject failed", e)
         }
+    }
+
+    fun exportAsOgg(context: Context, project: MusicProjectWithEvents) {
+        val audioFile = File(project.project.localAudioPath)
+        if (!audioFile.exists()) {
+            _exportError.value = "Source audio file not found"
+            return
+        }
+
+        _isExporting.value = true
+        _exportError.value = null
+
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val outputFile = File(context.cacheDir, "${project.project.name}.ogg")
+            val success = AudioProcessor.convertToOgg(context, audioFile.toUri(), outputFile)
+            
+            _isExporting.value = false
+            if (success) {
+                shareFile(context, outputFile.name, outputFile, "audio/ogg")
+            } else {
+                _exportError.value = "Failed to encode OGG"
+            }
+        }
+    }
+
+    fun clearExportError() {
+        _exportError.value = null
     }
 
     private fun shareFile(context: Context, fileName: String, file: File, mimeType: String) {

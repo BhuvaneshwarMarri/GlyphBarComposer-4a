@@ -24,6 +24,7 @@ data class ComposerUiState(
     val isPlaying: Boolean = false,
     val isPaused: Boolean = false,
     val activePlaylistId: Long? = null,
+    val editingPlaylistId: Long? = null,
     val selectedChannelIndex: Int = 0,
     val useOldVersion: Boolean = true
 )
@@ -193,10 +194,13 @@ class ComposerViewModel(
         if (name.isBlank() || state.currentSequenceSteps.isEmpty()) return
 
         viewModelScope.launch {
-            val playlist = Playlist(name = name)
+            val playlist = Playlist(
+                id = state.editingPlaylistId ?: 0,
+                name = name
+            )
             val playlistSteps = state.currentSequenceSteps.mapIndexed { index, step ->
                 SequenceStep(
-                    playlistId = 0, // Assigned by repository
+                    playlistId = playlist.id,
                     stepIndex = index,
                     channelIntensities = step.channelIntensities,
                     durationMs = step.durationMs
@@ -204,8 +208,20 @@ class ComposerViewModel(
             }
             repository.savePlaylist(playlist, playlistSteps)
             
-            _uiState.update { it.copy(sequenceName = "", currentSequenceSteps = emptyList()) }
+            _uiState.update { it.copy(sequenceName = "", currentSequenceSteps = emptyList(), editingPlaylistId = null) }
         }
+    }
+
+    fun editPlaylist(playlist: PlaylistWithSteps) {
+        stopPlayback()
+        val steps = playlist.steps.sortedBy { it.stepIndex }.map { 
+            GlyphSequence(it.channelIntensities, it.durationMs) 
+        }
+        _uiState.update { it.copy(
+            currentSequenceSteps = steps,
+            sequenceName = playlist.playlist.name,
+            editingPlaylistId = playlist.playlist.id
+        ) }
     }
 
     fun deletePlaylist(playlist: Playlist) {
