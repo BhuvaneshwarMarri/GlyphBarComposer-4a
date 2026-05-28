@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -67,6 +69,7 @@ fun HooksScreen(viewModel: HooksViewModel) {
     val channels            by viewModel.selectedAppChannels.collectAsState()
     val isLoadingChannels   by viewModel.isLoadingChannels.collectAsState()
     val testResult          by viewModel.testHookResult.collectAsState()
+    val isBgServiceEnabled  by viewModel.isBackgroundServiceEnabled.collectAsState()
 
     val context = LocalContext.current
     val scope   = rememberCoroutineScope()
@@ -136,11 +139,13 @@ fun HooksScreen(viewModel: HooksViewModel) {
                 }
             }
 
-            if (hooks.isEmpty()) {
+            if (hooks.isEmpty() && isPermissionGranted) {
                 EmptyHooksView()
             } else {
                 HooksList(
                     hooks = hooks,
+                    isBgServiceEnabled = isBgServiceEnabled,
+                    onBgServiceToggle = { viewModel.toggleBackgroundService(it) },
                     onDelete = { viewModel.deleteHook(it.hook) },
                     onToggle = { hook, enabled -> viewModel.toggleHook(hook.hook, enabled) },
                     onTest   = { viewModel.testHook(it, context) }
@@ -219,6 +224,8 @@ fun HooksScreen(viewModel: HooksViewModel) {
 @Composable
 private fun HooksList(
     hooks: List<NotificationHookWithPlaylist>,
+    isBgServiceEnabled: Boolean,
+    onBgServiceToggle: (Boolean) -> Unit,
     onDelete: (NotificationHookWithPlaylist) -> Unit,
     onToggle: (NotificationHookWithPlaylist, Boolean) -> Unit,
     onTest:   (NotificationHookWithPlaylist) -> Unit
@@ -231,6 +238,13 @@ private fun HooksList(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(bottom = 120.dp)
     ) {
+        item {
+            BackgroundServiceCard(
+                isEnabled = isBgServiceEnabled,
+                onToggle = onBgServiceToggle
+            )
+        }
+
         items(
             items = hooks,
             key   = { it.hook.id }
@@ -241,6 +255,69 @@ private fun HooksList(
                 onToggle  = { enabled -> onToggle(hookWithPlaylist, enabled) },
                 onTest    = { onTest(hookWithPlaylist) },
                 modifier  = Modifier.animateItem(tween(250))
+            )
+        }
+    }
+}
+
+@Composable
+private fun BackgroundServiceCard(
+    isEnabled: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    Surface(
+        color = Color(0xFF111111),
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, if (isEnabled) Color(0xFF00C853) else Color(0xFF222222)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(if (isEnabled) Color(0xFF00C853).copy(0.15f) else Color(0xFF1A1A1A)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isEnabled) Icons.Default.CloudSync else Icons.Default.CloudOff,
+                    contentDescription = null,
+                    tint = if (isEnabled) Color(0xFF00C853) else Color.Gray,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Background Persistence",
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 15.sp
+                )
+                Text(
+                    if (isEnabled) "Active: Hooks run while app is closed" else "Inactive: Hooks stop if app is closed",
+                    color = Color.Gray,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = onToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = Color(0xFF00C853),
+                    uncheckedThumbColor = Color.Gray,
+                    uncheckedTrackColor = Color(0xFF1A1A1A),
+                    uncheckedBorderColor = Color(0xFF333333)
+                ),
+                modifier = Modifier.scale(0.8f)
             )
         }
     }

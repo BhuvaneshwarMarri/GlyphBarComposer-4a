@@ -1,6 +1,7 @@
 package com.smaarig.glyphbarcomposer.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,25 +28,6 @@ import com.smaarig.glyphbarcomposer.ui.viewmodel.AppInfo
 import com.smaarig.glyphbarcomposer.utils.AppNotificationChannel
 import com.smaarig.glyphbarcomposer.utils.AppNotificationChannelHelper
 
-/**
- * Bottom sheet for adding a new notification hook.
- *
- * Flow:
- *  1. User has already selected an app (passed in via [selectedApp]).
- *  2. If the app is progress-only (Spotify, YouTube), only the progress-sync
- *     option is shown — the channel picker is skipped and progress-sync is pre-selected.
- *  3. Otherwise the user:
- *     a. Picks a notification channel from the app's real channels (or "All notifications")
- *     b. Chooses a glyph sequence playlist
- *     c. Optionally enables progress-sync for apps that support it
- *
- * @param selectedApp       The app the user long-pressed and chose to configure.
- * @param channels          Real notification channels for [selectedApp], from ViewModel.
- * @param isLoadingChannels True while channels are being fetched.
- * @param playlists         All available glyph playlists.
- * @param onConfirm         Called with (channelId?, channelName?, playlistId, isProgressSync).
- * @param onDismiss         Called when the sheet is dismissed without saving.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HookAddSheet(
@@ -63,21 +45,17 @@ fun HookAddSheet(
 ) {
     val isProgressOnly = selectedApp.isProgressOnly
 
-    // State
     var selectedChannelId   by remember { mutableStateOf<String?>(null) }
     var selectedChannelName by remember { mutableStateOf<String?>(null) }
     var selectedPlaylistId  by remember { mutableStateOf<Long?>(null) }
     var isProgressSync      by remember { mutableStateOf(isProgressOnly) }
 
-    // Pre-select "All notifications" for non-progress-only apps when channels load
-    // And auto-detect progress-sync from channel names
     LaunchedEffect(channels) {
         if (channels.isEmpty() && !isLoadingChannels && !isProgressOnly) {
             selectedChannelId   = null
             selectedChannelName = null
         }
         
-        // Auto-detect progress sync based on channel names
         val progressKeywords = listOf("progress", "download", "upload", "sync", "transfer", "media", "playback")
         val hasProgressChannel = channels.any { ch ->
             val name = ch.name?.lowercase() ?: ""
@@ -91,97 +69,93 @@ fun HookAddSheet(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 16.dp)
+            .background(Color.Black)
+            .padding(horizontal = 20.dp, vertical = 20.dp)
             .navigationBarsPadding()
     ) {
-        // ── Header ──────────────────────────────────────────────────────────
         Text(
-            text = "Add Hook — ${selectedApp.appName}",
+            text = "ADD HOOK — ${selectedApp.appName.uppercase()}",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Black,
             color = Color.White,
-            fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont
+            fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont,
+            letterSpacing = 2.sp
         )
 
         if (isProgressOnly) {
-            // Progress-only banner
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
             Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFF1A1A1A),
+                modifier = Modifier.fillMaxWidth(),
+                border = BorderStroke(1.dp, Color(0xFF2A2A2A))
             ) {
                 Row(
-                    Modifier.padding(10.dp),
+                    Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Icon(
                         Icons.Default.Info,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        tint = Color(0xFF00BFA5),
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
                         "${selectedApp.appName} is a media app. Only progress-sync mode is available.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(24.dp))
 
-        // ── Channel Picker (hidden for progress-only apps) ───────────────────
         if (!isProgressOnly) {
-            Text(
-                "Notification Channel",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.height(8.dp))
+            SectionLabel("NOTIFICATION CHANNEL")
+            Spacer(Modifier.height(12.dp))
 
             when {
                 isLoadingChannels -> {
                     Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
+                        Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Reading notification channels…", style = MaterialTheme.typography.bodySmall)
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Text("Reading channels…", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                     }
                 }
 
                 channels.isEmpty() -> {
-                    // No channels found — fall back to category selection
                     Text(
-                        "No specific channels found. The hook will trigger on all notifications from this app.",
+                        "No specific channels found. Triggers on all notifications.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
                     selectedChannelId   = null
                     selectedChannelName = null
                 }
 
                 else -> {
-                    // "All notifications" option
                     ChannelRow(
                         name      = "All Notifications",
-                        subtitle  = "Trigger on any notification from this app",
+                        subtitle  = "Trigger on any notification",
                         selected  = selectedChannelId == null,
                         onClick   = { selectedChannelId = null; selectedChannelName = null }
                     )
-                    Spacer(Modifier.height(4.dp))
-                    HorizontalDivider()
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(8.dp))
 
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 220.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                            .heightIn(max = 200.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(channels, key = { it.id }) { ch ->
                             ChannelRow(
@@ -198,62 +172,69 @@ fun HookAddSheet(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
         }
 
-        // ── Progress Sync Toggle (always visible, locked for progress-only) ──
         if (!isProgressOnly) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            Surface(
+                color = Color(0xFF111111),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, if (isProgressSync) Color(0xFF00BFA5) else Color(0xFF222222))
             ) {
-                Column(Modifier.weight(1f)) {
-                    Text("Sync Progress Bar", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                    Text(
-                        "Maps notification progress (0–100%) to glyph steps",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Sync Progress Bar", color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                        Text(
+                            "Maps progress (0–100%) to glyph steps",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Switch(
+                        checked  = isProgressSync,
+                        onCheckedChange = { isProgressSync = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFF00BFA5),
+                            uncheckedThumbColor = Color.Gray,
+                            uncheckedTrackColor = Color(0xFF1A1A1A),
+                            uncheckedBorderColor = Color(0xFF333333)
+                        )
                     )
                 }
-                Switch(
-                    checked  = isProgressSync,
-                    onCheckedChange = { isProgressSync = it }
-                )
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
         }
 
-        // ── Playlist Picker ──────────────────────────────────────────────────
-        Text(
-            "Glyph Sequence",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(Modifier.height(8.dp))
+        SectionLabel("GLYPH SEQUENCE")
+        Spacer(Modifier.height(12.dp))
 
         if (playlists.isEmpty()) {
             Text(
                 "No sequences yet. Create one in the Composer tab first.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
+                color = Color(0xFFFF5252),
+                fontWeight = FontWeight.Bold
             )
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 180.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(playlists, key = { it.playlist.id }) { pwSteps ->
                     val pl = pwSteps.playlist
                     PlaylistRow(
                         name     = pl.name,
-                        subtitle = "${pwSteps.steps.size} step${if (pwSteps.steps.size != 1) "s" else ""}",
+                        subtitle = "${pwSteps.steps.size} steps",
                         selected = selectedPlaylistId == pl.id,
                         onClick  = { 
                             selectedPlaylistId = if (selectedPlaylistId == pl.id) null else pl.id 
@@ -263,27 +244,51 @@ fun HookAddSheet(
             }
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(32.dp))
 
-        // ── Confirm / Cancel ─────────────────────────────────────────────────
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             OutlinedButton(
                 onClick  = onDismiss,
-                modifier = Modifier.weight(1f)
-            ) { Text("Cancel") }
+                modifier = Modifier.weight(1f).height(52.dp),
+                shape = RoundedCornerShape(26.dp),
+                border = BorderStroke(1.dp, Color(0xFF333333)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
+            ) { 
+                Text("CANCEL", fontWeight = FontWeight.Black, fontSize = 13.sp, letterSpacing = 1.sp) 
+            }
 
             Button(
                 onClick  = {
                     onConfirm(selectedChannelId, selectedChannelName, selectedPlaylistId, isProgressSync)
                 },
                 enabled  = isProgressSync || selectedPlaylistId != null,
-                modifier = Modifier.weight(1f)
-            ) { Text("Add Hook") }
+                modifier = Modifier.weight(1f).height(52.dp),
+                shape = RoundedCornerShape(26.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = Color.Black,
+                    disabledContainerColor = Color(0xFF1A1A1A),
+                    disabledContentColor = Color(0xFF444444)
+                )
+            ) { 
+                Text("ADD HOOK", fontWeight = FontWeight.Black, fontSize = 13.sp, letterSpacing = 1.sp) 
+            }
         }
     }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text = text,
+        color = Color(0xFF666666),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Black,
+        letterSpacing = 1.sp
+    )
 }
 
 @Composable
@@ -293,38 +298,57 @@ private fun ChannelRow(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(
-                if (selected) MaterialTheme.colorScheme.primaryContainer
-                else Color.Transparent
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+            .clickable(onClick = onClick),
+        color = if (selected) Color(0xFF1A1A1A) else Color.Transparent,
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, if (selected) Color(0xFF444444) else Color(0xFF111111))
     ) {
-        Icon(
-            imageVector = Icons.Default.Notifications,
-            contentDescription = null,
-            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(18.dp)
-        )
-        Column(Modifier.weight(1f)) {
-            Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
-            if (subtitle.isNotBlank()) {
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(if (selected) Color.White else Color(0xFF111111)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = null,
+                    tint = if (selected) Color.Black else Color.Gray,
+                    modifier = Modifier.size(18.dp)
+                )
             }
-        }
-        AnimatedVisibility(visible = selected) {
-            Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = "Selected",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-            )
+            Column(Modifier.weight(1f)) {
+                Text(
+                    name, 
+                    color = Color.White, 
+                    fontWeight = FontWeight.Black,
+                    fontSize = 14.sp
+                )
+                if (subtitle.isNotBlank()) {
+                    Text(
+                        subtitle, 
+                        color = Color.Gray,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            if (selected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Selected",
+                    tint = Color(0xFF00C853),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
@@ -336,30 +360,41 @@ private fun PlaylistRow(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(
-                if (selected) MaterialTheme.colorScheme.tertiaryContainer
-                else MaterialTheme.colorScheme.surfaceVariant
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+            .clickable(onClick = onClick),
+        color = if (selected) Color(0xFF1A1A1A) else Color(0xFF080808),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, if (selected) Color(0xFF00C853) else Color(0xFF111111))
     ) {
-        Column(Modifier.weight(1f)) {
-            Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        AnimatedVisibility(visible = selected) {
-            Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = "Selected",
-                tint = MaterialTheme.colorScheme.tertiary,
-                modifier = Modifier.size(18.dp)
-            )
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    name, 
+                    color = if (selected) Color.White else Color.Gray, 
+                    fontWeight = FontWeight.Black,
+                    fontSize = 14.sp
+                )
+                Text(
+                    subtitle, 
+                    color = Color(0xFF444444),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            if (selected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Selected",
+                    tint = Color(0xFF00C853),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }

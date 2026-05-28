@@ -55,6 +55,9 @@ class HooksViewModel(
     private val _isPermissionGranted = MutableStateFlow(false)
     val isPermissionGranted: StateFlow<Boolean> = _isPermissionGranted.asStateFlow()
 
+    private val _isBackgroundServiceEnabled = MutableStateFlow(false)
+    val isBackgroundServiceEnabled: StateFlow<Boolean> = _isBackgroundServiceEnabled.asStateFlow()
+
     private val _selectedAppChannels = MutableStateFlow<List<AppNotificationChannel>>(emptyList())
     val selectedAppChannels: StateFlow<List<AppNotificationChannel>> = _selectedAppChannels.asStateFlow()
 
@@ -68,6 +71,41 @@ class HooksViewModel(
     init {
         loadInstalledApps()
         checkPermission()
+        checkBackgroundServiceStatus()
+    }
+
+    private fun checkBackgroundServiceStatus() {
+        val prefs = getApplication<Application>().getSharedPreferences("glyph_prefs", Context.MODE_PRIVATE)
+        _isBackgroundServiceEnabled.value = prefs.getBoolean("bg_sync_enabled", false)
+    }
+
+    fun toggleBackgroundService(enabled: Boolean) {
+        val context = getApplication<Application>()
+        val prefs = context.getSharedPreferences("glyph_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("bg_sync_enabled", enabled).apply()
+        _isBackgroundServiceEnabled.value = enabled
+
+        val intent = Intent(context, GlyphNotificationListenerService::class.java).apply {
+            action = if (enabled) {
+                GlyphNotificationListenerService.ACTION_START_FOREGROUND
+            } else {
+                GlyphNotificationListenerService.ACTION_STOP_FOREGROUND
+            }
+        }
+
+        try {
+            if (enabled) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+            } else {
+                context.startService(intent) // Send STOP_FOREGROUND action
+            }
+        } catch (e: Exception) {
+            _testHookResult.value = "Failed to start service: ${e.message}"
+        }
     }
 
     fun checkPermission() {

@@ -158,10 +158,14 @@
             android:name=".service.GlyphNotificationListenerService"
             android:label="Glyph Composer Notification Sync"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:foregroundServiceType="specialUse"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Notification synchronization for Glyph lights" />
         </service>
 
         <provider

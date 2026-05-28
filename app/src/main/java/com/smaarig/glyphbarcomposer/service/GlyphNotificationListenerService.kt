@@ -2,20 +2,28 @@ package com.smaarig.glyphbarcomposer.service
 
 import android.app.Notification
 import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import android.os.Build
 import android.os.Process
 import android.os.SystemClock
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import com.smaarig.glyphbarcomposer.GlyphApplication
+import com.smaarig.glyphbarcomposer.R
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.data.NotificationHookWithPlaylist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
+import com.smaarig.glyphbarcomposer.ui.MainActivity
 import kotlinx.coroutines.*
 
 class GlyphNotificationListenerService : NotificationListenerService() {
@@ -35,6 +43,11 @@ class GlyphNotificationListenerService : NotificationListenerService() {
 
     companion object {
         private var instance: GlyphNotificationListenerService? = null
+        private const val SYNC_CHANNEL_ID = "notification_sync_channel"
+        private const val SYNC_NOTIFICATION_ID = 1002
+
+        const val ACTION_START_FOREGROUND = "com.smaarig.glyphbarcomposer.START_FOREGROUND"
+        const val ACTION_STOP_FOREGROUND = "com.smaarig.glyphbarcomposer.STOP_FOREGROUND"
 
         fun getActiveChannels(packageName: String): List<NotificationChannel> {
             return try {
@@ -100,10 +113,69 @@ class GlyphNotificationListenerService : NotificationListenerService() {
         Log.d(TAG, "Service Created")
     }
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            ACTION_START_FOREGROUND -> startForegroundSync()
+            ACTION_STOP_FOREGROUND -> stopForegroundSync()
+        }
+        return START_STICKY
+    }
+
+    private fun startForegroundSync() {
+        createNotificationChannel()
+        val notification = createNotification()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(SYNC_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        } else {
+            startForeground(SYNC_NOTIFICATION_ID, notification)
+        }
+        Log.d(TAG, "Started Foreground Sync")
+    }
+
+    private fun stopForegroundSync() {
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        Log.d(TAG, "Stopped Foreground Sync")
+    }
+
+    private fun createNotification(): Notification {
+        val notificationIntent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, notificationIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return NotificationCompat.Builder(this, SYNC_CHANNEL_ID)
+            .setContentTitle("Glyph Sync Active")
+            .setContentText("Listening for notification hooks in background")
+            .setSmallIcon(R.drawable.ic_launcher_foreground) // Using app icon
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .setCategory(Notification.CATEGORY_SERVICE)
+            .build()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val serviceChannel = NotificationChannel(
+                SYNC_CHANNEL_ID, "Glyph Notification Sync Channel",
+                NotificationManager.IMPORTANCE_MIN
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(serviceChannel)
+        }
+    }
+
     override fun onListenerConnected() {
         super.onListenerConnected()
         instance = this
         Log.d(TAG, "Listener Connected")
+
+        // Check if we should be in foreground
+        val prefs = getSharedPreferences("glyph_prefs", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("bg_sync_enabled", false)) {
+            startForegroundSync()
+        }
+
         setupMediaSessionListener()
     }
 
