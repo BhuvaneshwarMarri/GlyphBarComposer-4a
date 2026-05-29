@@ -1,15 +1,10 @@
 package com.smaarig.glyphbarcomposer.ui.hooks.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,14 +22,12 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import com.smaarig.glyphbarcomposer.data.NotificationHookWithPlaylist
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 @Composable
 fun HookItem(
@@ -48,14 +41,6 @@ fun HookItem(
     val playlist = hookWithPlaylist.playlist
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    // Swipe-to-reveal delete
-    var offsetX by remember { mutableFloatStateOf(0f) }
-    val animatedOffset by animateFloatAsState(
-        targetValue = offsetX,
-        animationSpec = tween(durationMillis = 200),
-        label = "swipe_offset"
-    )
 
     // Test button pulse animation
     var isTesting by remember { mutableStateOf(false) }
@@ -75,57 +60,17 @@ fun HookItem(
         }.getOrNull()
     }
 
-    val deleteThreshold = -160f
-    val isRevealed = offsetX < deleteThreshold / 2
-
-    Box(modifier = modifier.fillMaxWidth()) {
-        // Background delete action revealed by swipe
-        AnimatedVisibility(
-            visible = isRevealed,
-            enter = fadeIn(tween(150)),
-            exit = fadeOut(tween(150)),
-            modifier = Modifier.align(Alignment.CenterEnd)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(80.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xFFB71C1C).copy(alpha = 0.8f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-        }
-
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+    ) {
         // Main card
         Surface(
             color = Color(0xFF111111),
             shape = RoundedCornerShape(24.dp),
             border = BorderStroke(1.dp, if (hook.isEnabled) Color(0xFF00C853) else Color(0xFF222222)),
-            modifier = Modifier
-                .fillMaxWidth()
-                .offset { IntOffset(animatedOffset.roundToInt(), 0) }
-                .draggable(
-                    orientation = Orientation.Horizontal,
-                    state = rememberDraggableState { delta ->
-                        val newOffset = (offsetX + delta).coerceIn(deleteThreshold, 0f)
-                        offsetX = newOffset
-                    },
-                    onDragStopped = {
-                        if (offsetX < deleteThreshold * 0.75f) {
-                            onDelete()
-                            offsetX = 0f
-                        } else {
-                            offsetX = 0f
-                        }
-                    }
-                )
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier.padding(16.dp),
@@ -188,7 +133,7 @@ fun HookItem(
                 }
 
                 // Actions
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     // Test button
                     IconButton(
                         onClick = {
@@ -218,6 +163,19 @@ fun HookItem(
                                 modifier = Modifier.size(20.dp)
                             )
                         }
+                    }
+
+                    // Delete button
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = Color(0xFFFF5252).copy(alpha = 0.8f),
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
 
                     // Toggle

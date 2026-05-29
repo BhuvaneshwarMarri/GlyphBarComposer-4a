@@ -78,9 +78,9 @@ fun ComposerScreenOld(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(24.dp))
                 .background(Color(0xFF0C0C0C))
-                .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(16.dp))
+                .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(24.dp))
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -132,9 +132,9 @@ fun ComposerScreenOld(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(24.dp))
                 .background(Color(0xFF0C0C0C))
-                .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(16.dp))
+                .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(24.dp))
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
@@ -178,7 +178,7 @@ fun ComposerScreenOld(
                     containerColor = Color.White,
                     contentColor = Color.Black
                 ),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(20.dp)
             ) {
                 Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
@@ -190,9 +190,9 @@ fun ComposerScreenOld(
                     onClick = viewModel::clearSequence,
                     modifier = Modifier
                         .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(20.dp))
                         .background(Color(0xFF1A1A1A))
-                        .border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(12.dp))
+                        .border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(20.dp))
                 ) {
                     Icon(
                         Icons.Default.DeleteSweep,

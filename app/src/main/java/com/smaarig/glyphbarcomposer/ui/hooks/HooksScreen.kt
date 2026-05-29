@@ -78,6 +78,7 @@ fun HooksScreen(viewModel: HooksViewModel) {
     val scope   = rememberCoroutineScope()
 
     var sheetState by remember { mutableStateOf<SheetState?>(null) }
+    var hookToDelete by remember { mutableStateOf<NotificationHookWithPlaylist?>(null) }
 
     val pickerSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val configSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -149,7 +150,7 @@ fun HooksScreen(viewModel: HooksViewModel) {
                     hooks = hooks,
                     isBgServiceEnabled = isBgServiceEnabled,
                     onBgServiceToggle = { viewModel.toggleBackgroundService(it) },
-                    onDelete = { viewModel.deleteHook(it.hook) },
+                    onDelete = { hookToDelete = it },
                     onToggle = { hook, enabled -> viewModel.toggleHook(hook.hook, enabled) },
                     onTest   = { viewModel.testHook(it, context) }
                 )
@@ -219,6 +220,30 @@ fun HooksScreen(viewModel: HooksViewModel) {
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    // Confirmation Dialog
+    if (hookToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { hookToDelete = null },
+            title = { Text("Delete Hook?", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = { Text("This will stop Glyph effects for ${hookToDelete?.hook?.appName}.", color = Color.Gray) },
+            confirmButton = {
+                TextButton(onClick = {
+                    hookToDelete?.let { viewModel.deleteHook(it.hook) }
+                    hookToDelete = null
+                }) {
+                    Text("DELETE", color = Color(0xFFFF5252), fontWeight = FontWeight.Black)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { hookToDelete = null }) {
+                    Text("CANCEL", color = Color.Gray)
+                }
+            },
+            containerColor = Color(0xFF111111),
+            shape = RoundedCornerShape(28.dp)
+        )
     }
 }
 
