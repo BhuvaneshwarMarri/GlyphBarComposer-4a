@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -24,32 +25,55 @@ fun GlyphScrollPicker(
     isRed: Boolean = false,
     enabled: Boolean = true
 ) {
-    val states = if (isRed) listOf(0, 3) else listOf(0, 1, 2, 3)
+    val states = if (isRed) listOf(0, 4, 5, 6) else listOf(0, 1, 2, 3)
     val infiniteCount = 10000
     val startOffset = (infiniteCount / 2)
     val initialIdx = startOffset + states.indexOf(intensity).coerceAtLeast(0)
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIdx)
 
-    LaunchedEffect(intensity) {
-        val targetIdxInStates = states.indexOf(intensity)
-        if (targetIdxInStates != -1) {
-            val currentIdx = listState.firstVisibleItemIndex
-            val currentIdxInStates = currentIdx % states.size
-            if (currentIdxInStates != targetIdxInStates) {
-                var diff = targetIdxInStates - currentIdxInStates
-                if (diff > states.size / 2) diff -= states.size
-                else if (diff < -states.size / 2) diff += states.size
-                listState.animateScrollToItem(currentIdx + diff)
-            }
+    val currentIntensity by rememberUpdatedState(intensity)
+    val currentOnIntensityChange by rememberUpdatedState(onIntensityChange)
+    
+    val isDragged by listState.interactionSource.collectIsDraggedAsState()
+
+    // Sync selection when user touches/drags
+    LaunchedEffect(isDragged) {
+        if (isDragged) {
+            currentOnIntensityChange(currentIntensity)
         }
     }
 
-    val settledIdx = remember { derivedStateOf { listState.firstVisibleItemIndex } }
+    // Sync state TO ViewModel when user scrolls
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .collect { idx ->
+                val newVal = states[idx % states.size]
+                if (newVal != currentIntensity) {
+                    currentOnIntensityChange(newVal)
+                }
+            }
+    }
 
-    LaunchedEffect(settledIdx.value) {
-        val newVal = states[settledIdx.value % states.size]
-        if (newVal != intensity) {
-            onIntensityChange(newVal)
+    // Force sync FROM ViewModel when intensity is externally reset (e.g. Power Off or step load)
+    LaunchedEffect(intensity) {
+        if (!listState.isScrollInProgress) {
+            val targetIdxInStates = states.indexOf(intensity)
+            if (targetIdxInStates != -1) {
+                val currentIdx = listState.firstVisibleItemIndex
+                val currentIdxInStates = currentIdx % states.size
+                if (currentIdxInStates != targetIdxInStates) {
+                    var diff = targetIdxInStates - currentIdxInStates
+                    // Handle wrapping in infinite list for shortest path
+                    if (diff > states.size / 2) diff -= states.size
+                    else if (diff < -states.size / 2) diff += states.size
+                    
+                    if (intensity == 0) {
+                        listState.scrollToItem(currentIdx + diff)
+                    } else {
+                        listState.animateScrollToItem(currentIdx + diff)
+                    }
+                }
+            }
         }
     }
 
@@ -98,7 +122,6 @@ fun GlyphScrollPicker(
             ) {
                 items(infiniteCount) { idx ->
                     val level = states[idx % states.size]
-                    val colorIdx = if (isRed && level > 0) 6 else level
 
                     Box(
                         modifier = Modifier
@@ -109,7 +132,7 @@ fun GlyphScrollPicker(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(intensityColor[colorIdx])
+                                .background(intensityColor[level])
                         )
                     }
                 }

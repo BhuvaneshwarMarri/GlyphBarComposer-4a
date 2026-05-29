@@ -42,6 +42,8 @@ class ComposerViewModel(
     val allPlaylists = repository.allPlaylists
 
     private var playbackJob: Job? = null
+    private var loadStepJob: Job? = null
+    private var intensityUpdateJob: Job? = null
 
     private val channels = listOf(
         Glyph.Code_25111.A_1,
@@ -68,16 +70,11 @@ class ComposerViewModel(
             state.copy(glyphIntensities = newList)
         }
         
-        // Debounce physical Glyph update for 10ms to avoid flooding while scrolling
-        viewModelScope.launch {
-            delay(10)
+        intensityUpdateJob?.cancel()
+        intensityUpdateJob = viewModelScope.launch {
+            delay(20) // Debounce physical Glyph update
             val intensityMap = getIntensitiesMap()
             glyphController.applyGlyphStateWithIntensities(intensityMap, 2000)
-            
-            // Sync physical Red Glyph if index 6 was changed
-            if (index == 6) {
-                glyphController.setRedGlyph(if (newIntensity > 0) 3 else 0)
-            }
         }
     }
 
@@ -100,7 +97,9 @@ class ComposerViewModel(
 
     fun addStep() {
         val state = _uiState.value
-        val newSteps = state.currentSequenceSteps + GlyphSequence(getIntensitiesMap(), state.durationMs.toInt())
+        val intensities = getIntensitiesMap()
+        
+        val newSteps = state.currentSequenceSteps + GlyphSequence(intensities, state.durationMs.toInt())
         _uiState.update { it.copy(currentSequenceSteps = newSteps) }
         
         // Debug Log
@@ -127,7 +126,11 @@ class ComposerViewModel(
             durationMs = step.durationMs.toFloat()
         ) }
         
-        glyphController.applyGlyphStateWithIntensities(step.channelIntensities, 2000)
+        loadStepJob?.cancel()
+        loadStepJob = viewModelScope.launch {
+            delay(10) // Debounce hardware sync for scrolling
+            glyphController.applyGlyphStateWithIntensities(step.channelIntensities, 2000)
+        }
     }
 
     fun clearSequence() {
@@ -138,7 +141,10 @@ class ComposerViewModel(
     fun turnOffAllGlyphs() {
         if (_uiState.value.isPlaying) stopPlayback()
         glyphController.turnOffGlyphs()
-        _uiState.update { it.copy(glyphIntensities = listOf(0, 0, 0, 0, 0, 0, 0)) }
+        _uiState.update { it.copy(
+            glyphIntensities = listOf(0, 0, 0, 0, 0, 0, 0),
+            activePlaylistId = null // Ensure everything is reset
+        ) }
     }
 
     fun togglePause() {

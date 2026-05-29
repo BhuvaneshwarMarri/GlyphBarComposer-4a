@@ -47,14 +47,14 @@ fun OldGlyphButton(
         Box(
             modifier = Modifier
                 .size(width = 40.dp, height = 52.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(4.dp))
                 .background(
                     if (isSelected) Color(0xFF1E1E1E) else Color(0xFF111111)
                 )
                 .border(
                     width = if (isSelected) 1.5.dp else 1.dp,
                     color = if (isSelected) Color.White else Color(0xFF222222),
-                    shape = RoundedCornerShape(10.dp)
+                    shape = RoundedCornerShape(4.dp)
                 )
                 .pointerInput(enabled) {
                     if (!enabled) return@pointerInput
@@ -91,7 +91,7 @@ fun OldGlyphButton(
                     .fillMaxWidth()
                     .fillMaxHeight()
                     .padding(5.dp)
-                    .clip(RoundedCornerShape(6.dp))
+                    .clip(RoundedCornerShape(2.dp))
                     .background(intensityColor[colorIdx])
             )
 

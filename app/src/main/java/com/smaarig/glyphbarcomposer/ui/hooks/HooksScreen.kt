@@ -8,6 +8,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -33,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +48,7 @@ import com.smaarig.glyphbarcomposer.ui.hooks.components.HookItem
 import com.smaarig.glyphbarcomposer.ui.hooks.components.HooksHeader
 import com.smaarig.glyphbarcomposer.ui.hooks.components.PermissionBanner
 import com.smaarig.glyphbarcomposer.ui.screens.HookAddSheet
+import com.smaarig.glyphbarcomposer.ui.theme.nothingFont
 import com.smaarig.glyphbarcomposer.ui.viewmodel.AppInfo
 import com.smaarig.glyphbarcomposer.ui.viewmodel.HooksViewModel
 import kotlinx.coroutines.launch
@@ -241,7 +244,8 @@ private fun HooksList(
         item {
             BackgroundServiceCard(
                 isEnabled = isBgServiceEnabled,
-                onToggle = onBgServiceToggle
+                onToggle = onBgServiceToggle,
+                modifier = Modifier.animateItem()
             )
         }
 
@@ -263,13 +267,14 @@ private fun HooksList(
 @Composable
 private fun BackgroundServiceCard(
     isEnabled: Boolean,
-    onToggle: (Boolean) -> Unit
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Surface(
         color = Color(0xFF111111),
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, if (isEnabled) Color(0xFF00C853) else Color(0xFF222222)),
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -497,22 +502,24 @@ private fun AppIcon(app: AppInfo, size: androidx.compose.ui.unit.Dp) {
     Box(
         modifier = Modifier
             .size(size)
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xFF222222)),
+            .clip(CircleShape)
+            .background(Color(0xFF111111))
+            .border(1.dp, Color(0xFF222222), CircleShape),
         contentAlignment = Alignment.Center
     ) {
         if (bitmap != null) {
             androidx.compose.foundation.Image(
                 bitmap             = bitmap,
                 contentDescription = app.appName,
-                modifier           = Modifier.size(size)
+                modifier           = Modifier.size(size).clip(CircleShape)
             )
         } else {
             Text(
                 text       = app.appName.firstOrNull()?.uppercase() ?: "?",
                 style      = MaterialTheme.typography.bodyLarge,
                 color      = Color(0xFF888888),
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Black,
+                fontFamily = nothingFont
             )
         }
     }

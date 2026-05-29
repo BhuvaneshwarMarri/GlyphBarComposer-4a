@@ -35,7 +35,6 @@ fun StudioProjectCard(
     onPlay: () -> Unit,
     onDelete: () -> Unit,
     onEdit: () -> Unit,
-    onExportOgg: () -> Unit,
     onShare: () -> Unit
 ) {
     Surface(
@@ -79,11 +78,6 @@ fun StudioProjectCard(
             }
             IconButton(onClick = onShare) {
                 Icon(Icons.Default.Share, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
-            }
-            if (!isAudioMissing) {
-                IconButton(onClick = onExportOgg) {
-                    Icon(Icons.Default.AudioFile, null, tint = Color(0xFF00BFA5), modifier = Modifier.size(20.dp))
-                }
             }
             IconButton(onClick = onEdit) {
                 Icon(Icons.Default.Edit, null, tint = Color.Gray, modifier = Modifier.size(20.dp))

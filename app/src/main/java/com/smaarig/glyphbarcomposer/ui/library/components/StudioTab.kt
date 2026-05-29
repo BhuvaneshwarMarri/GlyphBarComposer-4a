@@ -21,7 +21,6 @@ fun StudioTab(
     projects: List<MusicProjectWithEvents>,
     viewModel: MusicStudioViewModel,
     onEdit: (MusicProjectWithEvents) -> Unit,
-    onExportOgg: (MusicProjectWithEvents) -> Unit,
     onShare: (MusicProjectWithEvents) -> Unit
 ) {
     var projectToRelink by remember { mutableStateOf<MusicProjectWithEvents?>(null) }
@@ -60,7 +59,6 @@ fun StudioTab(
                     },
                     onDelete = { viewModel.deleteMusicProject(project.project) },
                     onEdit = { onEdit(project) },
-                    onExportOgg = { onExportOgg(project) },
                     onShare = { onShare(project) }
                 )
             }

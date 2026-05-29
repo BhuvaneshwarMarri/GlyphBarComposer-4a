@@ -214,7 +214,7 @@ fun HookItem(
                             Icon(
                                 imageVector = Icons.Default.Science,
                                 contentDescription = "Test",
-                                tint = if (hook.isEnabled) Color(0xFFFFD54F).copy(alpha = 0.7f) else Color(0xFF333333),
+                                tint = if (hook.isEnabled) Color(0xFFFFEB3B) else Color(0xFF333333),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -235,7 +235,7 @@ fun HookItem(
                         },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFF00BFA5),
+                            checkedTrackColor = Color(0xFF00C853),
                             uncheckedThumbColor = Color(0xFF555555),
                             uncheckedTrackColor = Color(0xFF1A1A1A),
                             uncheckedBorderColor = Color(0xFF333333)

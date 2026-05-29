@@ -281,17 +281,17 @@ fun NavHostContainer(
                     // Slide to left (moving forward in list)
                     slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(500, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(500))
+                        animationSpec = tween(400, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(400))
                 } else {
                     // Slide to right (moving backward in list)
                     slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(500, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(500))
+                        animationSpec = tween(400, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(400))
                 }
             } else {
-                fadeIn(animationSpec = tween(500))
+                fadeIn(animationSpec = tween(400))
             }
         },
         exitTransition = {
@@ -305,16 +305,16 @@ fun NavHostContainer(
                 if (targetIdx > initialIdx) {
                     slideOutOfContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(500, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(500))
+                        animationSpec = tween(400, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(400))
                 } else {
                     slideOutOfContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(500, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(500))
+                        animationSpec = tween(400, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(400))
                 }
             } else {
-                fadeOut(animationSpec = tween(500))
+                fadeOut(animationSpec = tween(400))
             }
         }
     ) {

@@ -39,12 +39,6 @@ class LibraryViewModel(
     val allPlaylists: Flow<List<PlaylistWithSteps>> = repository.allPlaylists
     val allMusicProjects: Flow<List<MusicProjectWithEvents>> = repository.allMusicProjects
 
-    private val _isExporting = MutableStateFlow(false)
-    val isExporting: StateFlow<Boolean> = _isExporting.asStateFlow()
-
-    private val _exportError = MutableStateFlow<String?>(null)
-    val exportError: StateFlow<String?> = _exportError.asStateFlow()
-
     // ── Delete ───────────────────────────────────────────────────────────────
 
     fun deletePlaylist(playlist: Playlist) {
@@ -125,33 +119,6 @@ class LibraryViewModel(
         } catch (e: Exception) {
             Log.e(TAG, "exportMusicProject failed", e)
         }
-    }
-
-    fun exportAsOgg(context: Context, project: MusicProjectWithEvents) {
-        val audioFile = File(project.project.localAudioPath)
-        if (!audioFile.exists()) {
-            _exportError.value = "Source audio file not found"
-            return
-        }
-
-        _isExporting.value = true
-        _exportError.value = null
-
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            val outputFile = File(context.cacheDir, "${project.project.name}.ogg")
-            val success = AudioProcessor.convertToOgg(context, audioFile.toUri(), outputFile)
-            
-            _isExporting.value = false
-            if (success) {
-                shareFile(context, outputFile.name, outputFile, "audio/ogg")
-            } else {
-                _exportError.value = "Failed to encode OGG"
-            }
-        }
-    }
-
-    fun clearExportError() {
-        _exportError.value = null
     }
 
     private fun shareFile(context: Context, fileName: String, file: File, mimeType: String) {

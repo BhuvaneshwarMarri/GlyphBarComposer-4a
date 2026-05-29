@@ -2,6 +2,7 @@ package com.smaarig.glyphbarcomposer.ui.composer.components.v2
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -39,6 +40,16 @@ fun DraggableTimeline(
     val listState = rememberLazyListState()
     var showSaveDialog by remember { mutableStateOf(false) }
     var fileName by remember { mutableStateOf("") }
+
+    val settledIdx = remember { derivedStateOf { listState.firstVisibleItemIndex } }
+    
+    // Sync hardware when scrolling manually or when snapping settles
+    LaunchedEffect(settledIdx.value) {
+        if (!uiState.isPlaying && uiState.currentSequenceSteps.isNotEmpty()) {
+            val idx = settledIdx.value.coerceIn(0, uiState.currentSequenceSteps.size - 1)
+            viewModel.loadStep(idx)
+        }
+    }
 
     if (showSaveDialog) {
         AlertDialog(
@@ -107,6 +118,7 @@ fun DraggableTimeline(
             } else {
                 LazyColumn(
                     state = listState,
+                    flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {

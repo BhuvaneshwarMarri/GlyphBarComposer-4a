@@ -101,7 +101,7 @@ fun StepPreviewBox(
                 Row(horizontalArrangement = Arrangement.spacedBy(2.5.dp)) {
                     repeat(7) { i ->
                         val intensityVal = step.channelIntensities[getChannelForIndex(i)] ?: 0
-                        val finalIntensity = if (i == 6 && intensityVal > 0) 6 else intensityVal
+                        val finalIntensity = if (i == 6 && intensityVal > 0 && intensityVal < 4) 6 else intensityVal
                         Box(
                             modifier = Modifier
                                 .size(width = 4.dp, height = 16.dp)

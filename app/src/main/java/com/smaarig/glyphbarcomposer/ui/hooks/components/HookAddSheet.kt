@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,22 +51,6 @@ fun HookAddSheet(
     var selectedPlaylistId  by remember { mutableStateOf<Long?>(null) }
     var isProgressSync      by remember { mutableStateOf(isProgressOnly) }
 
-    LaunchedEffect(channels) {
-        if (channels.isEmpty() && !isLoadingChannels && !isProgressOnly) {
-            selectedChannelId   = null
-            selectedChannelName = null
-        }
-        
-        val progressKeywords = listOf("progress", "download", "upload", "sync", "transfer", "media", "playback")
-        val hasProgressChannel = channels.any { ch ->
-            val name = ch.name?.lowercase() ?: ""
-            progressKeywords.any { it in name }
-        }
-        if (hasProgressChannel && !isProgressSync) {
-            isProgressSync = true
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -82,164 +67,90 @@ fun HookAddSheet(
             letterSpacing = 2.sp
         )
 
-        if (isProgressOnly) {
-            Spacer(Modifier.height(12.dp))
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = Color(0xFF1A1A1A),
-                modifier = Modifier.fillMaxWidth(),
-                border = BorderStroke(1.dp, Color(0xFF2A2A2A))
-            ) {
-                Row(
-                    Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Info,
-                        contentDescription = null,
-                        tint = Color(0xFF00BFA5),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        "${selectedApp.appName} is a media app. Only progress-sync mode is available.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-
         Spacer(Modifier.height(24.dp))
 
-        if (!isProgressOnly) {
-            SectionLabel("NOTIFICATION CHANNEL")
-            Spacer(Modifier.height(12.dp))
-
-            when {
-                isLoadingChannels -> {
-                    Row(
-                        Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
-                        Spacer(Modifier.width(12.dp))
-                        Text("Reading channels…", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                    }
-                }
-
-                channels.isEmpty() -> {
-                    Text(
-                        "No specific channels found. Triggers on all notifications.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    selectedChannelId   = null
-                    selectedChannelName = null
-                }
-
-                else -> {
-                    ChannelRow(
-                        name      = "All Notifications",
-                        subtitle  = "Trigger on any notification",
-                        selected  = selectedChannelId == null,
-                        onClick   = { selectedChannelId = null; selectedChannelName = null }
-                    )
-                    Spacer(Modifier.height(8.dp))
-
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 200.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(channels, key = { it.id }) { ch ->
-                            ChannelRow(
-                                name     = AppNotificationChannelHelper.formatChannelName(ch),
-                                subtitle = buildString {
-                                    append(AppNotificationChannelHelper.importanceLabel(ch.importance))
-                                    if (!ch.description.isNullOrBlank()) append(" · ${ch.description}")
-                                },
-                                selected = selectedChannelId == ch.id,
-                                onClick  = { selectedChannelId = ch.id; selectedChannelName = ch.name }
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(24.dp))
-        }
-
-        if (!isProgressOnly) {
+        if (isProgressOnly) {
+            // Media app flow: Just show info and confirm
             Surface(
+                shape = RoundedCornerShape(20.dp),
                 color = Color(0xFF111111),
-                shape = RoundedCornerShape(24.dp),
-                border = BorderStroke(1.dp, if (isProgressSync) Color(0xFF00BFA5) else Color(0xFF222222))
+                modifier = Modifier.fillMaxWidth(),
+                border = BorderStroke(1.dp, Color(0xFF00C853).copy(alpha = 0.5f))
             ) {
                 Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    Modifier.padding(20.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Sync Progress Bar", color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF00C853).copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Sync,
+                            contentDescription = null,
+                            tint = Color(0xFF00C853),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Column {
                         Text(
-                            "Maps progress (0–100%) to glyph steps",
-                            style = MaterialTheme.typography.bodySmall,
+                            "Sync Progress Bar",
+                            color = Color.White,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            "is selected for ${selectedApp.appName}",
                             color = Color.Gray,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    Switch(
-                        checked  = isProgressSync,
-                        onCheckedChange = { isProgressSync = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFF00BFA5),
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color(0xFF1A1A1A),
-                            uncheckedBorderColor = Color(0xFF333333)
-                        )
-                    )
                 }
             }
-            Spacer(Modifier.height(24.dp))
-        }
-
-        SectionLabel("GLYPH SEQUENCE")
-        Spacer(Modifier.height(12.dp))
-
-        if (playlists.isEmpty()) {
+            
+            Spacer(Modifier.height(12.dp))
             Text(
-                "No sequences yet. Create one in the Composer tab first.",
+                "Media apps automatically sync their progress to your Glyph lights. No sequence selection needed.",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFFFF5252),
-                fontWeight = FontWeight.Bold
+                color = Color(0xFF555555),
+                modifier = Modifier.padding(horizontal = 8.dp)
             )
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 180.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(playlists, key = { it.playlist.id }) { pwSteps ->
-                    val pl = pwSteps.playlist
-                    PlaylistRow(
-                        name     = pl.name,
-                        subtitle = "${pwSteps.steps.size} steps",
-                        selected = selectedPlaylistId == pl.id,
-                        onClick  = { 
-                            selectedPlaylistId = if (selectedPlaylistId == pl.id) null else pl.id 
-                        }
-                    )
+            // Regular app flow: Just sequence selection (Channels removed per request)
+            SectionLabel("GLYPH SEQUENCE")
+            Spacer(Modifier.height(12.dp))
+
+            if (playlists.isEmpty()) {
+                Text(
+                    "No sequences yet. Create one in the Composer tab first.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFFF5252),
+                    fontWeight = FontWeight.Bold
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 240.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(playlists, key = { it.playlist.id }) { pwSteps ->
+                        val pl = pwSteps.playlist
+                        PlaylistRow(
+                            name     = pl.name,
+                            subtitle = "${pwSteps.steps.size} steps",
+                            selected = selectedPlaylistId == pl.id,
+                            onClick  = { 
+                                selectedPlaylistId = if (selectedPlaylistId == pl.id) null else pl.id 
+                                isProgressSync = false // Standard sequences disable progress sync
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -262,7 +173,7 @@ fun HookAddSheet(
 
             Button(
                 onClick  = {
-                    onConfirm(selectedChannelId, selectedChannelName, selectedPlaylistId, isProgressSync)
+                    onConfirm(null, null, selectedPlaylistId, isProgressSync)
                 },
                 enabled  = isProgressSync || selectedPlaylistId != null,
                 modifier = Modifier.weight(1f).height(52.dp),
@@ -289,68 +200,6 @@ private fun SectionLabel(text: String) {
         fontWeight = FontWeight.Black,
         letterSpacing = 1.sp
     )
-}
-
-@Composable
-private fun ChannelRow(
-    name: String,
-    subtitle: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        color = if (selected) Color(0xFF1A1A1A) else Color.Transparent,
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, if (selected) Color(0xFF444444) else Color(0xFF111111))
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(if (selected) Color.White else Color(0xFF111111)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Notifications,
-                    contentDescription = null,
-                    tint = if (selected) Color.Black else Color.Gray,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Column(Modifier.weight(1f)) {
-                Text(
-                    name, 
-                    color = Color.White, 
-                    fontWeight = FontWeight.Black,
-                    fontSize = 14.sp
-                )
-                if (subtitle.isNotBlank()) {
-                    Text(
-                        subtitle, 
-                        color = Color.Gray,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-            if (selected) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
-                    tint = Color(0xFF00C853),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
-    }
 }
 
 @Composable
@@ -382,7 +231,7 @@ private fun PlaylistRow(
                 )
                 Text(
                     subtitle, 
-                    color = Color(0xFF444444),
+                    color = if (selected) Color(0xFF00C853).copy(alpha = 0.7f) else Color(0xFF444444),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 )

@@ -46,20 +46,11 @@ fun LibraryScreen(
     val studioProjects by viewModel.allMusicProjects.collectAsStateWithLifecycle(emptyList())
     val compState by composerViewModel.uiState.collectAsStateWithLifecycle()
     val studioState by musicStudioViewModel.uiState.collectAsStateWithLifecycle()
-    val isExporting by viewModel.isExporting.collectAsStateWithLifecycle()
-    val exportError by viewModel.exportError.collectAsStateWithLifecycle()
 
     val orientation = rememberAppOrientation()
     val context = LocalContext.current
 
     var selectedTab by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(exportError) {
-        exportError?.let {
-            // Show error message if needed
-            viewModel.clearExportError()
-        }
-    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (orientation == AppOrientation.Landscape) {
@@ -80,7 +71,6 @@ fun LibraryScreen(
                     musicStudioViewModel.editMusicProject(it)
                     navController.navigate(Screen.MusicStudio.route)
                 },
-                onExportOgg = { viewModel.exportAsOgg(context, it) },
                 onSharePlaylist = { viewModel.exportPlaylist(context, it) },
                 onShareStudio = { viewModel.exportMusicProject(context, it) }
             )
@@ -102,35 +92,9 @@ fun LibraryScreen(
                     musicStudioViewModel.editMusicProject(it)
                     navController.navigate(Screen.MusicStudio.route)
                 },
-                onExportOgg = { viewModel.exportAsOgg(context, it) },
                 onSharePlaylist = { viewModel.exportPlaylist(context, it) },
                 onShareStudio = { viewModel.exportMusicProject(context, it) }
             )
-        }
-
-        if (isExporting) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.7f))
-                    .clickable(enabled = false) {},
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    color = Color(0xFF111111),
-                    shape = RoundedCornerShape(24.dp),
-                    border = BorderStroke(1.dp, Color(0xFF222222))
-                ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        CircularProgressIndicator(color = Color(0xFF00C853))
-                        Spacer(Modifier.height(16.dp))
-                        Text("Exporting OGG...", color = Color.White, fontWeight = FontWeight.Black)
-                    }
-                }
-            }
         }
     }
 }
@@ -147,7 +111,6 @@ fun LibraryPortrait(
     musicStudioViewModel: MusicStudioViewModel,
     onEditSequence: (PlaylistWithSteps) -> Unit,
     onEditStudio: (MusicProjectWithEvents) -> Unit,
-    onExportOgg: (MusicProjectWithEvents) -> Unit,
     onSharePlaylist: (PlaylistWithSteps) -> Unit,
     onShareStudio: (MusicProjectWithEvents) -> Unit
 ) {
@@ -196,7 +159,7 @@ fun LibraryPortrait(
             if (selectedTab == 0) {
                 SequencesTab(compState.isPlaying, compState.isPaused, compState.activePlaylistId, playlists, composerViewModel, onEditSequence, onSharePlaylist)
             } else {
-                StudioTab(studioState.isAudioPlaying, studioState.activeProjectId, studioProjects, musicStudioViewModel, onEditStudio, onExportOgg, onShareStudio)
+                StudioTab(studioState.isAudioPlaying, studioState.activeProjectId, studioProjects, musicStudioViewModel, onEditStudio, onShareStudio)
             }
         }
     }
@@ -214,7 +177,6 @@ fun LibraryLandscape(
     musicStudioViewModel: MusicStudioViewModel,
     onEditSequence: (PlaylistWithSteps) -> Unit,
     onEditStudio: (MusicProjectWithEvents) -> Unit,
-    onExportOgg: (MusicProjectWithEvents) -> Unit,
     onSharePlaylist: (PlaylistWithSteps) -> Unit,
     onShareStudio: (MusicProjectWithEvents) -> Unit
 ) {
@@ -238,7 +200,7 @@ fun LibraryLandscape(
             if (selectedTab == 0) {
                 SequencesTab(compState.isPlaying, compState.isPaused, compState.activePlaylistId, playlists, composerViewModel, onEditSequence, onSharePlaylist)
             } else {
-                StudioTab(studioState.isAudioPlaying, studioState.activeProjectId, studioProjects, musicStudioViewModel, onEditStudio, onExportOgg, onShareStudio)
+                StudioTab(studioState.isAudioPlaying, studioState.activeProjectId, studioProjects, musicStudioViewModel, onEditStudio, onShareStudio)
             }
         }
     }
