@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">GB4Aura</string>
+    <string name="widget_name_vertical">Glyph Composer (Vertical)</string>
+    <string name="widget_name_horizontal">Glyph Composer (Horizontal)</string>
+    <string name="widget_description_vertical">Control Glyph intensities vertically</string>
+    <string name="widget_description_horizontal">Control Glyph intensities horizontally</string>
 </resources>
