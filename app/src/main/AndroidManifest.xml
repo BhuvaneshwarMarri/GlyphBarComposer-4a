@@ -186,7 +186,7 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/glyph_composer_vertical_widget_info" />
+                android:resource="@xml/glance_vertical_widget_info" />
         </receiver>
 
         <receiver
@@ -197,7 +197,7 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/glyph_composer_horizontal_widget_info" />
+                android:resource="@xml/glance_horizontal_widget_info" />
         </receiver>
     </application>
 

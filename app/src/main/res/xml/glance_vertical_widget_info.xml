@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    res/xml/glance_vertical_widget_info.xml
+    V2 – Vertical scroll-picker column
+    Minimum size: 130 × 340 dp  (≈ 2 × 5 launcher cells)
+    Resize:       vertical only (extra height = more breathing room)
+-->
+<appwidget-provider
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_vertical_description"
+    android:minWidth="130dp"
+    android:minHeight="340dp"
+    android:minResizeWidth="120dp"
+    android:minResizeHeight="300dp"
+    android:maxResizeWidth="180dp"
+    android:maxResizeHeight="500dp"
+    android:resizeMode="vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable" />
