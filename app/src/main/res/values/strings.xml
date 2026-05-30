@@ -2,5 +2,6 @@
     <string name="app_name">GB4Aura</string>
     <string name="widget_name_quick">Glyph Quick Control</string>
     <string name="widget_description_quick">One-tap master control for all back glyphs</string>
-    <string name="widget_horizontal_description">One-tap master control for all back glyphs</string>
+    <string name="widget_horizontal_description">One-tap master control for all back glyphs (Horizontal)</string>
+    <string name="widget_vertical_description">One-tap master control for all back glyphs (Vertical)</string>
 </resources>

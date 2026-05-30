@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    res/xml/glance_vertical_widget_info.xml
+    V1 – Vertical glyph button row
+    Minimum size: 70 × 300 dp
+    Resize:       vertical only
+-->
+<appwidget-provider
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_vertical_description"
+    android:minWidth="70dp"
+    android:minHeight="300dp"
+    android:minResizeWidth="70dp"
+    android:minResizeHeight="250dp"
+    android:maxResizeWidth="100dp"
+    android:maxResizeHeight="500dp"
+    android:targetCellWidth="1"
+    android:targetCellHeight="5"
+    android:resizeMode="vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable" />

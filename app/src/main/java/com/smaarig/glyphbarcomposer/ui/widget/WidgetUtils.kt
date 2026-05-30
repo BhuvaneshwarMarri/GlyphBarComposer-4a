@@ -88,48 +88,19 @@ class IndividualCycleAction : ActionCallback {
         val glyphIndex = parameters[WidgetKeys.GlyphIndexKey] ?: return
         val isRed = glyphIndex == 6
 
-        var newIntensitiesStr = DEFAULT_INTENSITIES
-
-        // 1. Update persisted state and capture the new intensity string.
-        updateAppWidgetState(
-            context,
-            PreferencesGlanceStateDefinition,
-            glanceId
-        ) { prefs ->
-            val intensities = (prefs[INTENSITIES_KEY] ?: DEFAULT_INTENSITIES)
-                .split(",")
-                .map { it.toIntOrNull() ?: 0 }
-                .toMutableList()
-
-            intensities[glyphIndex] = cycleIntensity(intensities[glyphIndex], isRed)
-            newIntensitiesStr = intensities.joinToString(",")
-
-            prefs.toMutablePreferences().apply {
-                this[INTENSITIES_KEY] = newIntensitiesStr
-            }
-        }
-
-        // 2. Build the channel→intensity map using the canonical channel list
-        //    that lives in GlyphController so there is a single source of truth.
-        val channels = listOf(
-            Glyph.Code_25111.A_1, Glyph.Code_25111.A_2, Glyph.Code_25111.A_3,
-            Glyph.Code_25111.A_4, Glyph.Code_25111.A_5, Glyph.Code_25111.A_6,
-            Glyph.Code_22111.E1
-        )
-        val finalIntensities = newIntensitiesStr.split(",").map { it.toIntOrNull() ?: 0 }
-        val intensityMap: Map<Int, Int> = channels
-            .mapIndexed { i, ch -> ch to finalIntensities.getOrElse(i) { 0 } }
-            .toMap()
-
-        // 3. Fire the physical glyph hardware.
-        //    FIX: duration raised to 800 ms so the hardware stays lit through
-        //    the full launcher redraw cycle, eliminating the flicker that
-        //    occurred when the 300 ms pulse ended before the widget repainted.
         val glyphController = GlyphController.getInstance(context)
-        glyphController.applyGlyphStateWithIntensities(intensityMap, durationMs = 800)
+        val currentIntensities = glyphController.currentIntensities.value.toMutableList()
 
-        // 4. Redraw the widget — done AFTER the hardware call so the controller's
-        //    internal state is already updated when the widget reads it.
-        GlyphComposerHorizontalWidget().updateAll(context)
+        // 1. Cycle the intensity for the specific glyph
+        currentIntensities[glyphIndex] = cycleIntensity(currentIntensities[glyphIndex], isRed)
+
+        // 2. Build the channel→intensity map
+        val intensityMap = glyphController.channels.mapIndexed { i, ch ->
+            ch to currentIntensities.getOrElse(i) { 0 }
+        }.toMap()
+
+        // 3. Fire the physical glyph hardware and update global state.
+        //    The controller will automatically sync this to the widget DataStore.
+        glyphController.applyGlyphStateWithIntensities(intensityMap, durationMs = 800)
     }
 }

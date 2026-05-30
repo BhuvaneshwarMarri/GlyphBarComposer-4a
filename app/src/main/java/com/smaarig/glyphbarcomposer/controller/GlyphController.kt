@@ -3,12 +3,20 @@ package com.smaarig.glyphbarcomposer.controller
 import android.content.ComponentName
 import android.content.Context
 import android.util.Log
+import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.appwidget.updateAll
+import androidx.glance.state.PreferencesGlanceStateDefinition
+import androidx.datastore.preferences.core.*
 import com.nothing.ketchum.Common
 import com.nothing.ketchum.Glyph
 import com.nothing.ketchum.GlyphException
 import com.nothing.ketchum.GlyphFrame
 import com.nothing.ketchum.GlyphManager
 import com.smaarig.glyphbarcomposer.service.BatteryMonitor
+import com.smaarig.glyphbarcomposer.ui.widget.GlyphComposerHorizontalWidget
+import com.smaarig.glyphbarcomposer.ui.widget.GlyphComposerVerticalWidget
+import com.smaarig.glyphbarcomposer.ui.widget.INTENSITIES_KEY
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +24,7 @@ import kotlinx.coroutines.flow.combine
 
 class GlyphController private constructor() {
     private var mGlyphManager: GlyphManager? = null
+    private var mContext: Context? = null
     private val controllerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var resetJob: Job? = null
     private var batteryJob: Job? = null
@@ -32,7 +41,7 @@ class GlyphController private constructor() {
     private val _isCharging = MutableStateFlow(false)
     private val _isHardwareBusy = MutableStateFlow(false)
 
-    private val channels = listOf(
+    val channels = listOf(
         Glyph.Code_25111.A_1, Glyph.Code_25111.A_2, Glyph.Code_25111.A_3,
         Glyph.Code_25111.A_4, Glyph.Code_25111.A_5, Glyph.Code_25111.A_6,
         Glyph.Code_22111.E1 // Red glyph (channel 24)
@@ -191,10 +200,13 @@ class GlyphController private constructor() {
     }
 
     fun init(context: Context) {
+        mContext = context.applicationContext
         if (mGlyphManager == null) {
             mGlyphManager = GlyphManager.getInstance(context)
             mGlyphManager?.init(mCallback)
         }
+        // Initial sync to ensure widgets match app state on startup
+        updateWidgetState(context.applicationContext, _currentIntensities.value)
     }
 
     fun turnOffGlyphs() {
@@ -211,6 +223,11 @@ class GlyphController private constructor() {
         } catch (e: Exception) {}
         _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
         _isHardwareBusy.value = false
+        
+        // Sync with widgets
+        mContext?.let { context ->
+            updateWidgetState(context, _currentIntensities.value)
+        }
     }
 
     fun setRedGlyph(state: Int) {
@@ -238,6 +255,11 @@ class GlyphController private constructor() {
         } catch (e: Exception) {
             Log.e(TAG, "Error in setRedGlyph: ${e.message}")
         }
+
+        // Sync with widgets
+        mContext?.let { context ->
+            updateWidgetState(context, _currentIntensities.value)
+        }
     }
 
     fun applyGlyphStateWithIntensities(channelIntensities: Map<Int, Int>, durationMs: Int) {
@@ -252,6 +274,11 @@ class GlyphController private constructor() {
         // Update Global State for Preview
         val newIntensities = channels.map { ch -> channelIntensities[ch] ?: 0 }
         _currentIntensities.value = newIntensities
+
+        // Sync with widgets
+        mContext?.let { context ->
+            updateWidgetState(context, newIntensities)
+        }
 
         // Auto-reset hardware busy state after duration, but DON'T reset _currentIntensities
         // unless they are all zero. The preview should show the live state.
@@ -290,6 +317,11 @@ class GlyphController private constructor() {
         // Update Global State for Preview (legacy mode)
         val newIntensities = channels.map { ch -> if (activeChannels.contains(ch)) 3 else 0 }
         _currentIntensities.value = newIntensities
+
+        // Sync with widgets
+        mContext?.let { context ->
+            updateWidgetState(context, newIntensities)
+        }
 
         // Auto-reset busy state only
         resetJob?.cancel()
@@ -365,6 +397,32 @@ class GlyphController private constructor() {
             mGlyphManager?.setFrameColors(frameColors)
         } catch (e: Exception) {
             Log.e(TAG, "Error in smooth progress: ${e.message}")
+        }
+    }
+
+    private fun updateWidgetState(context: Context, intensities: List<Int>) {
+        val intensityStr = intensities.joinToString(",")
+        controllerScope.launch {
+            try {
+                // Update both horizontal and vertical widgets
+                listOf(
+                    GlyphComposerHorizontalWidget(),
+                    GlyphComposerVerticalWidget()
+                ).forEach { widget ->
+                    val manager = GlanceAppWidgetManager(context)
+                    val glanceIds = manager.getGlanceIds(widget.javaClass)
+                    glanceIds.forEach { glanceId ->
+                        updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+                            prefs.toMutablePreferences().apply {
+                                this[INTENSITIES_KEY] = intensityStr
+                            }
+                        }
+                    }
+                    widget.updateAll(context)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to update widget state: ${e.message}")
+            }
         }
     }
 
