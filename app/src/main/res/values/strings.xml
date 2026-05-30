@@ -1,10 +1,11 @@
 <resources>
     <string name="app_name">GB4Aura</string>
-    <string name="widget_name_quick">Glyph Quick Control</string>
+    <string name="widget_name_horizontal">Horizontal Composer</string>
+    <string name="widget_name_vertical">Vertical Composer</string>
+    <string name="widget_sequence_player_name">Sequence Player</string>
     <string name="widget_description_quick">One-tap master control for all back glyphs</string>
     <string name="widget_horizontal_description">One-tap master control for all back glyphs (Horizontal)</string>
     <string name="widget_vertical_description">One-tap master control for all back glyphs (Vertical)</string>
-    <string name="widget_sequence_player_name">Glyph Sequence Player</string>
     <string name="widget_sequence_player_description">Play and pause a specific sequence from your library</string>
     <string name="select_sequence_title">Select Sequence</string>
     <string name="no_sequences_found">No sequences found. Create one in the app first.</string>

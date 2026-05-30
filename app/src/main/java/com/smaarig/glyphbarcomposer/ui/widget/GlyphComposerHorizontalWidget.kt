@@ -42,7 +42,7 @@ class GlyphComposerHorizontalWidget : GlanceAppWidget() {
             .map { it.toIntOrNull() ?: 0 }
 
         Row(
-            modifier = GlanceModifier.fillMaxSize(),
+            modifier = GlanceModifier.fillMaxSize().padding(horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -71,30 +71,6 @@ class GlyphComposerHorizontalWidget : GlanceAppWidget() {
                     isRed = true
                 )
             }
-
-            // Power Off (Master Kill Switch)
-            Box(
-                modifier = GlanceModifier.defaultWeight(),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = GlanceModifier
-                        .size(34.dp)
-                        .cornerRadius(10.dp)
-                        .background(Color(0xFF1A1A1A))
-                        .clickable(actionRunCallback<PowerOffAction>()),
-                    contentAlignment = Alignment.Center
-                ) {
-                    androidx.glance.text.Text(
-                        text = "⏻",
-                        style = androidx.glance.text.TextStyle(
-                            color = androidx.glance.unit.ColorProvider(Color.White),
-                            fontSize = 16.sp,
-                            fontWeight = androidx.glance.text.FontWeight.Bold
-                        )
-                    )
-                }
-            }
         }
     }
 
@@ -102,9 +78,9 @@ class GlyphComposerHorizontalWidget : GlanceAppWidget() {
     private fun GlyphDot(index: Int, intensity: Int, isRed: Boolean) {
         val isActive = intensity > 0
 
-        // Circular Square parameters - Maximized size
-        val indicatorSize = if (isActive) 38.dp else 34.dp
-        val cornerRadius = 10.dp
+        // Circular Square parameters - Optimized size for fixed widget
+        val indicatorSize = if (isActive) 34.dp else 30.dp
+        val cornerRadius = 8.dp
         val backgroundColor = if (isActive) {
             getIntensityColor(intensity)
         } else {
@@ -116,7 +92,7 @@ class GlyphComposerHorizontalWidget : GlanceAppWidget() {
         Box(
             modifier = GlanceModifier
                 .fillMaxHeight()
-                .width(42.dp),
+                .width(36.dp),
             contentAlignment = Alignment.Center
         ) {
             // Indicator "circular square" with clickable area constrained to its shape

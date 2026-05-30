@@ -32,7 +32,9 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.updateAppWidgetState
 import com.smaarig.glyphbarcomposer.ui.widget.getIntensityColor
 import com.smaarig.glyphbarcomposer.ui.widget.INTENSITIES_KEY
-import com.smaarig.glyphbarcomposer.ui.widget.DEFAULT_INTENSITIES
+import androidx.glance.Image
+import androidx.glance.ImageProvider
+import com.smaarig.glyphbarcomposer.R
 
 class GlyphSequencePlayerWidget : GlanceAppWidget() {
 
@@ -52,11 +54,13 @@ class GlyphSequencePlayerWidget : GlanceAppWidget() {
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .cornerRadius(16.dp)
+                .background(Color(0xFF121212)),
             contentAlignment = Alignment.Center
         ) {
             Row(
-                modifier = GlanceModifier.fillMaxSize(),
+                modifier = GlanceModifier.fillMaxSize().padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // 1. Sequence Info (Left)
@@ -76,8 +80,8 @@ class GlyphSequencePlayerWidget : GlanceAppWidget() {
                     Text(
                         text = "GLYPH SEQUENCE",
                         style = TextStyle(
-                            color = ColorProvider(Color.Gray),
-                            fontSize = 9.sp,
+                            color = ColorProvider(Color(0xFFB3B3B3)),
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Normal
                         )
                     )
@@ -94,32 +98,30 @@ class GlyphSequencePlayerWidget : GlanceAppWidget() {
                             .clickable(actionRunCallback<PowerOffAction>()),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "⏻",
-                            style = TextStyle(
-                                color = ColorProvider(Color.White),
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                        Image(
+                            provider = ImageProvider(R.drawable.ic_power_off),
+                            contentDescription = "Turn Off",
+                            modifier = GlanceModifier.size(22.dp),
+                            colorFilter = androidx.glance.ColorFilter.tint(ColorProvider(Color(0xFF00E676)))
                         )
                     }
 
-                    Spacer(modifier = GlanceModifier.width(8.dp))
+                    Spacer(modifier = GlanceModifier.width(12.dp))
 
                     // Play/Pause Button
                     Box(
                         modifier = GlanceModifier
-                            .size(44.dp)
-                            .cornerRadius(22.dp)
-                            .background(if (isPlaying) Color(0xFFFF1744) else Color(0xFF1A1A1A))
+                            .size(48.dp)
+                            .cornerRadius(24.dp)
+                            .background(Color(0xFF1DB954))
                             .clickable(actionRunCallback<TogglePlaybackAction>()),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = if (isPlaying) "■" else "▶",
                             style = TextStyle(
-                                color = ColorProvider(Color.White),
-                                fontSize = 18.sp,
+                                color = ColorProvider(Color.Black),
+                                fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         )
