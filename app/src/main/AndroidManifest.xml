@@ -178,6 +178,36 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <activity
+            android:name=".ui.widget.SequencePlayerConfigActivity"
+            android:exported="true"
+            android:label="@string/select_sequence_title"
+            android:theme="@style/Theme.GlyphBarComposer">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".service.GlyphPlaybackService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Playback of glyph sequences" />
+        </service>
+
+        <receiver
+            android:name=".ui.widget.GlyphSequencePlayerWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/glance_sequence_player_widget_info" />
+        </receiver>
+
         <receiver
             android:name=".ui.widget.GlyphComposerHorizontalWidgetReceiver"
             android:exported="true">

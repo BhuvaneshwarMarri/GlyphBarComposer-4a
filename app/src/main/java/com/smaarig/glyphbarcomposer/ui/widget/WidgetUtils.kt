@@ -1,16 +1,21 @@
 package com.smaarig.glyphbarcomposer.ui.widget
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.ui.graphics.Color
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.appwidget.updateAll
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import com.nothing.ketchum.Glyph
 import com.smaarig.glyphbarcomposer.controller.GlyphController
+import com.smaarig.glyphbarcomposer.service.GlyphPlaybackService
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 
 // ─── Shared preference key ──────────────────────────────────────────────────
 val INTENSITIES_KEY = stringPreferencesKey("intensities")
@@ -102,5 +107,23 @@ class IndividualCycleAction : ActionCallback {
         // 3. Fire the physical glyph hardware and update global state.
         //    The controller will automatically sync this to the widget DataStore.
         glyphController.applyGlyphStateWithIntensities(intensityMap, durationMs = 800)
+    }
+}
+
+/**
+ * Master Kill Switch: Turns off all glyphs, stops sequence playback,
+ * and resets all widget visuals.
+ */
+class PowerOffAction : ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters
+    ) {
+        // 1. Stop playback service
+        context.stopService(Intent(context, GlyphPlaybackService::class.java))
+
+        // 2. Kill hardware lights
+        GlyphController.getInstance(context).turnOffGlyphs()
     }
 }

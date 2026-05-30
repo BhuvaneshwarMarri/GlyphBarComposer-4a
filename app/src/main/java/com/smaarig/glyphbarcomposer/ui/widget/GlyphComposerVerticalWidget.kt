@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -69,6 +70,30 @@ class GlyphComposerVerticalWidget : GlanceAppWidget() {
                     intensity = intensities.getOrElse(6) { 0 },
                     isRed = true
                 )
+            }
+
+            // Power Off (Master Kill Switch)
+            Box(
+                modifier = GlanceModifier.defaultWeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = GlanceModifier
+                        .size(34.dp)
+                        .cornerRadius(10.dp)
+                        .background(Color(0xFF1A1A1A))
+                        .clickable(actionRunCallback<PowerOffAction>()),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.glance.text.Text(
+                        text = "⏻",
+                        style = androidx.glance.text.TextStyle(
+                            color = androidx.glance.unit.ColorProvider(Color.White),
+                            fontSize = 16.sp,
+                            fontWeight = androidx.glance.text.FontWeight.Bold
+                        )
+                    )
+                }
             }
         }
     }
