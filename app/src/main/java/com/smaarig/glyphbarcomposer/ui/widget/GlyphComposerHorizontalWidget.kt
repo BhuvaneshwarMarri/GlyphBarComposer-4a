@@ -83,28 +83,28 @@ class GlyphComposerHorizontalWidget : GlanceAppWidget() {
         val backgroundColor = if (isActive) {
             getIntensityColor(intensity)
         } else {
-            // Increased visibility for the OFF state
-            Color(0xFF333333)
+            // Restore dark color for visibility when OFF
+            Color(0xFF1A1A1A)
         }
 
-        // Outer tap area — transparent, full slot size for easy tapping
+        // Outer container slot
         Box(
             modifier = GlanceModifier
                 .fillMaxHeight()
-                .width(42.dp) // Slightly smaller width to pack them tighter
-                .clickable(
-                    actionRunCallback<IndividualCycleAction>(
-                        actionParametersOf(WidgetKeys.GlyphIndexKey to index)
-                    )
-                ),
+                .width(42.dp),
             contentAlignment = Alignment.Center
         ) {
-            // Indicator "circular square"
+            // Indicator "circular square" with clickable area constrained to its shape
             Box(
                 modifier = GlanceModifier
                     .size(indicatorSize)
                     .cornerRadius(cornerRadius)
                     .background(backgroundColor)
+                    .clickable(
+                        actionRunCallback<IndividualCycleAction>(
+                            actionParametersOf(WidgetKeys.GlyphIndexKey to index)
+                        )
+                    )
             ) {}
         }
     }
