@@ -1,12 +1,26 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="200dp"
-    android:height="100dp"
+    android:height="72dp"
     android:viewportWidth="200"
-    android:viewportHeight="100">
+    android:viewportHeight="72">
+    <!-- Background -->
     <path
         android:fillColor="#121212"
-        android:pathData="M10,10h180v80h-180z"/>
+        android:pathData="M16,0h168a16,16 0,0 1,16 16v40a16,16 0,0 1,-16 16h-168a16,16 0,0 1,-16 -16v-40a16,16 0,0 1,16 -16z"/>
+
+    <!-- Text Placeholders -->
+    <path android:fillColor="#FFFFFF" android:pathData="M24,24h80v6h-80z"/>
+    <path android:fillColor="#B3B3B3" android:pathData="M24,36h60v4h-60z"/>
+
+    <!-- Power Icon (Green) -->
+    <path android:fillColor="#00E676" android:pathData="M128,30h14v12h-14z"/>
+    <path android:fillColor="#00E676" android:pathData="M135,26h2v6h-2z"/>
+
+    <!-- Play Button (Spotify Green) -->
     <path
         android:fillColor="#1DB954"
-        android:pathData="M140,50m-20,0a20,20 0,1 1,40 0a20,20 0,1 1,-40 0"/>
+        android:pathData="M172,36m-18,0a18,18 0,1 1,36 0a18,18 0,1 1,-36 0"/>
+
+    <!-- Play Icon (Black triangle) -->
+    <path android:fillColor="#000000" android:pathData="M170,30l8,6l-8,6z"/>
 </vector>
