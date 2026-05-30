@@ -21,9 +21,8 @@ import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
 
 /**
- * Minimalist Glyph Composer Widget.
- * Clean, square buttons for binary control of glyphs.
- * Labels and secondary backgrounds removed for a modern look.
+ * Glyph Individual Control Widget.
+ * 7 tap targets — no background, no labels, just on/off glyph indicators.
  */
 class GlyphComposerHorizontalWidget : GlanceAppWidget() {
 
@@ -41,57 +40,73 @@ class GlyphComposerHorizontalWidget : GlanceAppWidget() {
             .split(",")
             .map { it.toIntOrNull() ?: 0 }
 
-        Box(
+        Row(
             modifier = GlanceModifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = GlanceModifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // ── White glyphs 1-6 ──────────────────────────────────────
-                repeat(6) { index ->
-                    GlyphSquareButton(
-                        index = index,
-                        intensity = intensities.getOrElse(index) { 0 }
-                    )
-                    if (index < 5) Spacer(GlanceModifier.width(4.dp))
-                }
-
-                // ── Subtle divider ─────────────────────────────────────────
+            // White glyphs 1-6
+            repeat(6) { index ->
                 Box(
-                    modifier = GlanceModifier
-                        .padding(horizontal = 6.dp)
-                        .width(1.dp)
-                        .height(20.dp)
-                        .background(Color(0xFF333333))
-                ) {}
+                    modifier = GlanceModifier.defaultWeight(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    GlyphDot(
+                        index = index,
+                        intensity = intensities.getOrElse(index) { 0 },
+                        isRed = false
+                    )
+                }
+            }
 
-                // ── Red glyph (index 6) ────────────────────────────────────
-                GlyphSquareButton(
+            // Red glyph (index 6)
+            Box(
+                modifier = GlanceModifier.defaultWeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                GlyphDot(
                     index = 6,
-                    intensity = intensities.getOrElse(6) { 0 }
+                    intensity = intensities.getOrElse(6) { 0 },
+                    isRed = true
                 )
             }
         }
     }
 
     @Composable
-    private fun GlyphSquareButton(index: Int, intensity: Int) {
-        val statusColor = getIntensityColor(intensity)
+    private fun GlyphDot(index: Int, intensity: Int, isRed: Boolean) {
+        val isActive = intensity > 0
 
+        // Circular Square parameters - Maximized size
+        val indicatorSize = if (isActive) 38.dp else 34.dp
+        val cornerRadius = 10.dp
+        val backgroundColor = if (isActive) {
+            getIntensityColor(intensity)
+        } else {
+            // Increased visibility for the OFF state
+            Color(0xFF333333)
+        }
+
+        // Outer tap area — transparent, full slot size for easy tapping
         Box(
             modifier = GlanceModifier
-                .size(32.dp)
-                .cornerRadius(8.dp)
-                .background(statusColor)
+                .fillMaxHeight()
+                .width(42.dp) // Slightly smaller width to pack them tighter
                 .clickable(
                     actionRunCallback<IndividualCycleAction>(
                         actionParametersOf(WidgetKeys.GlyphIndexKey to index)
                     )
-                )
-        ) {}
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            // Indicator "circular square"
+            Box(
+                modifier = GlanceModifier
+                    .size(indicatorSize)
+                    .cornerRadius(cornerRadius)
+                    .background(backgroundColor)
+            ) {}
+        }
     }
 }
 
