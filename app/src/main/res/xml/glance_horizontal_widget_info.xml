@@ -2,20 +2,20 @@
 <!--
     res/xml/glance_horizontal_widget_info.xml
     V1 – Horizontal glyph button row
-    Minimum size: 250 × 110 dp  (≈ 4 × 2 launcher cells)
+    Minimum size: 300 × 70 dp  (≈ 4-5 × 1 launcher cells)
     Resize:       horizontal only
 -->
 <appwidget-provider
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_horizontal_description"
-    android:minWidth="250dp"
-    android:minHeight="110dp"
-    android:minResizeWidth="200dp"
-    android:minResizeHeight="110dp"
-    android:maxResizeWidth="450dp"
-    android:maxResizeHeight="130dp"
-    android:targetCellWidth="4"
-    android:targetCellHeight="2"
+    android:minWidth="300dp"
+    android:minHeight="70dp"
+    android:minResizeWidth="250dp"
+    android:minResizeHeight="70dp"
+    android:maxResizeWidth="500dp"
+    android:maxResizeHeight="100dp"
+    android:targetCellWidth="5"
+    android:targetCellHeight="1"
     android:resizeMode="horizontal"
     android:updatePeriodMillis="0"
     android:widgetCategory="home_screen"
