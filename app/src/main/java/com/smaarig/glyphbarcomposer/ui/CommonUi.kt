@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -40,8 +42,16 @@ import androidx.core.content.ContextCompat
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.LifecycleOwner
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions
+import androidx.core.net.toUri
 
 // ─── Intensity palette ──────────────────────────────────────────────────────
 val intensityColor = listOf(
@@ -142,11 +152,45 @@ val glyphChannels = listOf(
 )
 
 @Composable
+fun YouTubePlayer(
+    videoId: String,
+    lifecycleOwner: LifecycleOwner,
+    modifier: Modifier = Modifier
+) {
+    AndroidView(
+        factory = { context ->
+            YouTubePlayerView(context).apply {
+                enableAutomaticInitialization = false
+                lifecycleOwner.lifecycle.addObserver(this)
+                
+                val options = IFramePlayerOptions.Builder(context)
+                    .controls(1) // Show YouTube controls
+                    .fullscreen(0) // Disable fullscreen to prevent crash in dialog
+                    .build()
+
+                initialize(object : AbstractYouTubePlayerListener() {
+                    override fun onReady(youTubePlayer: YouTubePlayer) {
+                        youTubePlayer.cueVideo(videoId, 0f)
+                    }
+                }, options)
+            }
+        },
+        onRelease = { it.release() },
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(16 / 9f)
+            .clip(RoundedCornerShape(12.dp))
+    )
+}
+
+@Composable
 fun GlyphPreviewBar(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val glyphController = remember { GlyphController.getInstance(context) }
     val intensities by glyphController.currentIntensities.collectAsState()
     val isBatteryEnabled by glyphController.isBatteryFeatureEnabled.collectAsState()
+    var showHelpDialog by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -157,6 +201,67 @@ fun GlyphPreviewBar(modifier: Modifier = Modifier) {
         }
     }
 
+    if (showHelpDialog) {
+        AlertDialog(
+            onDismissRequest = { showHelpDialog = false },
+            title = {
+                Text(
+                    text = "HELP & TUTORIAL",
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontFamily = nothingFont,
+                    letterSpacing = 1.sp
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "To better understand how to use the GlyphBar Composer, we recommend watching this tutorial video:",
+                        color = Color.Gray,
+                        fontFamily = nothingFont,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp
+                    )
+                    Spacer(Modifier.height(16.dp))
+
+                    // Embed YouTube Player directly
+                    YouTubePlayer(
+                        videoId = "dQw4w9WgXcQ", // ID from the provided URL
+                        lifecycleOwner = lifecycleOwner
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    val videoUrl = "https://youtu.be/dQw4w9WgXcQ?si=3mdmf20EWUm6b7bS"
+                    Text(
+                        text = "Watch on YouTube",
+                        color = Color(0xFF0086EA),
+                        fontFamily = nothingFont,
+                        fontSize = 13.sp,
+                        textDecoration = TextDecoration.Underline,
+                        modifier = Modifier.clickable {
+                            val intent = Intent(Intent.ACTION_VIEW, videoUrl.toUri())
+                            context.startActivity(intent)
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showHelpDialog = false }) {
+                    Text(
+                        "GOT IT",
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        fontFamily = nothingFont,
+                        letterSpacing = 1.sp
+                    )
+                }
+            },
+            containerColor = Color(0xFF111111),
+            shape = RoundedCornerShape(28.dp)
+        )
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -164,7 +269,22 @@ fun GlyphPreviewBar(modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Box(modifier = Modifier.width(70.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.width(70.dp)
+        ) {
+            IconButton(
+                onClick = { showHelpDialog = true },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.HelpOutline,
+                    contentDescription = "Help",
+                    tint = Color.Gray,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
