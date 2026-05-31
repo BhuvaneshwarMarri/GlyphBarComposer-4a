@@ -25,6 +25,8 @@ import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.text.TextAlign
+import androidx.glance.LocalContext
 import com.smaarig.glyphbarcomposer.service.GlyphPlaybackService
 import androidx.glance.appwidget.updateAll
 import androidx.glance.unit.ColorProvider
@@ -48,6 +50,7 @@ class GlyphSequencePlayerWidget : GlanceAppWidget() {
     @Composable
     private fun WidgetContent() {
         val prefs = currentState<Preferences>()
+        val sequenceId = prefs[SELECTED_SEQUENCE_ID]
         val sequenceName = prefs[SELECTED_SEQUENCE_NAME] ?: "No Sequence"
         val isPlaying = prefs[IS_PLAYING] ?: false
 
@@ -59,72 +62,85 @@ class GlyphSequencePlayerWidget : GlanceAppWidget() {
                 .background(Color(0xFF121212)),
             contentAlignment = Alignment.Center
         ) {
-            Row(
-                modifier = GlanceModifier.fillMaxSize().padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // 1. Sequence Info (Left)
-                Column(
-                    modifier = GlanceModifier.defaultWeight(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = sequenceName.uppercase(),
-                        style = TextStyle(
-                            color = ColorProvider(Color.White),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        maxLines = 1
-                    )
-                    Text(
-                        text = "GLYPH SEQUENCE",
-                        style = TextStyle(
-                            color = ColorProvider(Color(0xFFB3B3B3)),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Normal
-                        )
-                    )
-                }
-
-                // 2. Controls (Right)
+            if (sequenceId == null) {
+                Text(
+                    text = LocalContext.current.getString(R.string.widget_no_sequence_selected),
+                    style = TextStyle(
+                        color = ColorProvider(Color.White),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center
+                    ),
+                    modifier = GlanceModifier.padding(horizontal = 16.dp)
+                )
+            } else {
                 Row(
+                    modifier = GlanceModifier.fillMaxSize().padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Power Off Button (Icon only)
-                    Box(
-                        modifier = GlanceModifier
-                            .size(36.dp)
-                            .clickable(actionRunCallback<PowerOffAction>()),
-                        contentAlignment = Alignment.Center
+                    // 1. Sequence Info (Left)
+                    Column(
+                        modifier = GlanceModifier.defaultWeight(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Image(
-                            provider = ImageProvider(R.drawable.ic_power_off),
-                            contentDescription = "Turn Off",
-                            modifier = GlanceModifier.size(22.dp),
-                            colorFilter = androidx.glance.ColorFilter.tint(ColorProvider(Color(0xFF00E676)))
+                        Text(
+                            text = sequenceName.uppercase(),
+                            style = TextStyle(
+                                color = ColorProvider(Color.White),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "GLYPH SEQUENCE",
+                            style = TextStyle(
+                                color = ColorProvider(Color(0xFFB3B3B3)),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Normal
+                            )
                         )
                     }
 
-                    Spacer(modifier = GlanceModifier.width(12.dp))
-
-                    // Play/Pause Button
-                    Box(
-                        modifier = GlanceModifier
-                            .size(48.dp)
-                            .cornerRadius(24.dp)
-                            .background(Color(0xFF1DB954))
-                            .clickable(actionRunCallback<TogglePlaybackAction>()),
-                        contentAlignment = Alignment.Center
+                    // 2. Controls (Right)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = if (isPlaying) "■" else "▶",
-                            style = TextStyle(
-                                color = ColorProvider(Color.Black),
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold
+                        // Power Off Button (Icon only)
+                        Box(
+                            modifier = GlanceModifier
+                                .size(36.dp)
+                                .clickable(actionRunCallback<PowerOffAction>()),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                provider = ImageProvider(R.drawable.ic_power_off),
+                                contentDescription = "Turn Off",
+                                modifier = GlanceModifier.size(22.dp),
+                                colorFilter = androidx.glance.ColorFilter.tint(ColorProvider(Color(0xFF00E676)))
                             )
-                        )
+                        }
+
+                        Spacer(modifier = GlanceModifier.width(12.dp))
+
+                        // Play/Pause Button
+                        Box(
+                            modifier = GlanceModifier
+                                .size(48.dp)
+                                .cornerRadius(24.dp)
+                                .background(Color(0xFF1DB954))
+                                .clickable(actionRunCallback<TogglePlaybackAction>()),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (isPlaying) "■" else "▶",
+                                style = TextStyle(
+                                    color = ColorProvider(Color.Black),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        }
                     }
                 }
             }

@@ -3,24 +3,32 @@
     android:height="72dp"
     android:viewportWidth="200"
     android:viewportHeight="72">
-    <!-- Background -->
+    <!-- Outer Border -->
+    <path
+        android:fillColor="#2A2A2A"
+        android:pathData="M16,0h168a16,16 0,0 1,16 16v40a16,16 0,0 1,-16 16h-168a16,16 0,0 1,-16 -16v-40a16,16 0,0 1,16 -16z"/>
+    <!-- Inner Background -->
     <path
         android:fillColor="#121212"
-        android:pathData="M16,0h168a16,16 0,0 1,16 16v40a16,16 0,0 1,-16 16h-168a16,16 0,0 1,-16 -16v-40a16,16 0,0 1,16 -16z"/>
+        android:pathData="M16.5,0.5h167a15.5,15.5 0,0 1,15.5 15.5v39a15.5,15.5 0,0 1,-15.5 15.5h-167a15.5,15.5 0,0 1,-15.5 -15.5v-39a15.5,15.5 0,0 1,15.5 -15.5z"/>
 
-    <!-- Text Placeholders -->
-    <path android:fillColor="#FFFFFF" android:pathData="M24,24h80v6h-80z"/>
-    <path android:fillColor="#B3B3B3" android:pathData="M24,36h60v4h-60z"/>
+    <!-- Text Placeholders (Sequence Info) -->
+    <path android:fillColor="#FFFFFF" android:pathData="M20,23h60v10h-60z"/>
+    <path android:fillColor="#B3B3B3" android:pathData="M20,41h50v6h-50z"/>
 
-    <!-- Power Icon (Green) -->
-    <path android:fillColor="#00E676" android:pathData="M128,30h14v12h-14z"/>
-    <path android:fillColor="#00E676" android:pathData="M135,26h2v6h-2z"/>
+    <!-- Power Button (36x36 Container) -->
+    <group android:translateX="102" android:translateY="36">
+        <!-- Icon (22x22) -->
+        <path
+            android:fillColor="#00E676"
+            android:pathData="M1, -9h-2v10h2V-9zM5.83, -6.83l-1.42, 1.42C5.99, -4.14 7, -2.19 7, 0c0, 3.87 -3.13, 7 -7, 7s-7, -3.13 -7, -7c0, -2.19 1.01, -4.14 2.58, -5.42L-5.83, -6.83C-7.77, -5.18 -9, -2.74 -9, 0c0, 4.97 4.03, 9 9, 9s9, -4.03 9, -9c0, -2.74 -1.23, -5.18 -3.17, -6.83z"/>
+    </group>
 
-    <!-- Play Button (Spotify Green) -->
+    <!-- Play Button (48x48 Circular Container) -->
     <path
         android:fillColor="#1DB954"
-        android:pathData="M172,36m-18,0a18,18 0,1 1,36 0a18,18 0,1 1,-36 0"/>
+        android:pathData="M156,36m-24,0a24,24 0,1 1,48 0a24,24 0,1 1,-48 0"/>
 
     <!-- Play Icon (Black triangle) -->
-    <path android:fillColor="#000000" android:pathData="M170,30l8,6l-8,6z"/>
+    <path android:fillColor="#000000" android:pathData="M152,28l12,8l-12,8z"/>
 </vector>

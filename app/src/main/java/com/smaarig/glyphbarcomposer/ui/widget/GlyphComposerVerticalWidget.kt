@@ -1,10 +1,16 @@
 package com.smaarig.glyphbarcomposer.ui.widget
 
 import android.content.Context
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment as ComposeAlignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -18,6 +24,7 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.currentState
 import androidx.glance.layout.*
+import androidx.glance.layout.Alignment as GlanceAlignment
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
 
@@ -43,14 +50,14 @@ class GlyphComposerVerticalWidget : GlanceAppWidget() {
 
         Column(
             modifier = GlanceModifier.fillMaxSize().padding(vertical = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalAlignment = Alignment.CenterVertically
+            horizontalAlignment = GlanceAlignment.CenterHorizontally,
+            verticalAlignment = GlanceAlignment.CenterVertically
         ) {
             // White glyphs 1-6
             repeat(6) { index ->
                 Box(
                     modifier = GlanceModifier.defaultWeight(),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = GlanceAlignment.Center
                 ) {
                     GlyphDot(
                         index = index,
@@ -63,7 +70,7 @@ class GlyphComposerVerticalWidget : GlanceAppWidget() {
             // Red glyph (index 6)
             Box(
                 modifier = GlanceModifier.defaultWeight(),
-                contentAlignment = Alignment.Center
+                contentAlignment = GlanceAlignment.Center
             ) {
                 GlyphDot(
                     index = 6,
@@ -93,7 +100,7 @@ class GlyphComposerVerticalWidget : GlanceAppWidget() {
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .height(36.dp),
-            contentAlignment = Alignment.Center
+            contentAlignment = GlanceAlignment.Center
         ) {
             // Indicator "circular square" with clickable area constrained to its shape
             Box(
@@ -107,6 +114,45 @@ class GlyphComposerVerticalWidget : GlanceAppWidget() {
                         )
                     )
             ) {}
+        }
+    }
+}
+
+/**
+ * Mock UI for Compose Previews (Glance components cannot be previewed directly).
+ */
+@Composable
+private fun MockGlyphDot(intensity: Int) {
+    val isActive = intensity > 0
+    val indicatorSize = if (isActive) 34.dp else 30.dp
+    val color = getIntensityColor(intensity)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(36.dp),
+        contentAlignment = ComposeAlignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(indicatorSize)
+                .clip(RoundedCornerShape(8.dp))
+                .background(color)
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF000000, widthDp = 56, heightDp = 260)
+@Composable
+fun GlyphComposerVerticalWidgetPreview() {
+    val intensities = listOf(3, 0, 0, 0, 0, 0, 6)
+    Column(
+        modifier = Modifier.fillMaxSize().padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
+        horizontalAlignment = ComposeAlignment.CenterHorizontally
+    ) {
+        intensities.forEach { intensity ->
+            MockGlyphDot(intensity = intensity)
         }
     }
 }

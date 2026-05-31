@@ -1,33 +1,42 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="56dp"
-    android:height="200dp"
+    android:height="260dp"
     android:viewportWidth="56"
-    android:viewportHeight="200">
-    <!-- Background -->
+    android:viewportHeight="260">
+
+    <!-- Square 1 -->
     <path
-        android:fillColor="#000000"
-        android:pathData="M0,8a8,8 0,0 1,8 -8h40a8,8 0,0 1,8 8v184a8,8 0,0 1,-8 8h-40a8,8 0,0 1,-8 -8z"/>
+        android:fillColor="#FFFFFF"
+        android:pathData="M10,8h20a6,6 0,0 1,6 6v20a6,6 0,0 1,-6 6h-20a6,6 0,0 1,-6 -6v-20a6,6 0,0 1,6 -6z"/>
 
-    <!-- White Dots 1-6 -->
-    <path android:fillColor="#1A1A1A" android:pathData="M13,12h30v24h-30a4,4 0,0 1,-4 -4v-16a4,4 0,0 1,4 -4z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M23,19h10v10h-10z"/>
+    <!-- Square 2 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M10,44h20a6,6 0,0 1,6 6v20a6,6 0,0 1,-6 6h-20a6,6 0,0 1,-6 -6v-20a6,6 0,0 1,6 -6z"/>
 
-    <path android:fillColor="#1A1A1A" android:pathData="M13,40h30v24h-30a4,4 0,0 1,-4 -4v-16a4,4 0,0 1,4 -4z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M23,47h10v10h-10z"/>
+    <!-- Square 3 -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M10,80h20a6,6 0,0 1,6 6v20a6,6 0,0 1,-6 6h-20a6,6 0,0 1,-6 -6v-20a6,6 0,0 1,6 -6z"/>
 
-    <path android:fillColor="#1A1A1A" android:pathData="M13,68h30v24h-30a4,4 0,0 1,-4 -4v-16a4,4 0,0 1,4 -4z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M23,75h10v10h-10z"/>
+    <!-- Square 4 -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M10,116h20a6,6 0,0 1,6 6v20a6,6 0,0 1,-6 6h-20a6,6 0,0 1,-6 -6v-20a6,6 0,0 1,6 -6z"/>
 
-    <path android:fillColor="#1A1A1A" android:pathData="M13,96h30v24h-30a4,4 0,0 1,-4 -4v-16a4,4 0,0 1,4 -4z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M23,103h10v10h-10z"/>
+    <!-- Square 5 -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M10,152h20a6,6 0,0 1,6 6v20a6,6 0,0 1,-6 6h-20a6,6 0,0 1,-6 -6v-20a6,6 0,0 1,6 -6z"/>
 
-    <path android:fillColor="#1A1A1A" android:pathData="M13,124h30v24h-30a4,4 0,0 1,-4 -4v-16a4,4 0,0 1,4 -4z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M23,131h10v10h-10z"/>
+    <!-- Square 6 -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M10,188h20a6,6 0,0 1,6 6v20a6,6 0,0 1,-6 6h-20a6,6 0,0 1,-6 -6v-20a6,6 0,0 1,6 -6z"/>
 
-    <path android:fillColor="#1A1A1A" android:pathData="M13,152h30v24h-30a4,4 0,0 1,-4 -4v-16a4,4 0,0 1,4 -4z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M23,159h10v10h-10z"/>
+    <!-- Square 7 -->
+    <path
+        android:fillColor="#FF1744"
+        android:pathData="M10,224h20a6,6 0,0 1,6 6v20a6,6 0,0 1,-6 6h-20a6,6 0,0 1,-6 -6v-20a6,6 0,0 1,6 -6z"/>
 
-    <!-- Red Dot -->
-    <path android:fillColor="#1A1A1A" android:pathData="M13,180h30v12h-30a4,4 0,0 1,-4 -4v-4a4,4 0,0 1,4 -4z"/>
-    <path android:fillColor="#FF1744" android:pathData="M23,181h10v10h-10z"/>
 </vector>

@@ -199,6 +199,7 @@
 
         <receiver
             android:name=".ui.widget.GlyphSequencePlayerWidgetReceiver"
+            android:label="@string/widget_sequence_player_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -210,6 +211,7 @@
 
         <receiver
             android:name=".ui.widget.GlyphComposerHorizontalWidgetReceiver"
+            android:label="@string/widget_name_horizontal"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -221,6 +223,7 @@
 
         <receiver
             android:name=".ui.widget.GlyphComposerVerticalWidgetReceiver"
+            android:label="@string/widget_name_vertical"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
