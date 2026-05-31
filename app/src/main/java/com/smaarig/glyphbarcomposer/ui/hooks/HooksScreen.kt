@@ -83,8 +83,8 @@ fun HooksScreen(viewModel: HooksViewModel) {
     val pickerSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val configSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // Show test result snackbar
-    val snackbarHostState = remember { SnackbarHostState() }
+    // Show test result snackbar via global host
+    val snackbarHostState = com.smaarig.glyphbarcomposer.ui.LocalSnackbarHostState.current
     LaunchedEffect(testResult) {
         val msg = testResult ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(
@@ -109,52 +109,36 @@ fun HooksScreen(viewModel: HooksViewModel) {
         }
     }
 
-    Scaffold(
-        containerColor = Color.Black,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = {
-            SnackbarHost(snackbarHostState) { data ->
-                Snackbar(
-                    snackbarData = data,
-                    containerColor = Color(0xFF1E1E1E),
-                    contentColor = Color.White,
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(horizontal = 16.dp, vertical = 24.dp)
+    ) {
+        HooksHeader(onAddClick = { sheetState = SheetState.AppPicker })
+
+        AnimatedVisibility(
+            visible = !isPermissionGranted,
+            enter = fadeIn(tween(300)) + slideInVertically { -it },
+            exit = fadeOut(tween(200))
+        ) {
+            Column {
+                PermissionBanner { viewModel.openPermissionSettings(context) }
+                Spacer(Modifier.height(16.dp))
             }
         }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-        ) {
-            HooksHeader(onAddClick = { sheetState = SheetState.AppPicker })
 
-            AnimatedVisibility(
-                visible = !isPermissionGranted,
-                enter = fadeIn(tween(300)) + slideInVertically { -it },
-                exit = fadeOut(tween(200))
-            ) {
-                Column {
-                    PermissionBanner { viewModel.openPermissionSettings(context) }
-                    Spacer(Modifier.height(16.dp))
-                }
-            }
-
-            if (hooks.isEmpty() && isPermissionGranted) {
-                EmptyHooksView()
-            } else {
-                HooksList(
-                    hooks = hooks,
-                    isBgServiceEnabled = isBgServiceEnabled,
-                    onBgServiceToggle = { viewModel.toggleBackgroundService(it) },
-                    onDelete = { hookToDelete = it },
-                    onToggle = { hook, enabled -> viewModel.toggleHook(hook.hook, enabled) },
-                    onTest   = { viewModel.testHook(it, context) }
-                )
-            }
+        if (hooks.isEmpty() && isPermissionGranted) {
+            EmptyHooksView()
+        } else {
+            HooksList(
+                hooks = hooks,
+                isBgServiceEnabled = isBgServiceEnabled,
+                onBgServiceToggle = { viewModel.toggleBackgroundService(it) },
+                onDelete = { hookToDelete = it },
+                onToggle = { hook, enabled -> viewModel.toggleHook(hook.hook, enabled) },
+                onTest   = { viewModel.testHook(it, context) }
+            )
         }
     }
 

@@ -17,10 +17,9 @@ import com.smaarig.glyphbarcomposer.service.BatteryMonitor
 import com.smaarig.glyphbarcomposer.ui.widget.GlyphComposerHorizontalWidget
 import com.smaarig.glyphbarcomposer.ui.widget.GlyphComposerVerticalWidget
 import com.smaarig.glyphbarcomposer.ui.widget.INTENSITIES_KEY
+import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.*
 
 class GlyphController private constructor() {
     private var mGlyphManager: GlyphManager? = null
@@ -28,10 +27,17 @@ class GlyphController private constructor() {
     private val controllerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var resetJob: Job? = null
     private var batteryJob: Job? = null
+    private var playbackJob: Job? = null
 
     // ── Global State for Preview ──────────────────────────────────────────
     private val _currentIntensities = MutableStateFlow(listOf(0, 0, 0, 0, 0, 0, 0))
     val currentIntensities = _currentIntensities.asStateFlow()
+
+    private val _isPlaying = MutableStateFlow(false)
+    val isPlaying = _isPlaying.asStateFlow()
+
+    private val _isPaused = MutableStateFlow(false)
+    val isPaused = _isPaused.asStateFlow()
 
     // ── Global State for Battery Feature ──────────────────────────────────
     private val _isBatteryFeatureEnabled = MutableStateFlow(false)
@@ -210,6 +216,7 @@ class GlyphController private constructor() {
     }
 
     fun turnOffGlyphs() {
+        stopPlayback()
         batteryJob?.cancel()
         batteryJob = null
         resetJob?.cancel()
@@ -268,8 +275,10 @@ class GlyphController private constructor() {
             return
         }
 
-        _isHardwareBusy.value = true
-        batteryJob?.cancel()
+        if (!_isPlaying.value) {
+            _isHardwareBusy.value = true
+            batteryJob?.cancel()
+        }
 
         // Update Global State for Preview
         val newIntensities = channels.map { ch -> channelIntensities[ch] ?: 0 }
@@ -282,10 +291,12 @@ class GlyphController private constructor() {
 
         // Auto-reset hardware busy state after duration, but DON'T reset _currentIntensities
         // unless they are all zero. The preview should show the live state.
-        resetJob?.cancel()
-        resetJob = controllerScope.launch {
-            delay(durationMs.toLong())
-            _isHardwareBusy.value = false
+        if (!_isPlaying.value) {
+            resetJob?.cancel()
+            resetJob = controllerScope.launch {
+                delay(durationMs.toLong())
+                _isHardwareBusy.value = false
+            }
         }
 
         try {
@@ -305,6 +316,58 @@ class GlyphController private constructor() {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error in applyGlyphStateWithIntensities: ${e.message}", e)
+        }
+    }
+
+    fun playSequence(steps: List<GlyphSequence>, loop: Boolean = false) {
+        if (steps.isEmpty()) return
+        stopPlayback()
+        
+        _isPlaying.value = true
+        _isHardwareBusy.value = true
+        
+        playbackJob = controllerScope.launch {
+            try {
+                do {
+                    for (step in steps) {
+                        while (_isPaused.value) {
+                            delay(100)
+                        }
+                        
+                        applyGlyphStateWithIntensities(step.channelIntensities, step.durationMs)
+                        delay(step.durationMs.toLong() + 50)
+                    }
+                } while (loop && isActive)
+            } finally {
+                if (!loop || !isActive) {
+                    stopPlayback()
+                }
+            }
+        }
+    }
+
+    fun stopPlayback() {
+        playbackJob?.cancel()
+        playbackJob = null
+        _isPlaying.value = false
+        _isPaused.value = false
+        _isHardwareBusy.value = false
+        
+        // Don't turn off if hardware is busy with a single manual trigger
+        if (resetJob == null) {
+            try {
+                mGlyphManager?.openSession()
+                mGlyphManager?.turnOff()
+                mGlyphManager?.setFrameColors(IntArray(7) { 0 })
+            } catch (e: Exception) {}
+            _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
+            mContext?.let { updateWidgetState(it, _currentIntensities.value) }
+        }
+    }
+
+    fun togglePausePlayback() {
+        if (_isPlaying.value) {
+            _isPaused.value = !_isPaused.value
         }
     }
 

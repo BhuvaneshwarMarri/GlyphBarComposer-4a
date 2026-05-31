@@ -44,38 +44,16 @@ fun MusicStudioScreen(
 
     if (showSaveDialog) {
         var projectName by remember { mutableStateOf(uiState.audioName?.substringBeforeLast(".") ?: "") }
-        AlertDialog(
-            onDismissRequest = { showSaveDialog = false },
-            title = { Text("Save Project", color = Color.White, fontWeight = FontWeight.Black) },
-            text = {
-                TextField(
-                    value = projectName,
-                    onValueChange = { projectName = it },
-                    placeholder = { Text("Project Name", color = Color.Gray) },
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF1A1A1A),
-                        unfocusedContainerColor = Color(0xFF1A1A1A),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
-                    )
-                )
+        com.smaarig.glyphbarcomposer.ui.StyledSaveDialog(
+            title = "Save Project",
+            value = projectName,
+            onValueChange = { projectName = it },
+            onSave = {
+                viewModel.saveMusicProject(projectName)
+                showSaveDialog = false
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.saveMusicProject(projectName)
-                    showSaveDialog = false
-                }) {
-                    Text("SAVE", color = Color(0xFF00C853), fontWeight = FontWeight.Black)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) {
-                    Text("CANCEL", color = Color.Gray)
-                }
-            },
-            containerColor = Color(0xFF111111),
-            shape = RoundedCornerShape(28.dp)
+            onDismiss = { showSaveDialog = false },
+            placeholder = "Project Name"
         )
     }
 

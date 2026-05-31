@@ -94,11 +94,12 @@ fun ScreenHeader(
                 )
                 if (subtitle != null) {
                     Text(
-                        subtitle,
+                        subtitle.uppercase(),
                         color = Color.Gray,
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp,
+                        letterSpacing = 1.sp,
+                        fontFamily = nothingFont,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -129,6 +130,16 @@ fun getChannelForIndex(index: Int): Int = when (index) {
     6 -> com.nothing.ketchum.Glyph.Code_22111.E1
     else -> 0
 }
+
+val glyphChannels = listOf(
+    com.nothing.ketchum.Glyph.Code_25111.A_1,
+    com.nothing.ketchum.Glyph.Code_25111.A_2,
+    com.nothing.ketchum.Glyph.Code_25111.A_3,
+    com.nothing.ketchum.Glyph.Code_25111.A_4,
+    com.nothing.ketchum.Glyph.Code_25111.A_5,
+    com.nothing.ketchum.Glyph.Code_25111.A_6,
+    com.nothing.ketchum.Glyph.Code_22111.E1
+)
 
 @Composable
 fun GlyphPreviewBar(modifier: Modifier = Modifier) {

@@ -28,14 +28,14 @@ object WidgetKeys {
 
 // ─── Intensity colour palette ───────────────────────────────────────────────
 fun getIntensityColor(intensity: Int): Color = when (intensity) {
-    0    -> Color(0xFF1A1A1A) // OFF (Deeper grey for minimal look)
+    0    -> Color(0xFF1C1C1C) // OFF (Matches CommonUi.kt)
     1    -> Color(0xFF686868) // LOW white
     2    -> Color(0xFFCDCDCD) // MED white
     3    -> Color(0xFFFFFFFF) // HIGH white
     4    -> Color(0xFFC62828) // LOW red
     5    -> Color(0xFFEF5350) // MED red
     6    -> Color(0xFFFF1744) // HIGH red
-    else -> Color(0xFF1A1A1A)
+    else -> Color(0xFF1C1C1C)
 }
 
 // ─── Cycle intensity states ──────────────────────────────────────────────────

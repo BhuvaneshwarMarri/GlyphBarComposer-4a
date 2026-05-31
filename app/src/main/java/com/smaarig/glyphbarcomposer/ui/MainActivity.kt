@@ -76,6 +76,16 @@ import com.smaarig.glyphbarcomposer.ui.viewmodel.PatternLabViewModel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
 import kotlinx.coroutines.delay
 
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.remember
+
+val LocalSnackbarHostState = compositionLocalOf<SnackbarHostState> {
+    error("No SnackbarHostState provided")
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -118,6 +128,7 @@ fun MainApp() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val orientation = rememberAppOrientation()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // ── Incoming file intent handler ─────────────────────────────────────────
     // Triggered on cold start and whenever onNewIntent fires (setIntent updates activity.intent).
@@ -171,26 +182,55 @@ fun MainApp() {
         Screen.Library
     )
 
-    if (orientation == AppOrientation.Landscape && !isSplashScreen) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-        ) {
-            ModernNavigationRail(navController, screens)
+    CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
+        if (orientation == AppOrientation.Landscape && !isSplashScreen) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+            ) {
+                ModernNavigationRail(navController, screens)
 
-            Scaffold(
-                modifier = Modifier.weight(1f),
-                containerColor = Color.Transparent,
-                topBar = {
-                    Surface(
-                        color = Color.Black,
+                Scaffold(
+                    modifier = Modifier.weight(1f),
+                    containerColor = Color.Transparent,
+                    snackbarHost = { SnackbarHost(snackbarHostState) },
+                    topBar = {
+                        Surface(
+                            color = Color.Black,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                        ) {
+                            GlyphPreviewBar()
+                        }
+                    }
+                ) { innerPadding ->
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                            .fillMaxSize()
+                            .padding(innerPadding)
                     ) {
-                        GlyphPreviewBar()
+                        NavHostContainer(navController, Modifier.fillMaxSize())
+                    }
+                }
+            }
+        } else {
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                containerColor = Color.Black,
+                snackbarHost = { SnackbarHost(snackbarHostState) },
+                topBar = {
+                    if (!isSplashScreen) {
+                        Surface(
+                            color = Color.Black,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                        ) {
+                            GlyphPreviewBar()
+                        }
                     }
                 }
             ) { innerPadding ->
@@ -200,42 +240,17 @@ fun MainApp() {
                         .padding(innerPadding)
                 ) {
                     NavHostContainer(navController, Modifier.fillMaxSize())
-                }
-            }
-        }
-    } else {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = Color.Black,
-            topBar = {
-                if (!isSplashScreen) {
-                    Surface(
-                        color = Color.Black,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-                    ) {
-                        GlyphPreviewBar()
-                    }
-                }
-            }
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                NavHostContainer(navController, Modifier.fillMaxSize())
 
-                if (!isSplashScreen) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.BottomCenter)
-                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
-                            .padding(horizontal = 24.dp, vertical = 20.dp)
-                    ) {
-                        ModernBottomNavigationBar(navController, screens)
+                    if (!isSplashScreen) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .align(Alignment.BottomCenter)
+                                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+                                .padding(horizontal = 24.dp, vertical = 20.dp)
+                        ) {
+                            ModernBottomNavigationBar(navController, screens)
+                        }
                     }
                 }
             }

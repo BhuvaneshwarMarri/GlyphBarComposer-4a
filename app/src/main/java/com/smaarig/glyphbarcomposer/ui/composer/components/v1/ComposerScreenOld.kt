@@ -30,42 +30,19 @@ fun ComposerScreenOld(
     var fileName by remember { mutableStateOf("") }
 
     if (showSaveDialog) {
-        AlertDialog(
-            onDismissRequest = { showSaveDialog = false },
-            title = { Text("Save Sequence", color = Color.White, fontWeight = FontWeight.Black) },
-            text = {
-                TextField(
-                    value = fileName,
-                    onValueChange = { fileName = it },
-                    placeholder = { Text("Sequence Name", color = Color.Gray) },
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF1A1A1A),
-                        unfocusedContainerColor = Color(0xFF1A1A1A),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        cursorColor = Color.White
-                    )
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (fileName.isNotBlank()) {
-                        viewModel.savePlaylist(fileName)
-                        showSaveDialog = false
-                        fileName = ""
-                    }
-                }) {
-                    Text("SAVE", color = Color(0xFF00C853), fontWeight = FontWeight.Black)
+        com.smaarig.glyphbarcomposer.ui.StyledSaveDialog(
+            title = "Save Sequence",
+            value = fileName,
+            onValueChange = { fileName = it },
+            onSave = {
+                if (fileName.isNotBlank()) {
+                    viewModel.savePlaylist(fileName)
+                    showSaveDialog = false
+                    fileName = ""
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) {
-                    Text("CANCEL", color = Color.Gray)
-                }
-            },
-            containerColor = Color(0xFF111111),
-            shape = RoundedCornerShape(28.dp)
+            onDismiss = { showSaveDialog = false },
+            placeholder = "Sequence Name"
         )
     }
 

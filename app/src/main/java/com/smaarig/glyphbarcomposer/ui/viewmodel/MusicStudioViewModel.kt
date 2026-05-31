@@ -105,7 +105,12 @@ class MusicStudioViewModel(
     private var visualizer: Visualizer? = null
 
     private val _uiState = MutableStateFlow(MusicStudioUiState())
-    val uiState: StateFlow<MusicStudioUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<MusicStudioUiState> = combine(
+        _uiState,
+        glyphController.isPlaying
+    ) { state, playing ->
+        state.copy(isAudioPlaying = playing && state.activeProjectId != null)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MusicStudioUiState())
 
     private val _visualizerData = MutableStateFlow(List(16) { 0f })
     val visualizerData: StateFlow<List<Float>> = _visualizerData.asStateFlow()
@@ -116,8 +121,8 @@ class MusicStudioViewModel(
     private val _composerIntensities = MutableStateFlow(listOf(0, 0, 0, 0, 0, 0, 0))
     val composerIntensities: StateFlow<List<Int>> = _composerIntensities.asStateFlow()
 
-    private val _liveGlyphIntensities = MutableStateFlow(listOf(0, 0, 0, 0, 0, 0, 0))
-    val liveGlyphIntensities: StateFlow<List<Int>> = _liveGlyphIntensities.asStateFlow()
+    val liveGlyphIntensities: StateFlow<List<Int>> = glyphController.currentIntensities
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf(0, 0, 0, 0, 0, 0, 0))
 
     private var musicStudioJob: Job? = null
     private var analysisJob: Job? = null
@@ -410,9 +415,8 @@ class MusicStudioViewModel(
                             merged[ch] = maxOf(merged.getOrDefault(ch, 0), intensity)
                         }
                     }
-                    _liveGlyphIntensities.value = channels.map { merged[it] ?: 0 }
                     if (merged.isNotEmpty()) glyphController.applyGlyphStateWithIntensities(merged, 50)
-                    else glyphController.turnOffGlyphs()
+                    else if (prevActiveIds.isNotEmpty()) glyphController.applyGlyphStateWithIntensities(emptyMap(), 50)
                     prevActiveIds = nowIds
                 }
 
@@ -421,7 +425,6 @@ class MusicStudioViewModel(
             }
 
             _uiState.update { it.copy(isAudioPlaying = false) }
-            _liveGlyphIntensities.value = List(7) { 0 }
             glyphController.turnOffGlyphs()
         }
     }
@@ -430,7 +433,6 @@ class MusicStudioViewModel(
         musicStudioJob?.cancel()
         glyphController.turnOffGlyphs()
         _uiState.update { it.copy(activeProjectId = null) }
-        _liveGlyphIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
         _visualizerData.value = List(16) { 0f }
         energyHistory.forEach { it.clear() }
     }
@@ -559,7 +561,6 @@ class MusicStudioViewModel(
         }
 
         if (anyBeat && now - lastFftPulseTime > MIN_PULSE_INTERVAL) {
-            _liveGlyphIntensities.value = detected
             glyphController.applyGlyphStateWithIntensities(
                 channels.mapIndexed { i, ch -> ch to detected[i] }.toMap(), 100
             )
