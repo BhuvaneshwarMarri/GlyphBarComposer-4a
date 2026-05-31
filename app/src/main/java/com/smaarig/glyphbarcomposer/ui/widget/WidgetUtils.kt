@@ -125,5 +125,17 @@ class PowerOffAction : ActionCallback {
 
         // 2. Kill hardware lights
         GlyphController.getInstance(context).turnOffGlyphs()
+
+        // 3. Reset all Sequence Player widgets' playback state
+        val manager = GlanceAppWidgetManager(context)
+        val playerGlanceIds = manager.getGlanceIds(GlyphSequencePlayerWidget::class.java)
+        playerGlanceIds.forEach { id ->
+            updateAppWidgetState(context, PreferencesGlanceStateDefinition, id) { prefs ->
+                prefs.toMutablePreferences().apply {
+                    this[GlyphSequencePlayerWidget.IS_PLAYING] = false
+                }
+            }
+        }
+        GlyphSequencePlayerWidget().updateAll(context)
     }
 }

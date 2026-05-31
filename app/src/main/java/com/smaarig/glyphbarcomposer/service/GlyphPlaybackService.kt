@@ -93,7 +93,12 @@ class GlyphPlaybackService : Service() {
         Log.d("GlyphPlaybackService", "stopPlayback")
         playbackJob?.cancel()
         playbackJob = null
-        stopSelf()
+        
+        // Reset widget state on stop
+        serviceScope.launch {
+            updateAllWidgets(false)
+            stopSelf()
+        }
     }
 
     private suspend fun updateAllWidgets(isPlaying: Boolean, intensities: String? = null) {

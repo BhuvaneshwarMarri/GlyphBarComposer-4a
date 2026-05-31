@@ -63,16 +63,21 @@ class GlyphSequencePlayerWidget : GlanceAppWidget() {
             contentAlignment = Alignment.Center
         ) {
             if (sequenceId == null) {
-                Text(
-                    text = LocalContext.current.getString(R.string.widget_no_sequence_selected),
-                    style = TextStyle(
-                        color = ColorProvider(Color.White),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center
-                    ),
-                    modifier = GlanceModifier.padding(horizontal = 16.dp)
-                )
+                Column(
+                    modifier = GlanceModifier.fillMaxSize().padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = LocalContext.current.getString(R.string.widget_no_sequence_selected),
+                        style = TextStyle(
+                            color = ColorProvider(Color.White),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center
+                        )
+                    )
+                }
             } else {
                 Row(
                     modifier = GlanceModifier.fillMaxSize().padding(horizontal = 12.dp),

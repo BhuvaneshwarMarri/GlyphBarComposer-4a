@@ -86,7 +86,7 @@ class GlyphComposerHorizontalWidget : GlanceAppWidget() {
         val isActive = intensity > 0
 
         // Circular Square parameters - Optimized size for fixed widget
-        val indicatorSize = if (isActive) 34.dp else 30.dp
+        val indicatorSize = if (isActive) 35.dp else 32.dp
         val cornerRadius = 8.dp
         val backgroundColor = if (isActive) {
             getIntensityColor(intensity)
@@ -124,7 +124,7 @@ class GlyphComposerHorizontalWidget : GlanceAppWidget() {
 @Composable
 private fun MockGlyphDot(intensity: Int) {
     val isActive = intensity > 0
-    val indicatorSize = if (isActive) 34.dp else 30.dp
+    val indicatorSize = if (isActive) 35.dp else 32.dp
     val color = getIntensityColor(intensity)
 
     Box(
