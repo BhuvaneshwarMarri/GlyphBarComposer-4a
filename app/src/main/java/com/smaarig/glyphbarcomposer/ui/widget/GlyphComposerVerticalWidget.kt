@@ -115,18 +115,27 @@ class GlyphComposerVerticalWidget : GlanceAppWidget() {
                 .height(36.dp),
             contentAlignment = GlanceAlignment.Center
         ) {
-            // Indicator "circular square" with clickable area constrained to its shape
+            // Border container
             Box(
                 modifier = GlanceModifier
                     .size(indicatorSize)
                     .cornerRadius(cornerRadius)
-                    .background(backgroundColor)
-                    .clickable(
-                        actionRunCallback<IndividualCycleAction>(
-                            actionParametersOf(WidgetKeys.GlyphIndexKey to index)
+                    .background(Color.White.copy(alpha = 0.15f)),
+                contentAlignment = GlanceAlignment.Center
+            ) {
+                // Main Indicator
+                Box(
+                    modifier = GlanceModifier
+                        .size(indicatorSize - 2.dp)
+                        .cornerRadius(cornerRadius - 1.dp)
+                        .background(backgroundColor)
+                        .clickable(
+                            actionRunCallback<IndividualCycleAction>(
+                                actionParametersOf(WidgetKeys.GlyphIndexKey to index)
+                            )
                         )
-                    )
-            ) {}
+                ) {}
+            }
         }
     }
 }
@@ -150,8 +159,16 @@ private fun MockGlyphDot(intensity: Int) {
             modifier = Modifier
                 .size(indicatorSize)
                 .clip(RoundedCornerShape(8.dp))
-                .background(color)
-        )
+                .background(Color.White.copy(alpha = 0.15f)),
+            contentAlignment = ComposeAlignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(indicatorSize - 2.dp)
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(color)
+            )
+        }
     }
 }
 
