@@ -199,6 +199,7 @@ class HooksViewModel(
         packageName: String,
         appName: String,
         playlistId: Long?,
+        presetName: String?,
         isProgressSync: Boolean,
         notificationType: String = "ALL",
         notificationChannelId: String? = null,
@@ -210,6 +211,7 @@ class HooksViewModel(
                 packageName = packageName,
                 appName = appName,
                 playlistId = playlistId,
+                presetName = presetName,
                 isProgressSync = isProgressSync,
                 notificationType = notificationType,
                 notificationChannelId = notificationChannelId,
@@ -256,19 +258,20 @@ class HooksViewModel(
     fun testHook(hookWithPlaylist: NotificationHookWithPlaylist, context: Context) {
         val hook = hookWithPlaylist.hook
         val playlist = hookWithPlaylist.playlist
+        val presetName = hook.presetName
 
         if (!hook.isEnabled) {
             _testHookResult.value = "Hook is disabled — enable it first"
             return
         }
-        if (playlist == null && !hook.isProgressSync) {
-            _testHookResult.value = "No playlist assigned to this hook"
+        if (playlist == null && presetName == null && !hook.isProgressSync) {
+            _testHookResult.value = "No preset or sequence assigned to this hook"
             return
         }
 
         viewModelScope.launch {
             try {
-                // Create a dedicated test channel in our app
+                // ... (existing notification channel code)
                 val testChannelId = "hook_test_channel"
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     val nm =
@@ -283,8 +286,9 @@ class HooksViewModel(
                     }
                 }
 
+                val targetName = presetName ?: playlist?.name ?: "Unknown"
                 val content =
-                    if (hook.isProgressSync) "Progress Sync Test" else "Trigger Test — ${playlist?.name}"
+                    if (hook.isProgressSync) "Progress Sync Test" else "Trigger Test — $targetName"
 
                 // Build a dummy notification that mimics the target app
                 val notification = NotificationCompat.Builder(context, testChannelId)
@@ -299,15 +303,13 @@ class HooksViewModel(
                 val notifId = (hook.id % Int.MAX_VALUE).toInt() + 10_000
                 NotificationManagerCompat.from(context).notify(notifId, notification)
 
-                // Also directly trigger the glyph sequence via the service,
-                // since the posted notification is from our package (not the target app).
-                // This gives immediate feedback regardless of channel matching.
+                // Also directly trigger the glyph sequence via the service
                 val triggered = GlyphNotificationListenerService.triggerTestForHook(
                     hookWithPlaylist
                 )
 
                 _testHookResult.value = if (triggered) {
-                    val label = if (hook.isProgressSync) "Progress" else "\"${playlist?.name}\""
+                    val label = if (hook.isProgressSync) "Progress" else "\"$targetName\""
                     "✓ Triggered $label for ${hook.appName}"
                 } else {
                     "Notification posted — make sure Glyph permission is granted"

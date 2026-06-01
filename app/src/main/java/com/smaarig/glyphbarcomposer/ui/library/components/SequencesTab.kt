@@ -23,6 +23,7 @@ fun SequencesTab(
     isPlaying: Boolean,
     isPaused: Boolean,
     activeId: Long?,
+    activePresetName: String?,
     playlists: List<PlaylistWithSteps>,
     viewModel: ComposerViewModel,
     onEdit: (PlaylistWithSteps) -> Unit,
@@ -39,7 +40,14 @@ fun SequencesTab(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 presetSequences.forEach { preset ->
-                    PresetCard(preset, false) { viewModel.startPlayback(preset.steps, null) }
+                    val isActive = activePresetName == preset.name
+                    PresetCard(preset, isActive) {
+                        if (isActive && isPlaying) {
+                            viewModel.stopPlayback()
+                        } else {
+                            viewModel.startPlayback(preset.steps, null, preset.name)
+                        }
+                    }
                 }
             }
         }

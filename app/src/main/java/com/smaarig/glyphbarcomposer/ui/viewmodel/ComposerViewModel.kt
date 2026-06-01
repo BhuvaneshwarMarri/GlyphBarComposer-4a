@@ -29,6 +29,7 @@ data class ComposerUiState(
     val isPlaying: Boolean = false,
     val isPaused: Boolean = false,
     val activePlaylistId: Long? = null,
+    val activePresetName: String? = null,
     val editingPlaylistId: Long? = null,
     val selectedChannelIndex: Int = 0,
     val useOldVersion: Boolean = true
@@ -166,7 +167,8 @@ class ComposerViewModel(
         _uiState.update {
             it.copy(
                 glyphIntensities = listOf(0, 0, 0, 0, 0, 0, 0),
-                activePlaylistId = null // Ensure everything is reset
+                activePlaylistId = null,
+                activePresetName = null // Ensure everything is reset
             )
         }
     }
@@ -177,13 +179,13 @@ class ComposerViewModel(
 
     fun stopPlayback() {
         glyphController.stopPlayback()
-        _uiState.update { it.copy(activePlaylistId = null) }
+        _uiState.update { it.copy(activePlaylistId = null, activePresetName = null) }
     }
 
-    fun startPlayback(steps: List<GlyphSequence>, playlistId: Long? = null) {
+    fun startPlayback(steps: List<GlyphSequence>, playlistId: Long? = null, presetName: String? = null) {
         if (steps.isEmpty()) return
         glyphController.playSequence(steps, loop = true)
-        _uiState.update { it.copy(activePlaylistId = playlistId) }
+        _uiState.update { it.copy(activePlaylistId = playlistId, activePresetName = presetName) }
     }
 
     fun savePlaylist(name: String) {

@@ -139,7 +139,9 @@ fun HookItem(
 
                     val subtitle = when {
                         hook.notificationChannelName != null -> hook.notificationChannelName
+                        hook.presetName != null -> "Preset: ${hook.presetName}"
                         playlist != null -> playlist.name
+                        hook.isProgressSync -> "Progress Sync"
                         else -> "Notification Hook"
                     }
 

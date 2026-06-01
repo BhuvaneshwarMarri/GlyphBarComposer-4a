@@ -21,8 +21,9 @@ import com.smaarig.glyphbarcomposer.GlyphApplication
 import com.smaarig.glyphbarcomposer.R
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.data.NotificationHookWithPlaylist
-import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
+import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import com.smaarig.glyphbarcomposer.ui.MainActivity
+import com.smaarig.glyphbarcomposer.ui.library.components.presetSequences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -106,11 +107,23 @@ class GlyphNotificationListenerService : NotificationListenerService() {
                     delay(5000) // Auto-off after 5 seconds
                     svc.glyphController?.turnOffGlyphs()
                 } else {
-                    val playlist = hookWithPlaylist.playlist ?: return@launch
-                    val app = svc.application as GlyphApplication
-                    val playlistWithSteps =
-                        app.repository.getPlaylistWithSteps(playlist.id) ?: return@launch
-                    svc.playSequence(playlistWithSteps)
+                    val presetName = hook.presetName
+                    val playlist = hookWithPlaylist.playlist
+
+                    if (presetName != null) {
+                        // Play preset
+                        val preset = presetSequences.find { it.name == presetName }
+                        if (preset != null) {
+                            svc.playSteps(preset.steps)
+                        }
+                    } else if (playlist != null) {
+                        val app = svc.application as GlyphApplication
+                        val playlistWithSteps =
+                            app.repository.getPlaylistWithSteps(playlist.id) ?: return@launch
+                        svc.playSteps(playlistWithSteps.steps.sortedBy { it.stepIndex }.map {
+                            GlyphSequence(it.channelIntensities, it.durationMs)
+                        })
+                    }
                 }
             }
             return true
@@ -258,17 +271,31 @@ class GlyphNotificationListenerService : NotificationListenerService() {
                     lastProgressHookId = hook.id
                     startProgressPolling()
                 } else {
-                    val playlistId = hook.playlistId ?: continue
-                    val playlistWithSteps = try {
-                        app.repository.getPlaylistWithSteps(playlistId)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error fetching playlist $playlistId: ${e.message}")
-                        null
-                    } ?: continue
+                    val playlistId = hook.playlistId
+                    val presetName = hook.presetName
 
-                    activeJobs[hook.id]?.cancel()
-                    activeJobs[hook.id] = serviceScope.launch {
-                        playSequence(playlistWithSteps)
+                    if (presetName != null) {
+                        val preset = presetSequences.find { it.name == presetName }
+                        if (preset != null) {
+                            activeJobs[hook.id]?.cancel()
+                            activeJobs[hook.id] = serviceScope.launch {
+                                playSteps(preset.steps)
+                            }
+                        }
+                    } else if (playlistId != null) {
+                        val playlistWithSteps = try {
+                            app.repository.getPlaylistWithSteps(playlistId)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error fetching playlist $playlistId: ${e.message}")
+                            null
+                        } ?: continue
+
+                        activeJobs[hook.id]?.cancel()
+                        activeJobs[hook.id] = serviceScope.launch {
+                            playSteps(playlistWithSteps.steps.sortedBy { it.stepIndex }.map {
+                                GlyphSequence(it.channelIntensities, it.durationMs)
+                            })
+                        }
                     }
                 }
             }
@@ -395,8 +422,7 @@ class GlyphNotificationListenerService : NotificationListenerService() {
         }
     }
 
-    internal suspend fun playSequence(playlistWithSteps: PlaylistWithSteps) {
-        val steps = playlistWithSteps.steps.sortedBy { it.stepIndex }
+    internal suspend fun playSteps(steps: List<GlyphSequence>) {
         val rawTotalDuration = steps.sumOf { it.durationMs.toLong() }
         val allowedDuration = if (rawTotalDuration > 1500) 1000L else rawTotalDuration
 

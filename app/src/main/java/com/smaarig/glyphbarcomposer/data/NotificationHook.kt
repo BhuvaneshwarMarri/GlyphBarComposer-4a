@@ -42,6 +42,7 @@ data class NotificationHook(
     val packageName: String,
     val appName: String,
     val playlistId: Long? = null,
+    val presetName: String? = null,
     val isEnabled: Boolean = true,
     val isProgressSync: Boolean = false,
 

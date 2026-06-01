@@ -218,11 +218,12 @@ fun HooksScreen(viewModel: HooksViewModel) {
                 channels = channels,
                 isLoadingChannels = isLoadingChannels,
                 playlists = playlists,
-                onConfirm = { channelId, channelName, playlistId, isProgressSync ->
+                onConfirm = { channelId, channelName, playlistId, presetName, isProgressSync ->
                     viewModel.addHook(
                         packageName = configApp.packageName,
                         appName = configApp.appName,
                         playlistId = playlistId,
+                        presetName = presetName,
                         isProgressSync = isProgressSync,
                         notificationChannelId = channelId,
                         notificationChannelName = channelName

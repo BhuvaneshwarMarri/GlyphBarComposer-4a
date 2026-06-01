@@ -7,7 +7,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.Waves
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.smaarig.glyphbarcomposer.model.GlyphSequence
@@ -33,21 +32,17 @@ val presetSequences = listOf(
     PresetSequence("Pulse", "Steady rhythmic breathing", Icons.Default.Favorite, List(4) { i ->
         GlyphSequence(ch.associateWith { if (i % 2 == 0) 3 else 0 }, 500)
     }),
-    PresetSequence("Wave", "Smooth horizontal sweep", Icons.Default.Waves, List(12) { i ->
-        val active = if (i < 6) i else 11 - i
-        GlyphSequence(mapOf(ch[active.coerceIn(0, 6)] to 3), 80)
-    }),
-    PresetSequence("Strobe", "High intensity flashing", Icons.Default.FlashOn, List(2) { i ->
-        GlyphSequence(ch.associateWith { if (i == 0) 3 else 0 }, 100)
-    }),
     PresetSequence(
         "Knight Rider",
-        "Back and forth pulse",
+        "Classic scanner sweep",
         Icons.AutoMirrored.Filled.DirectionsRun,
         List(10) { i ->
             val active = if (i < 6) i else 10 - i
-            GlyphSequence(mapOf(ch[active.coerceIn(0, 5)] to 3), 100)
+            GlyphSequence(mapOf(ch[active.coerceIn(0, 5)] to 3), 80)
         }),
+    PresetSequence("Strobe", "High intensity flashing", Icons.Default.FlashOn, List(2) { i ->
+        GlyphSequence(ch.associateWith { if (i == 0) 3 else 0 }, 100)
+    }),
     PresetSequence("Fire", "Warm flickering glow", Icons.Default.Whatshot, List(8) {
         val intensities = ch.associateWith { (1..3).random() }
         GlyphSequence(intensities, (80..150).random())
@@ -68,8 +63,11 @@ val presetSequences = listOf(
             GlyphSequence(ch.associateWith { 0 }, 600)
         )
     ),
-    PresetSequence("Matrix", "Digital rain descent", Icons.Default.Code, List(14) { i ->
-        val active = i % 7
-        GlyphSequence(mapOf(ch[active] to 3), 120)
+    PresetSequence("Matrix", "Digital rain descent", Icons.Default.Code, List(7) { i ->
+        GlyphSequence(mapOf(ch[i] to 3), 100)
+    }),
+    PresetSequence("Sparkle", "Random light points", Icons.Default.FlashOn, List(10) {
+        val active = (0..6).random()
+        GlyphSequence(mapOf(ch[active] to (2..3).random()), (50..120).random())
     })
 )

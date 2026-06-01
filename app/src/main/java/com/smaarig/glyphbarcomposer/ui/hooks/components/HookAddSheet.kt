@@ -56,6 +56,7 @@ fun HookAddSheet(
         channelId: String?,
         channelName: String?,
         playlistId: Long?,
+        presetName: String?,
         isProgressSync: Boolean
     ) -> Unit,
     onDismiss: () -> Unit
@@ -63,6 +64,7 @@ fun HookAddSheet(
     val isProgressOnly = selectedApp.isProgressOnly
 
     var selectedPlaylistId by remember { mutableStateOf<Long?>(null) }
+    var selectedPresetName by remember { mutableStateOf<String?>(null) }
     var isProgressSync by remember { mutableStateOf(isProgressOnly) }
 
     Column(
@@ -84,6 +86,7 @@ fun HookAddSheet(
         Spacer(Modifier.height(24.dp))
 
         if (isProgressOnly) {
+            // ... (rest of media app flow remains same)
             // Media app flow: Just show info and confirm
             Surface(
                 shape = RoundedCornerShape(20.dp),
@@ -136,23 +139,46 @@ fun HookAddSheet(
             )
         } else {
             // Regular app flow: Just sequence selection (Channels removed per request)
-            SectionLabel("GLYPH SEQUENCE")
-            Spacer(Modifier.height(12.dp))
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                item {
+                    SectionLabel("PRESET SEQUENCES")
+                    Spacer(Modifier.height(8.dp))
+                }
 
-            if (playlists.isEmpty()) {
-                Text(
-                    "No sequences yet. Create one in the Composer tab first.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFFF5252),
-                    fontWeight = FontWeight.Bold
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 240.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
+                items(com.smaarig.glyphbarcomposer.ui.library.components.presetSequences) { preset ->
+                    PlaylistRow(
+                        name = preset.name,
+                        subtitle = preset.description,
+                        selected = selectedPresetName == preset.name,
+                        onClick = {
+                            selectedPresetName = if (selectedPresetName == preset.name) null else preset.name
+                            selectedPlaylistId = null
+                            isProgressSync = false
+                        }
+                    )
+                }
+
+                item {
+                    Spacer(Modifier.height(16.dp))
+                    SectionLabel("MY SEQUENCES")
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                if (playlists.isEmpty()) {
+                    item {
+                        Text(
+                            "No sequences yet. Create one in the Composer tab first.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFFF5252),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else {
                     items(playlists, key = { it.playlist.id }) { pwSteps ->
                         val pl = pwSteps.playlist
                         PlaylistRow(
@@ -160,9 +186,9 @@ fun HookAddSheet(
                             subtitle = "${pwSteps.steps.size} steps",
                             selected = selectedPlaylistId == pl.id,
                             onClick = {
-                                selectedPlaylistId =
-                                    if (selectedPlaylistId == pl.id) null else pl.id
-                                isProgressSync = false // Standard sequences disable progress sync
+                                selectedPlaylistId = if (selectedPlaylistId == pl.id) null else pl.id
+                                selectedPresetName = null
+                                isProgressSync = false
                             }
                         )
                     }
@@ -195,9 +221,9 @@ fun HookAddSheet(
 
             Button(
                 onClick = {
-                    onConfirm(null, null, selectedPlaylistId, isProgressSync)
+                    onConfirm(null, null, selectedPlaylistId, selectedPresetName, isProgressSync)
                 },
-                enabled = isProgressSync || selectedPlaylistId != null,
+                enabled = isProgressSync || selectedPlaylistId != null || selectedPresetName != null,
                 modifier = Modifier
                     .weight(1f)
                     .height(52.dp),
