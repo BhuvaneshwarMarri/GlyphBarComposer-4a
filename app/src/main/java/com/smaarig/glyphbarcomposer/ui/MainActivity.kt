@@ -6,41 +6,84 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Pattern
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.smaarig.glyphbarcomposer.ui.theme.GlyphBarComposerTheme
 import com.smaarig.glyphbarcomposer.GlyphApplication
 import com.smaarig.glyphbarcomposer.ui.composer.ComposerScreen
+import com.smaarig.glyphbarcomposer.ui.hooks.HooksScreen
 import com.smaarig.glyphbarcomposer.ui.library.LibraryScreen
 import com.smaarig.glyphbarcomposer.ui.patternlab.PatternLabScreen
 import com.smaarig.glyphbarcomposer.ui.studio.MusicStudioScreen
-import com.smaarig.glyphbarcomposer.ui.viewmodel.*
+import com.smaarig.glyphbarcomposer.ui.theme.GlyphBarComposerTheme
+import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.GlyphViewModelFactory
+import com.smaarig.glyphbarcomposer.ui.viewmodel.HooksViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.LibraryViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.PatternLabViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
 import kotlinx.coroutines.delay
+
+val LocalSnackbarHostState = compositionLocalOf<SnackbarHostState> {
+    error("No SnackbarHostState provided")
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,6 +108,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Composer : Screen("composer", "Composer", Icons.Default.MusicNote)
     object PatternLab : Screen("pattern_lab", "Patterns", Icons.Default.Pattern)
     object MusicStudio : Screen("music_studio", "Music Studio", Icons.Default.GraphicEq)
+    object Hooks : Screen("hooks", "Hooks", Icons.Default.NotificationsActive)
     object Library : Screen("library", "Library", Icons.Default.LibraryMusic)
 }
 
@@ -83,6 +127,7 @@ fun MainApp() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val orientation = rememberAppOrientation()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // ── Incoming file intent handler ─────────────────────────────────────────
     // Triggered on cold start and whenever onNewIntent fires (setIntent updates activity.intent).
@@ -110,7 +155,8 @@ fun MainApp() {
                     uri,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
-            } catch (_: SecurityException) { }
+            } catch (_: SecurityException) {
+            }
 
             libraryViewModel.importItem(context, uri)
 
@@ -131,29 +177,59 @@ fun MainApp() {
         Screen.Composer,
         Screen.PatternLab,
         Screen.MusicStudio,
+        Screen.Hooks,
         Screen.Library
     )
 
-    if (orientation == AppOrientation.Landscape && !isSplashScreen) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFF0A0A0A))
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-        ) {
-            ModernNavigationRail(navController, screens)
+    CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
+        if (orientation == AppOrientation.Landscape && !isSplashScreen) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+            ) {
+                ModernNavigationRail(navController, screens)
 
-            Scaffold(
-                modifier = Modifier.weight(1f),
-                containerColor = Color.Transparent,
-                topBar = {
-                    Surface(
-                        color = Color(0xFF0A0A0A),
+                Scaffold(
+                    modifier = Modifier.weight(1f),
+                    containerColor = Color.Transparent,
+                    snackbarHost = { SnackbarHost(snackbarHostState) },
+                    topBar = {
+                        Surface(
+                            color = Color.Black,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                        ) {
+                            GlyphPreviewBar()
+                        }
+                    }
+                ) { innerPadding ->
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                            .fillMaxSize()
+                            .padding(innerPadding)
                     ) {
-                        GlyphPreviewBar()
+                        NavHostContainer(navController, Modifier.fillMaxSize())
+                    }
+                }
+            }
+        } else {
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                containerColor = Color.Black,
+                snackbarHost = { SnackbarHost(snackbarHostState) },
+                topBar = {
+                    if (!isSplashScreen) {
+                        Surface(
+                            color = Color.Black,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                        ) {
+                            GlyphPreviewBar()
+                        }
                     }
                 }
             ) { innerPadding ->
@@ -163,42 +239,17 @@ fun MainApp() {
                         .padding(innerPadding)
                 ) {
                     NavHostContainer(navController, Modifier.fillMaxSize())
-                }
-            }
-        }
-    } else {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = Color(0xFF0A0A0A),
-            topBar = {
-                if (!isSplashScreen) {
-                    Surface(
-                        color = Color(0xFF0A0A0A),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-                    ) {
-                        GlyphPreviewBar()
-                    }
-                }
-            }
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                NavHostContainer(navController, Modifier.fillMaxSize())
 
-                if (!isSplashScreen) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.BottomCenter)
-                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
-                            .padding(horizontal = 24.dp, vertical = 20.dp)
-                    ) {
-                        ModernBottomNavigationBar(navController, screens)
+                    if (!isSplashScreen) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .align(Alignment.BottomCenter)
+                                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+                                .padding(horizontal = 24.dp, vertical = 20.dp)
+                        ) {
+                            ModernBottomNavigationBar(navController, screens)
+                        }
                     }
                 }
             }
@@ -224,6 +275,7 @@ fun NavHostContainer(
         Screen.Composer,
         Screen.PatternLab,
         Screen.MusicStudio,
+        Screen.Hooks,
         Screen.Library
     )
 
@@ -234,7 +286,7 @@ fun NavHostContainer(
         enterTransition = {
             val initialState = initialState.destination.route
             val targetState = targetState.destination.route
-            
+
             val initialIdx = screens.indexOfFirst { it.route == initialState }
             val targetIdx = screens.indexOfFirst { it.route == targetState }
 
@@ -243,23 +295,23 @@ fun NavHostContainer(
                     // Slide to left (moving forward in list)
                     slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(500, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(500))
+                        animationSpec = tween(400, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(400))
                 } else {
                     // Slide to right (moving backward in list)
                     slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(500, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(500))
+                        animationSpec = tween(400, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(400))
                 }
             } else {
-                fadeIn(animationSpec = tween(500))
+                fadeIn(animationSpec = tween(400))
             }
         },
         exitTransition = {
             val initialState = initialState.destination.route
             val targetState = targetState.destination.route
-            
+
             val initialIdx = screens.indexOfFirst { it.route == initialState }
             val targetIdx = screens.indexOfFirst { it.route == targetState }
 
@@ -267,16 +319,16 @@ fun NavHostContainer(
                 if (targetIdx > initialIdx) {
                     slideOutOfContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(500, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(500))
+                        animationSpec = tween(400, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(400))
                 } else {
                     slideOutOfContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(500, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(500))
+                        animationSpec = tween(400, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(400))
                 }
             } else {
-                fadeOut(animationSpec = tween(500))
+                fadeOut(animationSpec = tween(400))
             }
         }
     ) {
@@ -308,6 +360,13 @@ fun NavHostContainer(
             )
             MusicStudioScreen(viewModel = viewModel)
         }
+        composable(Screen.Hooks.route) {
+            val viewModel: HooksViewModel = viewModel(
+                viewModelStoreOwner = activity,
+                factory = factory
+            )
+            HooksScreen(viewModel = viewModel)
+        }
         composable(Screen.Library.route) {
             val viewModel: LibraryViewModel = viewModel(
                 viewModelStoreOwner = activity,
@@ -324,7 +383,8 @@ fun NavHostContainer(
             LibraryScreen(
                 viewModel = viewModel,
                 composerViewModel = composerViewModel,
-                musicStudioViewModel = musicStudioViewModel
+                musicStudioViewModel = musicStudioViewModel,
+                navController = navController
             )
         }
     }
@@ -353,7 +413,7 @@ fun SplashScreen(onTimeout: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0E0E0E)),
+            .background(Color.Black),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

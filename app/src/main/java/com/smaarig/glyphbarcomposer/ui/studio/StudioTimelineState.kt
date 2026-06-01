@@ -2,7 +2,12 @@ package com.smaarig.glyphbarcomposer.ui.studio
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -18,7 +23,7 @@ class StudioTimelineState(
     val density: Density
 ) {
     var pxPerMs by mutableStateOf(initialPxPerMs)
-    
+
     val scrollState: ScrollState get() = horizontalScrollState
 
     /** Logical Dp offset for a given timestamp. Used for layout offsets/widths. */

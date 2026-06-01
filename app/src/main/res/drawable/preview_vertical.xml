@@ -1,0 +1,42 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="56dp"
+    android:height="260dp"
+    android:viewportWidth="56"
+    android:viewportHeight="260">
+
+    <!-- Square 1 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M10,8h20a6,6 0,0 1,6 6v20a6,6 0,0 1,-6 6h-20a6,6 0,0 1,-6 -6v-20a6,6 0,0 1,6 -6z"/>
+
+    <!-- Square 2 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M10,44h20a6,6 0,0 1,6 6v20a6,6 0,0 1,-6 6h-20a6,6 0,0 1,-6 -6v-20a6,6 0,0 1,6 -6z"/>
+
+    <!-- Square 3 -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M10,80h20a6,6 0,0 1,6 6v20a6,6 0,0 1,-6 6h-20a6,6 0,0 1,-6 -6v-20a6,6 0,0 1,6 -6z"/>
+
+    <!-- Square 4 -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M10,116h20a6,6 0,0 1,6 6v20a6,6 0,0 1,-6 6h-20a6,6 0,0 1,-6 -6v-20a6,6 0,0 1,6 -6z"/>
+
+    <!-- Square 5 -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M10,152h20a6,6 0,0 1,6 6v20a6,6 0,0 1,-6 6h-20a6,6 0,0 1,-6 -6v-20a6,6 0,0 1,6 -6z"/>
+
+    <!-- Square 6 -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M10,188h20a6,6 0,0 1,6 6v20a6,6 0,0 1,-6 6h-20a6,6 0,0 1,-6 -6v-20a6,6 0,0 1,6 -6z"/>
+
+    <!-- Square 7 -->
+    <path
+        android:fillColor="#FF1744"
+        android:pathData="M10,224h20a6,6 0,0 1,6 6v20a6,6 0,0 1,-6 6h-20a6,6 0,0 1,-6 -6v-20a6,6 0,0 1,6 -6z"/>
+
+</vector>

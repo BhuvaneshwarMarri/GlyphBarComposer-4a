@@ -1,7 +1,11 @@
 package com.smaarig.glyphbarcomposer.ui.library.components
 
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -21,21 +25,34 @@ fun SequencesTab(
     activeId: Long?,
     playlists: List<PlaylistWithSteps>,
     viewModel: ComposerViewModel,
+    onEdit: (PlaylistWithSteps) -> Unit,
     onShare: (PlaylistWithSteps) -> Unit
 ) {
-    LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         item { SectionLabel("GLYPH  PRESETS") }
         item {
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 presetSequences.forEach { preset ->
                     PresetCard(preset, false) { viewModel.startPlayback(preset.steps, null) }
                 }
             }
         }
-        
+
         item { SectionLabel("MY SEQUENCES") }
         if (playlists.isEmpty()) {
-            item { EmptyStateView(Icons.Default.Create, "No Sequences", "Create one in the Composer tab") }
+            item {
+                EmptyStateView(
+                    Icons.Default.Create,
+                    "No Sequences",
+                    "Create one in the Composer tab"
+                )
+            }
         } else {
             items(playlists, key = { it.playlist.id }) { playlist ->
                 SavedSequenceCard(
@@ -43,8 +60,9 @@ fun SequencesTab(
                     isActive = activeId == playlist.playlist.id,
                     isPlaying = isPlaying,
                     isPaused = isPaused,
-                    onPlay = { viewModel.playSequence(playlist) }, 
+                    onPlay = { viewModel.playSequence(playlist) },
                     onDelete = { viewModel.deletePlaylist(playlist.playlist) },
+                    onEdit = { onEdit(playlist) },
                     onShare = { onShare(playlist) }
                 )
             }

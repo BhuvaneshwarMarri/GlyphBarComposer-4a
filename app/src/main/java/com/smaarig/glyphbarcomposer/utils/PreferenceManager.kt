@@ -4,7 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 
 class PreferenceManager(context: Context) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("glyph_prefs", Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences =
+        context.getSharedPreferences("glyph_prefs", Context.MODE_PRIVATE)
 
     companion object {
         private const val KEY_USE_OLD_VERSION = "use_old_version"

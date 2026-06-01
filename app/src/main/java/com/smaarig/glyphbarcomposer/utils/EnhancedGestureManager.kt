@@ -7,10 +7,12 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import kotlin.math.sqrt
 
-class EnhancedGestureManager(context: Context, private val onTrigger: () -> Unit) : SensorEventListener {
-    private var sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+class EnhancedGestureManager(context: Context, private val onTrigger: () -> Unit) :
+    SensorEventListener {
+    private var sensorManager: SensorManager =
+        context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private var accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-    
+
     // ── Shake Settings ───────────────────────────────────────────────────
     private var lastAcceleration = 0f
     private var currentAcceleration = 0f
@@ -39,18 +41,18 @@ class EnhancedGestureManager(context: Context, private val onTrigger: () -> Unit
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null) return
-        
+
         val x = event.values[0]
         val y = event.values[1]
         val z = event.values[2]
-        
+
         val now = System.currentTimeMillis()
 
         // 1. Detect Shake (Gentle)
         lastAcceleration = currentAcceleration
         currentAcceleration = sqrt(x * x + y * y + z * z)
         val delta = currentAcceleration - lastAcceleration
-        
+
         if (delta > shakeThreshold) {
             if (now - lastShakeTime > 2000) {
                 lastShakeTime = now

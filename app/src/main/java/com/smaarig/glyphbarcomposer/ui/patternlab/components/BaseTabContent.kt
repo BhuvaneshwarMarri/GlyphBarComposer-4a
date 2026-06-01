@@ -2,7 +2,11 @@ package com.smaarig.glyphbarcomposer.ui.patternlab.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -45,18 +49,50 @@ fun BaseTabContent(
         ) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f).clickable { onPick() }) {
-                        Text(title, color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        Text(name ?: "Select Sequence...", color = if (name != null) Color.White else Color(0xFF444444), fontWeight = FontWeight.Black, fontSize = 18.sp, maxLines = 1)
+                    Column(Modifier
+                        .weight(1f)
+                        .clickable { onPick() }) {
+                        Text(
+                            title,
+                            color = Color.Gray,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            name ?: "Select Sequence...",
+                            color = if (name != null) Color.White else Color(0xFF444444),
+                            fontWeight = FontWeight.Black,
+                            fontSize = 18.sp,
+                            maxLines = 1
+                        )
                     }
                     Icon(Icons.Default.ArrowDropDown, null, tint = Color.Gray)
                 }
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LabToggleButton(icon = Icons.Default.InvertColors, label = "Invert", active = inverted) { onInvertChange(!inverted) }
-                    LabToggleButton(icon = Icons.Default.Flip, label = "Mirror", active = mirrored) { onMirrorChange(!mirrored) }
-                    LabToggleButton(icon = Icons.AutoMirrored.Filled.Undo, label = "Reverse", active = reversed) { onReverseChange(!reversed) }
-                    LabToggleButton(icon = Icons.Default.SyncAlt, label = "Ping-Pong", active = pingPong) { onPingPongChange(!pingPong) }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    LabToggleButton(
+                        icon = Icons.Default.InvertColors,
+                        label = "Invert",
+                        active = inverted
+                    ) { onInvertChange(!inverted) }
+                    LabToggleButton(
+                        icon = Icons.Default.Flip,
+                        label = "Mirror",
+                        active = mirrored
+                    ) { onMirrorChange(!mirrored) }
+                    LabToggleButton(
+                        icon = Icons.AutoMirrored.Filled.Undo,
+                        label = "Reverse",
+                        active = reversed
+                    ) { onReverseChange(!reversed) }
+                    LabToggleButton(
+                        icon = Icons.Default.SyncAlt,
+                        label = "Ping-Pong",
+                        active = pingPong
+                    ) { onPingPongChange(!pingPong) }
                 }
             }
         }
@@ -67,7 +103,13 @@ fun BaseTabContent(
             border = BorderStroke(1.dp, Color(0xFF222222))
         ) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                LabSliderRow("Speed", "${"%.1f".format(speed)}x", speed, 0.5f..2.0f, onValueChange = onSpeedChange)
+                LabSliderRow(
+                    "Speed",
+                    "${"%.1f".format(speed)}x",
+                    speed,
+                    0.5f..2.0f,
+                    onValueChange = onSpeedChange
+                )
             }
         }
     }

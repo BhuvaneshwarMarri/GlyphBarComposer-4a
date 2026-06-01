@@ -20,7 +20,10 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun LabToggleButton(icon: ImageVector, label: String, active: Boolean, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
         IconButton(
             onClick = onClick,
             modifier = Modifier
@@ -28,8 +31,18 @@ fun LabToggleButton(icon: ImageVector, label: String, active: Boolean, onClick: 
                 .clip(RoundedCornerShape(12.dp))
                 .background(if (active) Color.White else Color(0xFF1A1A1A))
         ) {
-            Icon(icon, null, tint = if (active) Color.Black else Color.Gray, modifier = Modifier.size(20.dp))
+            Icon(
+                icon,
+                null,
+                tint = if (active) Color.Black else Color.Gray,
+                modifier = Modifier.size(20.dp)
+            )
         }
-        Text(label, color = if (active) Color.White else Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Text(
+            label,
+            color = if (active) Color.White else Color.Gray,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }

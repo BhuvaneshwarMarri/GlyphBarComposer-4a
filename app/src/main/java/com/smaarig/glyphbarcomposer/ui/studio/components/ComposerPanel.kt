@@ -9,15 +9,36 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,7 +72,10 @@ fun ComposerPanel(
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, Color(0xFF222222))
     ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -69,11 +93,19 @@ fun ComposerPanel(
                         color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold
                     )
                 }
-                
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     if (anyActive && !isPlaying) {
                         IconButton(onClick = onClear, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Refresh, null, tint = Color.Gray, modifier = Modifier.size(18.dp))
+                            Icon(
+                                Icons.Default.Refresh,
+                                null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
                 }
@@ -96,8 +128,8 @@ fun ComposerPanel(
                         .weight(1f)
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color(0xFF1A1A1A))
-                        .clickable { 
-                            val next = when(defaultDuration) {
+                        .clickable {
+                            val next = when (defaultDuration) {
                                 100 -> 200; 200 -> 300; 300 -> 500; 500 -> 800; else -> 100
                             }
                             onDurationChange(next)
@@ -106,9 +138,19 @@ fun ComposerPanel(
                     contentAlignment = Alignment.CenterStart
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Timer, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                        Icon(
+                            Icons.Default.Timer,
+                            null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(Modifier.width(8.dp))
-                        Text("${defaultDuration}ms", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "${defaultDuration}ms",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
 
@@ -116,8 +158,10 @@ fun ComposerPanel(
                     onClick = onInsert,
                     enabled = canInsert,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White, contentColor = Color.Black,
-                        disabledContainerColor = Color(0xFF1A1A1A), disabledContentColor = Color(0xFF333333)
+                        containerColor = Color.White,
+                        contentColor = Color.Black,
+                        disabledContainerColor = Color(0xFF1A1A1A),
+                        disabledContentColor = Color(0xFF333333)
                     ),
                     shape = RoundedCornerShape(16.dp),
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
@@ -236,7 +280,7 @@ fun IntensityFader(
                 targetValue = intensity / 3f,
                 animationSpec = spring(stiffness = Spring.StiffnessLow)
             )
-            
+
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -252,7 +296,9 @@ fun IntensityFader(
 
             // Visual markers
             Column(
-                modifier = Modifier.fillMaxSize().padding(vertical = 12.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(vertical = 12.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -261,7 +307,11 @@ fun IntensityFader(
                         Modifier
                             .width(8.dp)
                             .height(1.dp)
-                            .background(if ((3-i) <= intensity && intensity > 0) Color.White.copy(0.4f) else Color.White.copy(0.05f))
+                            .background(
+                                if ((3 - i) <= intensity && intensity > 0) Color.White.copy(
+                                    0.4f
+                                ) else Color.White.copy(0.05f)
+                            )
                     )
                 }
             }

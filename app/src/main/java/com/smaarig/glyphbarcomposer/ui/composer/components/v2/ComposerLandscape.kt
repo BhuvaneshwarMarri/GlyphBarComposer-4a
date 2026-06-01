@@ -1,7 +1,12 @@
 package com.smaarig.glyphbarcomposer.ui.composer.components.v2
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,7 +48,9 @@ fun ComposerLandscape(
             ) {
                 // Left Panel: Horizontal Glyphs & Horizontal Controls
                 Column(
-                    modifier = Modifier.weight(1.3f).fillMaxHeight(),
+                    modifier = Modifier
+                        .weight(1.3f)
+                        .fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     LandscapeGlyphsRow(uiState, viewModel, Modifier.weight(1f))
@@ -54,7 +61,9 @@ fun ComposerLandscape(
                 DraggableTimeline(
                     uiState = uiState,
                     viewModel = viewModel,
-                    modifier = Modifier.weight(1f).fillMaxHeight()
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
                 )
             }
         }

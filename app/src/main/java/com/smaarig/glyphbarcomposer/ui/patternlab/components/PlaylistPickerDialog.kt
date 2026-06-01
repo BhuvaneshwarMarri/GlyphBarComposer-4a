@@ -34,17 +34,30 @@ fun PlaylistPickerDialog(
                 LazyColumn(Modifier.heightIn(max = 300.dp)) {
                     items(playlists) { p ->
                         Surface(
-                            modifier = Modifier.fillMaxWidth().clickable { onSelect(p) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(p) },
                             color = Color.Transparent
                         ) {
-                            Text(p.playlist.name, modifier = Modifier.padding(16.dp), color = Color.White, fontWeight = FontWeight.Bold)
+                            Text(
+                                p.playlist.name,
+                                modifier = Modifier.padding(16.dp),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("CANCEL", color = Color.White, fontWeight = FontWeight.Black) }
+            TextButton(onClick = onDismiss) {
+                Text(
+                    "CANCEL",
+                    color = Color.White,
+                    fontWeight = FontWeight.Black
+                )
+            }
         },
         containerColor = Color(0xFF111111),
         shape = RoundedCornerShape(28.dp)

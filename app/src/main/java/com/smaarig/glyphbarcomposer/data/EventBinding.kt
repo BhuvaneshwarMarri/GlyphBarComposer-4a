@@ -1,6 +1,11 @@
 package com.smaarig.glyphbarcomposer.data
 
-import androidx.room.*
+import androidx.room.Embedded
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
+import androidx.room.Relation
 
 @Entity(
     tableName = "event_bindings",

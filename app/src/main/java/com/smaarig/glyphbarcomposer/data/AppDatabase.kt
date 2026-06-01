@@ -8,14 +8,15 @@ import androidx.room.TypeConverters
 
 @Database(
     entities = [
-        Playlist::class, 
-        SequenceStep::class, 
-        EventBinding::class, 
-        MusicStudioProject::class, 
+        Playlist::class,
+        SequenceStep::class,
+        EventBinding::class,
+        MusicStudioProject::class,
         MusicStudioEvent::class,
-        ContactBinding::class
+        ContactBinding::class,
+        NotificationHook::class
     ],
-    version = 7,
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -33,8 +34,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "glyph_database"
                 )
-                .fallbackToDestructiveMigration()
-                .build()
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }

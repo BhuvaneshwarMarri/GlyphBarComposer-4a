@@ -2,13 +2,33 @@ package com.smaarig.glyphbarcomposer.ui.composer.components.v1
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,57 +50,34 @@ fun ComposerScreenOld(
     var fileName by remember { mutableStateOf("") }
 
     if (showSaveDialog) {
-        AlertDialog(
-            onDismissRequest = { showSaveDialog = false },
-            title = { Text("Save Sequence", color = Color.White, fontWeight = FontWeight.Black) },
-            text = {
-                TextField(
-                    value = fileName,
-                    onValueChange = { fileName = it },
-                    placeholder = { Text("Sequence Name", color = Color.Gray) },
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF1A1A1A),
-                        unfocusedContainerColor = Color(0xFF1A1A1A),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        cursorColor = Color.White
-                    )
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (fileName.isNotBlank()) {
-                        viewModel.savePlaylist(fileName)
-                        showSaveDialog = false
-                        fileName = ""
-                    }
-                }) {
-                    Text("SAVE", color = Color(0xFF00C853), fontWeight = FontWeight.Black)
+        com.smaarig.glyphbarcomposer.ui.StyledSaveDialog(
+            title = "Save Sequence",
+            value = fileName,
+            onValueChange = { fileName = it },
+            onSave = {
+                if (fileName.isNotBlank()) {
+                    viewModel.savePlaylist(fileName)
+                    showSaveDialog = false
+                    fileName = ""
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) {
-                    Text("CANCEL", color = Color.Gray)
-                }
-            },
-            containerColor = Color(0xFF111111),
-            shape = RoundedCornerShape(28.dp)
+            onDismiss = { showSaveDialog = false },
+            placeholder = "Sequence Name"
         )
     }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.8f),
+            .fillMaxHeight(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(24.dp))
                 .background(Color(0xFF0C0C0C))
-                .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(16.dp))
+                .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(24.dp))
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -132,9 +129,9 @@ fun ComposerScreenOld(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(24.dp))
                 .background(Color(0xFF0C0C0C))
-                .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(16.dp))
+                .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(24.dp))
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
@@ -178,7 +175,7 @@ fun ComposerScreenOld(
                     containerColor = Color.White,
                     contentColor = Color.Black
                 ),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(20.dp)
             ) {
                 Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
@@ -190,9 +187,9 @@ fun ComposerScreenOld(
                     onClick = viewModel::clearSequence,
                     modifier = Modifier
                         .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(20.dp))
                         .background(Color(0xFF1A1A1A))
-                        .border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(12.dp))
+                        .border(1.dp, Color(0xFF2A2A2A), RoundedCornerShape(20.dp))
                 ) {
                     Icon(
                         Icons.Default.DeleteSweep,
@@ -209,7 +206,12 @@ fun ComposerScreenOld(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text("TIMELINE", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-            DraggableTimelineHorizontal(uiState, viewModel, onSaveRequest = { showSaveDialog = true })
+            DraggableTimelineHorizontal(
+                uiState,
+                viewModel,
+                onSaveRequest = { showSaveDialog = true })
         }
+
+        Spacer(Modifier.height(120.dp))
     }
 }

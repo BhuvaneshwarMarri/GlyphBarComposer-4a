@@ -3,7 +3,18 @@ package com.smaarig.glyphbarcomposer.ui.composer.components.v1
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -18,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,14 +50,21 @@ fun DraggableTimelineHorizontal(
 ) {
     val listState = rememberLazyListState()
 
+    // Auto-scroll to end when a new step is added
+    LaunchedEffect(uiState.currentSequenceSteps.size) {
+        if (uiState.currentSequenceSteps.isNotEmpty()) {
+            listState.animateScrollToItem(uiState.currentSequenceSteps.size - 1)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .background(Color(0xFF0C0C0C))
             .border(1.dp, Color(0xFF1A1A1A), RoundedCornerShape(20.dp))
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Box(
             modifier = Modifier
@@ -106,8 +125,10 @@ fun DraggableTimelineHorizontal(
                                 )
                                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                                     repeat(7) { i ->
-                                        val intensityVal = step.channelIntensities[getChannelForIndex(i)] ?: 0
-                                        val finalIntensity = if (i == 6 && intensityVal > 0) 6 else intensityVal
+                                        val intensityVal =
+                                            step.channelIntensities[getChannelForIndex(i)] ?: 0
+                                        val finalIntensity =
+                                            if (i == 6 && intensityVal > 0) 6 else intensityVal
                                         Box(
                                             modifier = Modifier
                                                 .size(width = 4.dp, height = 14.dp)
@@ -135,6 +156,8 @@ fun DraggableTimelineHorizontal(
                 }
             }
         }
+
+        Spacer(Modifier.height(4.dp))
 
         if (uiState.currentSequenceSteps.isNotEmpty()) {
             Row(

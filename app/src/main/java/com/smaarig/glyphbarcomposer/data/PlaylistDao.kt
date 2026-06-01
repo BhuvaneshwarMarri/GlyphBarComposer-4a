@@ -1,6 +1,12 @@
 package com.smaarig.glyphbarcomposer.data
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Transaction
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -9,10 +15,10 @@ interface PlaylistDao {
     @Query("SELECT * FROM playlists")
     fun getAllPlaylists(): Flow<List<PlaylistWithSteps>>
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlaylist(playlist: Playlist): Long
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSteps(steps: List<SequenceStep>)
 
     @Delete
@@ -29,10 +35,10 @@ interface PlaylistDao {
     suspend fun deleteEventBinding(binding: EventBinding)
 
     // Music Studio
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMusicProject(project: MusicStudioProject): Long
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMusicEvents(events: List<MusicStudioEvent>)
 
     @Transaction
@@ -64,7 +70,35 @@ interface PlaylistDao {
     @Query("SELECT * FROM contact_bindings WHERE contactId = :contactId LIMIT 1")
     suspend fun getContactBinding(contactId: String): ContactBindingWithPlaylist?
 
+    // Notification Hooks
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertNotificationHook(hook: NotificationHook)
+
+    @Transaction
+    @Query("SELECT * FROM notification_hooks")
+    fun getAllNotificationHooks(): Flow<List<NotificationHookWithPlaylist>>
+
+    @Transaction
+    @Query("SELECT * FROM notification_hooks")
+    suspend fun getNotificationHooksList(): List<NotificationHookWithPlaylist>
+
+    @Delete
+    suspend fun deleteNotificationHook(hook: NotificationHook)
+
+    @Transaction
+    @Query("SELECT * FROM notification_hooks WHERE packageName = :packageName AND isEnabled = 1")
+    suspend fun getHooksForPackage(packageName: String): List<NotificationHookWithPlaylist>
+
+    @Query("SELECT * FROM notification_hooks WHERE id = :hookId LIMIT 1")
+    suspend fun getNotificationHookById(hookId: Long): NotificationHook?
+
     @Transaction
     @Query("SELECT * FROM playlists WHERE id = :playlistId LIMIT 1")
     suspend fun getPlaylistWithSteps(playlistId: Long): PlaylistWithSteps?
+
+    @Query("DELETE FROM sequence_steps WHERE playlistId = :playlistId")
+    suspend fun deleteStepsForPlaylist(playlistId: Long)
+
+    @Query("DELETE FROM music_studio_events WHERE projectId = :projectId")
+    suspend fun deleteEventsForProject(projectId: Long)
 }

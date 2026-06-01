@@ -1,43 +1,79 @@
 package com.smaarig.glyphbarcomposer.ui
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BatteryChargingFull
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.currentBackStackEntryAsState
-import com.smaarig.glyphbarcomposer.controller.GlyphController
-import com.smaarig.glyphbarcomposer.service.BatteryService
-import androidx.core.content.ContextCompat
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
+import androidx.lifecycle.LifecycleOwner
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
+import com.smaarig.glyphbarcomposer.controller.GlyphController
+import com.smaarig.glyphbarcomposer.service.BatteryService
+import com.smaarig.glyphbarcomposer.ui.theme.nothingFont
 
 // ─── Intensity palette ──────────────────────────────────────────────────────
 val intensityColor = listOf(
@@ -61,6 +97,57 @@ val intensityBorder = listOf(
 )
 
 @Composable
+fun ScreenHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    actions: @Composable RowScope.() -> Unit = {}
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Column {
+                Text(
+                    title.uppercase(),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp,
+                    fontFamily = nothingFont,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (subtitle != null) {
+                    Text(
+                        subtitle.uppercase(),
+                        color = Color.Gray,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        fontFamily = nothingFont,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End,
+            content = actions
+        )
+    }
+}
+
+@Composable
 fun SectionLabel(text: String) {
     Text(text, color = Color(0xFF666666), fontSize = 11.sp, modifier = Modifier.fillMaxWidth())
 }
@@ -76,12 +163,56 @@ fun getChannelForIndex(index: Int): Int = when (index) {
     else -> 0
 }
 
+val glyphChannels = listOf(
+    com.nothing.ketchum.Glyph.Code_25111.A_1,
+    com.nothing.ketchum.Glyph.Code_25111.A_2,
+    com.nothing.ketchum.Glyph.Code_25111.A_3,
+    com.nothing.ketchum.Glyph.Code_25111.A_4,
+    com.nothing.ketchum.Glyph.Code_25111.A_5,
+    com.nothing.ketchum.Glyph.Code_25111.A_6,
+    com.nothing.ketchum.Glyph.Code_22111.E1
+)
+
+@Composable
+fun YouTubePlayer(
+    videoId: String,
+    lifecycleOwner: LifecycleOwner,
+    modifier: Modifier = Modifier
+) {
+    AndroidView(
+        factory = { context ->
+            YouTubePlayerView(context).apply {
+                enableAutomaticInitialization = false
+                lifecycleOwner.lifecycle.addObserver(this)
+
+                val options = IFramePlayerOptions.Builder(context)
+                    .controls(1) // Show YouTube controls
+                    .fullscreen(0) // Disable fullscreen to prevent crash in dialog
+                    .build()
+
+                initialize(object : AbstractYouTubePlayerListener() {
+                    override fun onReady(youTubePlayer: YouTubePlayer) {
+                        youTubePlayer.cueVideo(videoId, 0f)
+                    }
+                }, options)
+            }
+        },
+        onRelease = { it.release() },
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(16 / 9f)
+            .clip(RoundedCornerShape(12.dp))
+    )
+}
+
 @Composable
 fun GlyphPreviewBar(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val glyphController = remember { GlyphController.getInstance(context) }
     val intensities by glyphController.currentIntensities.collectAsState()
     val isBatteryEnabled by glyphController.isBatteryFeatureEnabled.collectAsState()
+    var showHelpDialog by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -92,6 +223,67 @@ fun GlyphPreviewBar(modifier: Modifier = Modifier) {
         }
     }
 
+    if (showHelpDialog) {
+        AlertDialog(
+            onDismissRequest = { showHelpDialog = false },
+            title = {
+                Text(
+                    text = "HELP & TUTORIAL",
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontFamily = nothingFont,
+                    letterSpacing = 1.sp
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "To better understand how to use the GlyphBar Composer, we recommend watching this tutorial video:",
+                        color = Color.Gray,
+                        fontFamily = nothingFont,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp
+                    )
+                    Spacer(Modifier.height(16.dp))
+
+                    // Embed YouTube Player directly
+                    YouTubePlayer(
+                        videoId = "dQw4w9WgXcQ", // ID from the provided URL
+                        lifecycleOwner = lifecycleOwner
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    val videoUrl = "https://youtu.be/dQw4w9WgXcQ?si=3mdmf20EWUm6b7bS"
+                    Text(
+                        text = "Watch on YouTube",
+                        color = Color(0xFF0086EA),
+                        fontFamily = nothingFont,
+                        fontSize = 13.sp,
+                        textDecoration = TextDecoration.Underline,
+                        modifier = Modifier.clickable {
+                            val intent = Intent(Intent.ACTION_VIEW, videoUrl.toUri())
+                            context.startActivity(intent)
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showHelpDialog = false }) {
+                    Text(
+                        "GOT IT",
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        fontFamily = nothingFont,
+                        letterSpacing = 1.sp
+                    )
+                }
+            },
+            containerColor = Color(0xFF111111),
+            shape = RoundedCornerShape(28.dp)
+        )
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -99,7 +291,22 @@ fun GlyphPreviewBar(modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Box(modifier = Modifier.width(70.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.width(70.dp)
+        ) {
+            IconButton(
+                onClick = { showHelpDialog = true },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.HelpOutline,
+                    contentDescription = "Help",
+                    tint = Color.Gray,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -107,7 +314,8 @@ fun GlyphPreviewBar(modifier: Modifier = Modifier) {
         ) {
             intensities.forEachIndexed { index, intensity ->
                 val isRedGlyph = index == 6
-                val finalIntensity = if (isRedGlyph && intensity > 0 && intensity < 4) 6 else intensity
+                val finalIntensity =
+                    if (isRedGlyph && intensity > 0 && intensity < 4) 6 else intensity
                 val color = intensityColor.getOrElse(finalIntensity) { Color(0xFF1C1C1C) }
 
                 Box(
@@ -214,7 +422,9 @@ fun ModernBottomNavigationBar(navController: NavHostController, screens: List<Sc
                         imageVector = screen.icon,
                         contentDescription = null,
                         tint = animatedColor,
-                        modifier = Modifier.size(24.dp).scale(animatedScale)
+                        modifier = Modifier
+                            .size(24.dp)
+                            .scale(animatedScale)
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
@@ -236,43 +446,49 @@ fun ModernNavigationRail(navController: NavHostController, screens: List<Screen>
     val currentRoute = navBackStackEntry?.destination?.route
 
     NavigationRail(
-        containerColor = Color(0xFF111111),
+        containerColor = Color.Black,
         header = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 24.dp),
+                    .padding(top = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Box(
                     Modifier
-                        .size(36.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(0.05f))
                         .border(1.dp, Color.White.copy(0.1f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(Modifier.size(10.dp).clip(CircleShape).background(Color.White))
+                    Box(
+                        Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                    )
                 }
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(16.dp))
             }
         },
         // No windowInsetsPadding here – avoids double-consuming insets on rotation
         modifier = Modifier
             .fillMaxHeight()
-            .width(80.dp)
+            .width(72.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxHeight()
-                .padding(bottom = 24.dp),
+                .padding(bottom = 16.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             screens.forEach { screen ->
                 val selected = currentRoute == screen.route
                 val animatedScale by animateFloatAsState(
-                    targetValue = if (selected) 1.25f else 1f,
+                    targetValue = if (selected) 1.2f else 1f,
                     label = "railScale"
                 )
 
@@ -290,7 +506,9 @@ fun ModernNavigationRail(navController: NavHostController, screens: List<Screen>
                         Icon(
                             imageVector = screen.icon,
                             contentDescription = screen.label,
-                            modifier = Modifier.size(24.dp).scale(animatedScale)
+                            modifier = Modifier
+                                .size(24.dp)
+                                .scale(animatedScale)
                         )
                     },
                     label = null,
@@ -301,7 +519,7 @@ fun ModernNavigationRail(navController: NavHostController, screens: List<Screen>
                         indicatorColor = Color.White.copy(0.12f)
                     )
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
             }
         }
     }

@@ -1,7 +1,19 @@
 package com.smaarig.glyphbarcomposer.repository
 
 import android.util.Log
-import com.smaarig.glyphbarcomposer.data.*
+import com.smaarig.glyphbarcomposer.data.ContactBinding
+import com.smaarig.glyphbarcomposer.data.ContactBindingWithPlaylist
+import com.smaarig.glyphbarcomposer.data.EventBinding
+import com.smaarig.glyphbarcomposer.data.EventBindingWithPlaylist
+import com.smaarig.glyphbarcomposer.data.MusicProjectWithEvents
+import com.smaarig.glyphbarcomposer.data.MusicStudioEvent
+import com.smaarig.glyphbarcomposer.data.MusicStudioProject
+import com.smaarig.glyphbarcomposer.data.NotificationHook
+import com.smaarig.glyphbarcomposer.data.NotificationHookWithPlaylist
+import com.smaarig.glyphbarcomposer.data.Playlist
+import com.smaarig.glyphbarcomposer.data.PlaylistDao
+import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
+import com.smaarig.glyphbarcomposer.data.SequenceStep
 import kotlinx.coroutines.flow.Flow
 
 class GlyphRepository(private val playlistDao: PlaylistDao) {
@@ -10,11 +22,20 @@ class GlyphRepository(private val playlistDao: PlaylistDao) {
     val allPlaylists: Flow<List<PlaylistWithSteps>> = playlistDao.getAllPlaylists()
     val allMusicProjects: Flow<List<MusicProjectWithEvents>> = playlistDao.getAllMusicProjects()
     val allEventBindings: Flow<List<EventBindingWithPlaylist>> = playlistDao.getAllEventBindings()
-    val allContactBindings: Flow<List<ContactBindingWithPlaylist>> = playlistDao.getAllContactBindings()
+    val allContactBindings: Flow<List<ContactBindingWithPlaylist>> =
+        playlistDao.getAllContactBindings()
+    val allNotificationHooks: Flow<List<NotificationHookWithPlaylist>> =
+        playlistDao.getAllNotificationHooks()
 
     suspend fun savePlaylist(playlist: Playlist, steps: List<SequenceStep>) {
         Log.d(TAG, "Saving playlist: ${playlist.name} with ${steps.size} steps")
-        val id = playlistDao.insertPlaylist(playlist)
+        val id = if (playlist.id != 0L) {
+            playlistDao.insertPlaylist(playlist)
+            playlistDao.deleteStepsForPlaylist(playlist.id)
+            playlist.id
+        } else {
+            playlistDao.insertPlaylist(playlist)
+        }
         val stepsWithId = steps.map { it.copy(playlistId = id) }
         playlistDao.insertSteps(stepsWithId)
     }
@@ -26,7 +47,13 @@ class GlyphRepository(private val playlistDao: PlaylistDao) {
 
     suspend fun saveMusicProject(project: MusicStudioProject, events: List<MusicStudioEvent>) {
         Log.d(TAG, "Saving music project: ${project.name} with ${events.size} events")
-        val id = playlistDao.insertMusicProject(project)
+        val id = if (project.id != 0L) {
+            playlistDao.insertMusicProject(project)
+            playlistDao.deleteEventsForProject(project.id)
+            project.id
+        } else {
+            playlistDao.insertMusicProject(project)
+        }
         val eventsWithId = events.map { it.copy(projectId = id) }
         playlistDao.insertMusicEvents(eventsWithId)
     }
@@ -61,7 +88,25 @@ class GlyphRepository(private val playlistDao: PlaylistDao) {
         playlistDao.deleteContactBinding(binding)
     }
 
+    suspend fun saveNotificationHook(hook: NotificationHook) {
+        Log.d(TAG, "Saving notification hook for package: ${hook.packageName}")
+        playlistDao.insertNotificationHook(hook)
+    }
+
+    suspend fun deleteNotificationHook(hook: NotificationHook) {
+        Log.d(TAG, "Deleting notification hook for package: ${hook.packageName}")
+        playlistDao.deleteNotificationHook(hook)
+    }
+
+    suspend fun getHooksForPackage(packageName: String): List<NotificationHookWithPlaylist> {
+        return playlistDao.getHooksForPackage(packageName)
+    }
+
     suspend fun getPlaylistWithSteps(playlistId: Long): PlaylistWithSteps? {
         return playlistDao.getPlaylistWithSteps(playlistId)
+    }
+
+    suspend fun getNotificationHookSync(hookId: Long): NotificationHook? {
+        return playlistDao.getNotificationHookById(hookId)
     }
 }

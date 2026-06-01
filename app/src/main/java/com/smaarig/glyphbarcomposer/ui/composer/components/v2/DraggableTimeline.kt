@@ -2,7 +2,19 @@ package com.smaarig.glyphbarcomposer.ui.composer.components.v2
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -11,13 +23,23 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,43 +62,40 @@ fun DraggableTimeline(
     var showSaveDialog by remember { mutableStateOf(false) }
     var fileName by remember { mutableStateOf("") }
 
+    val settledIdx = remember { derivedStateOf { listState.firstVisibleItemIndex } }
+    val isScrollInProgress by listState.interactionSource.collectIsDraggedAsState()
+
+    // Sync hardware when scrolling manually
+    // We only load step if the user is actually dragging the timeline, 
+    // to prevent auto-loading when steps are added/removed.
+    LaunchedEffect(settledIdx.value) {
+        if (isScrollInProgress && !uiState.isPlaying && uiState.currentSequenceSteps.isNotEmpty()) {
+            val idx = settledIdx.value.coerceIn(0, uiState.currentSequenceSteps.size - 1)
+            viewModel.loadStep(idx)
+        }
+    }
+
+    // Auto-scroll to end when a new step is added
+    LaunchedEffect(uiState.currentSequenceSteps.size) {
+        if (uiState.currentSequenceSteps.isNotEmpty()) {
+            listState.animateScrollToItem(uiState.currentSequenceSteps.size - 1)
+        }
+    }
+
     if (showSaveDialog) {
-        AlertDialog(
-            onDismissRequest = { showSaveDialog = false },
-            title = { Text("Save Sequence", color = Color.White, fontWeight = FontWeight.Black) },
-            text = {
-                TextField(
-                    value = fileName,
-                    onValueChange = { fileName = it },
-                    placeholder = { Text("Sequence Name", color = Color.Gray) },
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF1A1A1A),
-                        unfocusedContainerColor = Color(0xFF1A1A1A),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        cursorColor = Color.White
-                    )
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (fileName.isNotBlank()) {
-                        viewModel.savePlaylist(fileName)
-                        showSaveDialog = false
-                        fileName = ""
-                    }
-                }) {
-                    Text("SAVE", color = Color(0xFF00C853), fontWeight = FontWeight.Black)
+        com.smaarig.glyphbarcomposer.ui.StyledSaveDialog(
+            title = "Save Sequence",
+            value = fileName,
+            onValueChange = { fileName = it },
+            onSave = {
+                if (fileName.isNotBlank()) {
+                    viewModel.savePlaylist(fileName)
+                    showSaveDialog = false
+                    fileName = ""
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) {
-                    Text("CANCEL", color = Color.Gray)
-                }
-            },
-            containerColor = Color(0xFF111111),
-            shape = RoundedCornerShape(28.dp)
+            onDismiss = { showSaveDialog = false },
+            placeholder = "Sequence Name"
         )
     }
 
@@ -107,7 +126,10 @@ fun DraggableTimeline(
             } else {
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize(),
+                    flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("timeline_list"),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     itemsIndexed(uiState.currentSequenceSteps) { index, step ->
@@ -124,34 +146,34 @@ fun DraggableTimeline(
                                 }
                         ) {
                             StepPreviewBox(
-                            step = step,
-                            index = index,
-                            onDelete = { viewModel.removeStep(index) },
-                            onLoad = { viewModel.loadStep(index) },
-                            enabled = !uiState.isPlaying,
-                            onDragStart = {
-                                if (!uiState.isPlaying) draggingIndex = index
-                            },
-                            onDragEnd = {
-                                val src = draggingIndex
-                                if (src != null) {
-                                    val steps = (dragOffsetY / itemHeightPx).roundToInt()
-                                    val dst = (src + steps)
-                                        .coerceIn(0, uiState.currentSequenceSteps.size - 1)
-                                    if (dst != src) viewModel.reorderSteps(src, dst)
+                                step = step,
+                                index = index,
+                                onDelete = { viewModel.removeStep(index) },
+                                onLoad = { viewModel.loadStep(index) },
+                                enabled = !uiState.isPlaying,
+                                onDragStart = {
+                                    if (!uiState.isPlaying) draggingIndex = index
+                                },
+                                onDragEnd = {
+                                    val src = draggingIndex
+                                    if (src != null) {
+                                        val steps = (dragOffsetY / itemHeightPx).roundToInt()
+                                        val dst = (src + steps)
+                                            .coerceIn(0, uiState.currentSequenceSteps.size - 1)
+                                        if (dst != src) viewModel.reorderSteps(src, dst)
+                                    }
+                                    draggingIndex = null
+                                    dragOffsetY = 0f
+                                },
+                                onDragCancel = {
+                                    draggingIndex = null
+                                    dragOffsetY = 0f
+                                },
+                                onDrag = { change, amount ->
+                                    change.consume()
+                                    if (!uiState.isPlaying) dragOffsetY += amount.y
                                 }
-                                draggingIndex = null
-                                dragOffsetY = 0f
-                            },
-                            onDragCancel = {
-                                draggingIndex = null
-                                dragOffsetY = 0f
-                            },
-                            onDrag = { change, amount ->
-                                change.consume()
-                                if (!uiState.isPlaying) dragOffsetY += amount.y
-                            }
-                        )
+                            )
                         }
                     }
                 }
@@ -177,6 +199,7 @@ fun DraggableTimeline(
                             if (uiState.isPlaying) Color(0xFF00E676) else Color.White,
                             RoundedCornerShape(10.dp)
                         )
+                        .testTag("play_button")
                 ) {
                     Icon(
                         if (uiState.isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
@@ -191,8 +214,14 @@ fun DraggableTimeline(
                         .weight(1f)
                         .fillMaxHeight()
                         .background(Color(0xFF1A1A1A), RoundedCornerShape(10.dp))
+                        .testTag("save_button")
                 ) {
-                    Icon(Icons.Default.Save, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Icon(
+                        Icons.Default.Save,
+                        null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
             Spacer(Modifier.height(12.dp))

@@ -9,12 +9,17 @@ import com.smaarig.glyphbarcomposer.data.Playlist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import com.smaarig.glyphbarcomposer.data.SequenceStep
 import com.smaarig.glyphbarcomposer.model.GlyphSequence
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import com.smaarig.glyphbarcomposer.repository.GlyphRepository
 import com.smaarig.glyphbarcomposer.utils.PreferenceManager
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 data class ComposerUiState(
     val glyphIntensities: List<Int> = listOf(0, 0, 0, 0, 0, 0, 0),
@@ -24,6 +29,7 @@ data class ComposerUiState(
     val isPlaying: Boolean = false,
     val isPaused: Boolean = false,
     val activePlaylistId: Long? = null,
+    val editingPlaylistId: Long? = null,
     val selectedChannelIndex: Int = 0,
     val useOldVersion: Boolean = true
 )
@@ -35,12 +41,30 @@ class ComposerViewModel(
     private val glyphController = GlyphController.getInstance(application)
     private val prefManager = PreferenceManager(application)
 
-    private val _uiState = MutableStateFlow(ComposerUiState(useOldVersion = prefManager.useOldVersion))
-    val uiState: StateFlow<ComposerUiState> = _uiState.asStateFlow()
+    private val _uiState =
+        MutableStateFlow(ComposerUiState(useOldVersion = prefManager.useOldVersion))
+    val uiState: StateFlow<ComposerUiState> = combine(
+        _uiState,
+        glyphController.currentIntensities,
+        glyphController.isPlaying,
+        glyphController.isPaused
+    ) { state, controllerIntensities, playing, paused ->
+        state.copy(
+            // Use controller intensities only when playing to avoid overwriting user edits
+            glyphIntensities = if (playing) controllerIntensities else state.glyphIntensities,
+            isPlaying = playing,
+            isPaused = paused
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        ComposerUiState(useOldVersion = prefManager.useOldVersion)
+    )
 
     val allPlaylists = repository.allPlaylists
 
-    private var playbackJob: Job? = null
+    private var loadStepJob: Job? = null
+    private var intensityUpdateJob: Job? = null
 
     private val channels = listOf(
         Glyph.Code_25111.A_1,
@@ -58,25 +82,19 @@ class ComposerViewModel(
     }
 
     fun onIntensityChange(index: Int, newIntensity: Int) {
-        if (_uiState.value.isPlaying) return
-        
-        _uiState.update { state ->
-            val newList = state.glyphIntensities.toMutableList().apply {
-                this[index] = newIntensity
-            }
-            state.copy(glyphIntensities = newList)
+        if (glyphController.isPlaying.value) return
+
+        // Update local state immediately for snappy UI
+        val newList = _uiState.value.glyphIntensities.toMutableList().apply {
+            this[index] = newIntensity
         }
-        
-        // Debounce physical Glyph update for 10ms to avoid flooding while scrolling
-        viewModelScope.launch {
-            delay(10)
+        _uiState.update { it.copy(glyphIntensities = newList) }
+
+        intensityUpdateJob?.cancel()
+        intensityUpdateJob = viewModelScope.launch {
+            delay(20) // Debounce physical Glyph update
             val intensityMap = getIntensitiesMap()
             glyphController.applyGlyphStateWithIntensities(intensityMap, 2000)
-            
-            // Sync physical Red Glyph if index 6 was changed
-            if (index == 6) {
-                glyphController.setRedGlyph(if (newIntensity > 0) 3 else 0)
-            }
         }
     }
 
@@ -99,15 +117,18 @@ class ComposerViewModel(
 
     fun addStep() {
         val state = _uiState.value
-        val newSteps = state.currentSequenceSteps + GlyphSequence(getIntensitiesMap(), state.durationMs.toInt())
+        val intensities = getIntensitiesMap()
+
+        val newSteps =
+            state.currentSequenceSteps + GlyphSequence(intensities, state.durationMs.toInt())
         _uiState.update { it.copy(currentSequenceSteps = newSteps) }
-        
+
         // Debug Log
         android.util.Log.d("ComposerViewModel", "Step added. Total steps: ${newSteps.size}")
     }
 
     fun removeStep(index: Int) {
-        if (_uiState.value.isPlaying) return
+        if (glyphController.isPlaying.value) return
         _uiState.update { state ->
             val mutableSteps = state.currentSequenceSteps.toMutableList()
             if (index in mutableSteps.indices) {
@@ -120,72 +141,49 @@ class ComposerViewModel(
     fun loadStep(index: Int) {
         val state = _uiState.value
         val step = state.currentSequenceSteps.getOrNull(index) ?: return
-        
-        _uiState.update { it.copy(
-            glyphIntensities = channels.map { ch -> step.channelIntensities[ch] ?: 0 },
-            durationMs = step.durationMs.toFloat()
-        ) }
-        
-        glyphController.applyGlyphStateWithIntensities(step.channelIntensities, 2000)
+
+        _uiState.update {
+            it.copy(
+                glyphIntensities = channels.map { ch -> step.channelIntensities[ch] ?: 0 },
+                durationMs = step.durationMs.toFloat()
+            )
+        }
+
+        loadStepJob?.cancel()
+        loadStepJob = viewModelScope.launch {
+            delay(10) // Debounce hardware sync for scrolling
+            glyphController.applyGlyphStateWithIntensities(step.channelIntensities, 2000)
+        }
     }
 
     fun clearSequence() {
-        if (_uiState.value.isPlaying) return
+        if (glyphController.isPlaying.value) return
         _uiState.update { it.copy(currentSequenceSteps = emptyList()) }
     }
 
     fun turnOffAllGlyphs() {
-        if (_uiState.value.isPlaying) stopPlayback()
         glyphController.turnOffGlyphs()
-        _uiState.update { it.copy(glyphIntensities = listOf(0, 0, 0, 0, 0, 0, 0)) }
-    }
-
-    fun togglePause() {
-        if (_uiState.value.isPlaying) {
-            _uiState.update { it.copy(isPaused = !it.isPaused) }
+        _uiState.update {
+            it.copy(
+                glyphIntensities = listOf(0, 0, 0, 0, 0, 0, 0),
+                activePlaylistId = null // Ensure everything is reset
+            )
         }
     }
 
+    fun togglePause() {
+        glyphController.togglePausePlayback()
+    }
+
     fun stopPlayback() {
-        playbackJob?.cancel()
-        playbackJob = null
-        _uiState.update { it.copy(
-            isPlaying = false, 
-            isPaused = false, 
-            activePlaylistId = null,
-            glyphIntensities = listOf(0, 0, 0, 0, 0, 0, 0)
-        ) }
-        glyphController.turnOffGlyphs()
+        glyphController.stopPlayback()
+        _uiState.update { it.copy(activePlaylistId = null) }
     }
 
     fun startPlayback(steps: List<GlyphSequence>, playlistId: Long? = null) {
         if (steps.isEmpty()) return
-        stopPlayback()
-        
-        _uiState.update { it.copy(isPlaying = true, activePlaylistId = playlistId) }
-        playbackJob = viewModelScope.launch {
-            try {
-                while (true) {
-                    for (step in steps) {
-                        while (_uiState.value.isPaused) {
-                            delay(100)
-                        }
-                        
-                        _uiState.update { state ->
-                            val newList = channels.map { ch -> step.channelIntensities[ch] ?: 0 }
-                            state.copy(glyphIntensities = newList)
-                        }
-                        
-                        glyphController.applyGlyphStateWithIntensities(
-                            step.channelIntensities, step.durationMs
-                        )
-                        delay(step.durationMs.toLong() + 50)
-                    }
-                }
-            } finally {
-                // Cleanup handled in stopPlayback
-            }
-        }
+        glyphController.playSequence(steps, loop = true)
+        _uiState.update { it.copy(activePlaylistId = playlistId) }
     }
 
     fun savePlaylist(name: String) {
@@ -193,18 +191,41 @@ class ComposerViewModel(
         if (name.isBlank() || state.currentSequenceSteps.isEmpty()) return
 
         viewModelScope.launch {
-            val playlist = Playlist(name = name)
+            val playlist = Playlist(
+                id = state.editingPlaylistId ?: 0,
+                name = name
+            )
             val playlistSteps = state.currentSequenceSteps.mapIndexed { index, step ->
                 SequenceStep(
-                    playlistId = 0, // Assigned by repository
+                    playlistId = playlist.id,
                     stepIndex = index,
                     channelIntensities = step.channelIntensities,
                     durationMs = step.durationMs
                 )
             }
             repository.savePlaylist(playlist, playlistSteps)
-            
-            _uiState.update { it.copy(sequenceName = "", currentSequenceSteps = emptyList()) }
+
+            _uiState.update {
+                it.copy(
+                    sequenceName = "",
+                    currentSequenceSteps = emptyList(),
+                    editingPlaylistId = null
+                )
+            }
+        }
+    }
+
+    fun editPlaylist(playlist: PlaylistWithSteps) {
+        stopPlayback()
+        val steps = playlist.steps.sortedBy { it.stepIndex }.map {
+            GlyphSequence(it.channelIntensities, it.durationMs)
+        }
+        _uiState.update {
+            it.copy(
+                currentSequenceSteps = steps,
+                sequenceName = playlist.playlist.name,
+                editingPlaylistId = playlist.playlist.id
+            )
         }
     }
 
@@ -225,8 +246,8 @@ class ComposerViewModel(
         if (state.activePlaylistId == playlist.playlist.id) {
             togglePause()
         } else {
-            val steps = playlist.steps.sortedBy { it.stepIndex }.map { 
-                GlyphSequence(it.channelIntensities, it.durationMs) 
+            val steps = playlist.steps.sortedBy { it.stepIndex }.map {
+                GlyphSequence(it.channelIntensities, it.durationMs)
             }
             startPlayback(steps, playlist.playlist.id)
         }

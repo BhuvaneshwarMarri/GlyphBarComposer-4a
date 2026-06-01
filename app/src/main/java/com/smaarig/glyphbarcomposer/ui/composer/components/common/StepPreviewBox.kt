@@ -4,7 +4,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -14,19 +22,22 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import com.smaarig.glyphbarcomposer.ui.getChannelForIndex
-import com.smaarig.glyphbarcomposer.ui.intensityBorder
 import com.smaarig.glyphbarcomposer.ui.intensityColor
 
 @Composable
@@ -51,7 +62,8 @@ fun StepPreviewBox(
             .clip(RoundedCornerShape(12.dp))
             .background(Color(0xFF0F0F0F))
             .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(12.dp))
-            .clickable(enabled = enabled) { showMenu = !showMenu },
+            .clickable(enabled = enabled) { showMenu = !showMenu }
+            .testTag("step_box_$index"),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -68,6 +80,7 @@ fun StepPreviewBox(
                 tint = Color(0xFF333333),
                 modifier = Modifier
                     .size(28.dp)
+                    .testTag("drag_handle_$index")
                     .pointerInput(Unit) {
                         detectDragGestures(
                             onDragStart = { onDragStart() },
@@ -101,7 +114,8 @@ fun StepPreviewBox(
                 Row(horizontalArrangement = Arrangement.spacedBy(2.5.dp)) {
                     repeat(7) { i ->
                         val intensityVal = step.channelIntensities[getChannelForIndex(i)] ?: 0
-                        val finalIntensity = if (i == 6 && intensityVal > 0) 6 else intensityVal
+                        val finalIntensity =
+                            if (i == 6 && intensityVal > 0 && intensityVal < 4) 6 else intensityVal
                         Box(
                             modifier = Modifier
                                 .size(width = 4.dp, height = 16.dp)
@@ -111,11 +125,13 @@ fun StepPreviewBox(
                     }
                 }
             }
-            
+
             // Right part: Quick actions or indicator
             IconButton(
                 onClick = onLoad,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier
+                    .size(32.dp)
+                    .testTag("retry_button_$index"),
                 enabled = enabled
             ) {
                 Icon(
@@ -145,6 +161,7 @@ fun StepPreviewBox(
                             .size(36.dp)
                             .background(Color(0xFF221111), CircleShape)
                             .border(1.dp, Color(0xFF442222), CircleShape)
+                            .testTag("delete_button_$index")
                     ) {
                         Icon(
                             Icons.Default.Delete,

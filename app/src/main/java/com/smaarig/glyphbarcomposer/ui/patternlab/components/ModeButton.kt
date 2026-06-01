@@ -18,13 +18,20 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun ModeButton(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     Surface(
-        modifier = modifier.height(48.dp).clickable { onClick() },
+        modifier = modifier
+            .height(48.dp)
+            .clickable { onClick() },
         color = if (selected) Color.White else Color(0xFF111111),
         shape = RoundedCornerShape(16.dp),
         border = if (!selected) BorderStroke(1.dp, Color(0xFF222222)) else null
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(label, color = if (selected) Color.Black else Color.Gray, fontWeight = FontWeight.Black, fontSize = 13.sp)
+            Text(
+                label,
+                color = if (selected) Color.Black else Color.Gray,
+                fontWeight = FontWeight.Black,
+                fontSize = 13.sp
+            )
         }
     }
 }
