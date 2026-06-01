@@ -2,7 +2,10 @@ package com.smaarig.glyphbarcomposer.ui.library.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -18,16 +21,35 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun PresetCard(preset: PresetSequence, isActive: Boolean, onClick: () -> Unit) {
     Surface(
-        modifier = Modifier.size(width = 140.dp, height = 140.dp).clickable { onClick() },
+        modifier = Modifier
+            .size(width = 140.dp, height = 140.dp)
+            .clickable { onClick() },
         color = Color(0xFF111111),
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, if (isActive) Color(0xFF00C853) else Color(0xFF222222))
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Icon(preset.icon, null, tint = if (isActive) Color(0xFF00C853) else Color.Gray, modifier = Modifier.size(28.dp))
+            Icon(
+                preset.icon,
+                null,
+                tint = if (isActive) Color(0xFF00C853) else Color.Gray,
+                modifier = Modifier.size(28.dp)
+            )
             Column {
-                Text(preset.name, color = Color.White, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                Text(preset.description, color = Color.Gray, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold)
+                Text(
+                    preset.name,
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 14.sp
+                )
+                Text(
+                    preset.description,
+                    color = Color.Gray,
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

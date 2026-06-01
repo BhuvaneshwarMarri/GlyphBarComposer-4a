@@ -14,9 +14,19 @@ import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioViewModel
 
 @Composable
-fun TimelineCard(uiState: MusicStudioUiState, audioPositionMs: Int, viewModel: MusicStudioViewModel) {
+fun TimelineCard(
+    uiState: MusicStudioUiState,
+    audioPositionMs: Int,
+    viewModel: MusicStudioViewModel
+) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("TIMELINE", color = Color(0xFF555555), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Text(
+            "TIMELINE",
+            color = Color(0xFF555555),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
         StudioTimelineEditor(
             uiState = uiState,
             audioPositionMs = audioPositionMs,

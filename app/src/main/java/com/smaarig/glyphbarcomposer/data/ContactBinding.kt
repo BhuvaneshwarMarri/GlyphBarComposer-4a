@@ -1,8 +1,8 @@
 package com.smaarig.glyphbarcomposer.data
 
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import androidx.room.Embedded
 import androidx.room.Relation
 
 @Entity(tableName = "contact_bindings")

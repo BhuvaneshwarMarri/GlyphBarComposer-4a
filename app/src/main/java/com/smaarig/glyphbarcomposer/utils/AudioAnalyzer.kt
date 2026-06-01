@@ -6,7 +6,14 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
 import android.util.Log
-import kotlin.math.*
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.log10
+import kotlin.math.log2
+import kotlin.math.max
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 object AudioAnalyzer {
     private const val TAG = "AudioAnalyzer"
@@ -35,14 +42,15 @@ object AudioAnalyzer {
     ): List<Map<Int, Int>> = decodePcmWindows(context, uri) { windows ->
         val result = mutableListOf<Map<Int, Int>>()
         val hannWindow = buildHannWindow(FFT_SIZE)
-        val bandMagnitudes  = FloatArray(6)
-        val adaptivePeaks   = FloatArray(6) { 0.1f }
-        val currentLevels   = IntArray(6)
+        val bandMagnitudes = FloatArray(6)
+        val adaptivePeaks = FloatArray(6) { 0.1f }
+        val currentLevels = IntArray(6)
         var prevFft: FloatArray? = null
 
         for (window in windows) {
             val fft = performFFT(window, hannWindow)
-            val intensities = processWhiteLeds(fft, bandMagnitudes, adaptivePeaks, currentLevels, channels)
+            val intensities =
+                processWhiteLeds(fft, bandMagnitudes, adaptivePeaks, currentLevels, channels)
             val redVal = processRedOnset(fft, prevFft)
             prevFft = fft.copyOf()
             val map = intensities.toMutableMap()
@@ -72,7 +80,7 @@ object AudioAnalyzer {
         // Circular history buffer per channel for adaptive threshold
         val histSize = 30   // ~1.5 s
         val histories = Array(6) { ArrayDeque<Float>(histSize) }
-        val peakHold  = FloatArray(6) { 0f }   // peak-hold with fast-decay
+        val peakHold = FloatArray(6) { 0f }   // peak-hold with fast-decay
         val PEAK_HOLD_DECAY = 0.90f
 
         // Refractory period per channel (in window indices)
@@ -180,7 +188,8 @@ object AudioAnalyzer {
             val hfMean = hfFluxHist.average().toFloat()
             val hfVar = hfFluxHist.map { (it - hfMean).pow(2) }.average().toFloat()
             val hfThresh = hfMean + 2.0f * sqrt(hfVar)
-            if (hfFlux > hfThresh && hfFlux > 0.01f) map[channels[6]] = if (hfFlux > hfThresh * 1.5f) 3 else 2
+            if (hfFlux > hfThresh && hfFlux > 0.01f) map[channels[6]] =
+                if (hfFlux > hfThresh * 1.5f) 3 else 2
 
             prevHfEnergy = hfEnergy
             prevFft = fft.copyOf()
@@ -210,7 +219,7 @@ object AudioAnalyzer {
 
         // Ultra-aggressive envelope follower for zero lag
         var envelope = 0f
-        val ATTACK  = 0.95f   // Instant attack
+        val ATTACK = 0.95f   // Instant attack
         val RELEASE = 0.70f   // Faster release to match beat drops
         var peakEnvelope = 0.01f
         val PEAK_DECAY = 0.995f
@@ -224,12 +233,14 @@ object AudioAnalyzer {
 
             // Overall loudness via RMS
             var sumSq = 0f
-            for (s in window) { val f = s.toFloat() / 32768f; sumSq += f * f }
+            for (s in window) {
+                val f = s.toFloat() / 32768f; sumSq += f * f
+            }
             val rms = sqrt(sumSq / window.size.coerceAtLeast(1))
-            
+
             envelope = if (rms > envelope) rms * ATTACK + envelope * (1f - ATTACK)
             else rms * (1f - RELEASE) + envelope * RELEASE
-            
+
             peakEnvelope = maxOf(envelope, peakEnvelope * PEAK_DECAY).coerceAtLeast(0.005f)
             val normEnergy = (envelope / peakEnvelope).coerceIn(0f, 1f)
 
@@ -272,7 +283,7 @@ object AudioAnalyzer {
         val hannWindow = buildHannWindow(FFT_SIZE)
         val histSize = 25
         val energyHist = Array(6) { ArrayDeque<Float>(histSize) }
-        val prevEnergy  = FloatArray(6)
+        val prevEnergy = FloatArray(6)
         var prevSubFlux = 0f
 
         windows.forEach { window ->
@@ -286,14 +297,18 @@ object AudioAnalyzer {
 
                 // Local mean and max over rolling window
                 val localMean = energyHist[b].average().toFloat()
-                val localMax  = energyHist[b].max()
+                val localMax = energyHist[b].max()
 
                 // Onset = energy is above mean by a relative threshold
                 val relativeThresh = localMean + (localMax - localMean) * 0.55f
                 val delta = e - prevEnergy[b]
 
                 if (e > relativeThresh && delta > 0 && e > 0.02f) {
-                    val rel = ((e - relativeThresh) / (localMax - relativeThresh + 0.001f)).coerceIn(0f, 1f)
+                    val rel =
+                        ((e - relativeThresh) / (localMax - relativeThresh + 0.001f)).coerceIn(
+                            0f,
+                            1f
+                        )
                     map[channels[b]] = when {
                         rel > 0.70f -> 3
                         rel > 0.35f -> 2
@@ -328,9 +343,9 @@ object AudioAnalyzer {
     ): List<Map<Int, Int>> = decodePcmWindows(context, uri) { windows ->
         val result = mutableListOf<Map<Int, Int>>()
         val hannWindow = buildHannWindow(FFT_SIZE)
-        val smoothed   = FloatArray(7)
-        val peaks      = FloatArray(7) { 0.05f }
-        val ATTACK  = 0.50f
+        val smoothed = FloatArray(7)
+        val peaks = FloatArray(7) { 0.05f }
+        val ATTACK = 0.50f
         val RELEASE = 0.85f
         val P_DECAY = 0.9990f
 
@@ -389,9 +404,9 @@ object AudioAnalyzer {
         val result = ArrayList<Map<Int, Int>>(windows.size)
         repeat(windows.size) { result.add(emptyMap()) }
 
-        val hannWindow  = buildHannWindow(FFT_SIZE)
-        val msPerBeat   = (60_000.0 / bpm).toLong()
-        val winMs       = 50L          // one window = 50 ms
+        val hannWindow = buildHannWindow(FFT_SIZE)
+        val msPerBeat = (60_000.0 / bpm).toLong()
+        val winMs = 50L          // one window = 50 ms
 
         // Build a sub-bass onset strength function (one value per window)
         val onsetStrength = FloatArray(windows.size)
@@ -414,13 +429,17 @@ object AudioAnalyzer {
             var bestStrength = onsetStrength[nominalWin]
             for (delta in -SNAP_WINDOW_WINDOWS..SNAP_WINDOW_WINDOWS) {
                 val w = (nominalWin + delta).coerceIn(0, windows.size - 1)
-                if (onsetStrength[w] > bestStrength) { bestStrength = onsetStrength[w]; bestWin = w }
+                if (onsetStrength[w] > bestStrength) {
+                    bestStrength = onsetStrength[w]; bestWin = w
+                }
             }
 
             val pattern: Map<Int, Int> = when (beat % 4) {
-                0    -> channels.take(6).mapIndexed { i, ch -> ch to (3 - i / 2).coerceIn(1, 3) }.toMap() +
+                0 -> channels.take(6).mapIndexed { i, ch -> ch to (3 - i / 2).coerceIn(1, 3) }
+                    .toMap() +
                         mapOf(channels[6] to 3)
-                2    -> mapOf(channels[2] to 3, channels[3] to 3, channels[4] to 2, channels[5] to 2)
+
+                2 -> mapOf(channels[2] to 3, channels[3] to 3, channels[4] to 2, channels[5] to 2)
                 1, 3 -> mapOf(channels[0] to 2, channels[1] to 2)
                 else -> emptyMap()
             }
@@ -459,11 +478,11 @@ object AudioAnalyzer {
                 extractor.selectTrack(trackIndex)
                 val format = extractor.getTrackFormat(trackIndex)
                 val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
-                
+
                 // Get actual sample rate for precise 50ms windowing
                 val sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE, 44100)
                 val windowSizeSamples = (sampleRate * 0.050).toInt()
-                
+
                 if (mime.startsWith("audio/")) {
                     codec = MediaCodec.createDecoderByType(mime)
                     codec.configure(format, null, null, 0)
@@ -481,7 +500,13 @@ object AudioAnalyzer {
                                 val buf = codec.getInputBuffer(inIdx)!!
                                 val sz = extractor.readSampleData(buf, 0)
                                 if (sz < 0) {
-                                    codec.queueInputBuffer(inIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                                    codec.queueInputBuffer(
+                                        inIdx,
+                                        0,
+                                        0,
+                                        0,
+                                        MediaCodec.BUFFER_FLAG_END_OF_STREAM
+                                    )
                                     extDone = true
                                 } else {
                                     codec.queueInputBuffer(inIdx, 0, sz, extractor.sampleTime, 0)
@@ -494,7 +519,7 @@ object AudioAnalyzer {
                             codec.getOutputBuffer(outIdx)?.let { buf ->
                                 while (buf.remaining() >= 2) pcm.add(buf.short)
                             }
-                            
+
                             // Emit as many 50ms windows as we have buffered
                             while (pcm.size >= windowSizeSamples) {
                                 val window = ShortArray(windowSizeSamples)
@@ -503,7 +528,8 @@ object AudioAnalyzer {
                             }
 
                             codec.releaseOutputBuffer(outIdx, false)
-                            if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) decDone = true
+                            if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) decDone =
+                                true
                         }
                     }
                 }
@@ -520,7 +546,9 @@ object AudioAnalyzer {
 
     private fun selectAudioTrack(extractor: MediaExtractor): Int {
         for (i in 0 until extractor.trackCount) {
-            if (extractor.getTrackFormat(i).getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true) return i
+            if (extractor.getTrackFormat(i).getString(MediaFormat.KEY_MIME)
+                    ?.startsWith("audio/") == true
+            ) return i
         }
         return -1
     }
@@ -532,22 +560,26 @@ object AudioAnalyzer {
     /** In-place iterative radix-2 FFT; returns magnitude spectrum [0..N/2). */
     internal fun performFFT(samples: ShortArray, window: FloatArray): FloatArray {
         val n = FFT_SIZE
-        
+
         // Use the middle of the window if it's larger than FFT_SIZE
         val offset = if (samples.size > n) (samples.size - n) / 2 else 0
-        
-        val re = FloatArray(n) { i -> 
-            if (i + offset < samples.size) (samples[i + offset].toFloat() / 32768f) * window[i] else 0f 
+
+        val re = FloatArray(n) { i ->
+            if (i + offset < samples.size) (samples[i + offset].toFloat() / 32768f) * window[i] else 0f
         }
         val im = FloatArray(n)
-        val m  = log2(n.toDouble()).toInt()
+        val m = log2(n.toDouble()).toInt()
 
         // Bit-reversal permutation
         var j = 0
         for (i in 0 until n - 1) {
-            if (i < j) { val t = re[i]; re[i] = re[j]; re[j] = t }
+            if (i < j) {
+                val t = re[i]; re[i] = re[j]; re[j] = t
+            }
             var k = n / 2
-            while (k <= j) { j -= k; k /= 2 }
+            while (k <= j) {
+                j -= k; k /= 2
+            }
             j += k
         }
 
@@ -557,7 +589,8 @@ object AudioAnalyzer {
             val le1 = le; le *= 2
             val ur = cos(PI / le1).toFloat()
             val ui = (-sin(PI / le1)).toFloat()
-            var wr = 1f; var wi = 0f
+            var wr = 1f
+            var wi = 0f
             for (j2 in 0 until le1) {
                 var i = j2
                 while (i < n) {
@@ -581,9 +614,9 @@ object AudioAnalyzer {
     private fun bandEnergy(fft: FloatArray, b: Int): Float {
         val melMin = freqToMel(20f)
         val melMax = freqToMel(16000f)
-        val step   = (melMax - melMin) / 6f
-        val loHz    = melToFreq(melMin + b * step)
-        val hiHz    = melToFreq(melMin + (b + 1) * step)
+        val step = (melMax - melMin) / 6f
+        val loHz = melToFreq(melMin + b * step)
+        val hiHz = melToFreq(melMin + (b + 1) * step)
         return bandEnergyHz(fft, loHz, hiHz)
     }
 
@@ -617,12 +650,18 @@ object AudioAnalyzer {
             if (normalized > currentMagnitudes[i]) currentMagnitudes[i] = normalized
             else currentMagnitudes[i] *= RELEASE_RATE
 
-            val mag  = currentMagnitudes[i]
+            val mag = currentMagnitudes[i]
             val prev = currentLevels[i]
             val next = when (prev) {
                 0 -> if (mag > 0.18f) 1 else 0
-                1 -> when { mag > 0.48f -> 2; mag < 0.10f -> 0; else -> 1 }
-                2 -> when { mag > 0.78f -> 3; mag < 0.38f -> 1; else -> 2 }
+                1 -> when {
+                    mag > 0.48f -> 2; mag < 0.10f -> 0; else -> 1
+                }
+
+                2 -> when {
+                    mag > 0.78f -> 3; mag < 0.38f -> 1; else -> 2
+                }
+
                 3 -> if (mag < 0.68f) 2 else 3
                 else -> 0
             }
@@ -637,7 +676,9 @@ object AudioAnalyzer {
         val binLo = (20f / HZ_PER_BIN).toInt()
         val binHi = (120f / HZ_PER_BIN).toInt()
         var flux = 0f
-        for (i in binLo..binHi) { val d = magnitudes[i] - prevMagnitudes[i]; if (d > 0) flux += d }
+        for (i in binLo..binHi) {
+            val d = magnitudes[i] - prevMagnitudes[i]; if (d > 0) flux += d
+        }
         return if (flux > 0.15f) 3 else 0
     }
 }

@@ -9,9 +9,21 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -20,10 +32,37 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,7 +73,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,15 +105,15 @@ private sealed interface SheetState {
 fun HooksScreen(viewModel: HooksViewModel) {
     val hooks by viewModel.allHooks.collectAsState(initial = emptyList())
     val isPermissionGranted by viewModel.isPermissionGranted.collectAsState()
-    val installedApps       by viewModel.installedApps.collectAsState()
-    val playlists           by viewModel.allPlaylists.collectAsState()
-    val channels            by viewModel.selectedAppChannels.collectAsState()
-    val isLoadingChannels   by viewModel.isLoadingChannels.collectAsState()
-    val testResult          by viewModel.testHookResult.collectAsState()
-    val isBgServiceEnabled  by viewModel.isBackgroundServiceEnabled.collectAsState()
+    val installedApps by viewModel.installedApps.collectAsState()
+    val playlists by viewModel.allPlaylists.collectAsState()
+    val channels by viewModel.selectedAppChannels.collectAsState()
+    val isLoadingChannels by viewModel.isLoadingChannels.collectAsState()
+    val testResult by viewModel.testHookResult.collectAsState()
+    val isBgServiceEnabled by viewModel.isBackgroundServiceEnabled.collectAsState()
 
     val context = LocalContext.current
-    val scope   = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
     var sheetState by remember { mutableStateOf<SheetState?>(null) }
     var hookToDelete by remember { mutableStateOf<NotificationHookWithPlaylist?>(null) }
@@ -137,7 +175,7 @@ fun HooksScreen(viewModel: HooksViewModel) {
                 onBgServiceToggle = { viewModel.toggleBackgroundService(it) },
                 onDelete = { hookToDelete = it },
                 onToggle = { hook, enabled -> viewModel.toggleHook(hook.hook, enabled) },
-                onTest   = { viewModel.testHook(it, context) }
+                onTest = { viewModel.testHook(it, context) }
             )
         }
     }
@@ -146,9 +184,9 @@ fun HooksScreen(viewModel: HooksViewModel) {
     if (sheetState == SheetState.AppPicker) {
         ModalBottomSheet(
             onDismissRequest = { sheetState = null },
-            sheetState       = pickerSheetState,
-            containerColor   = Color(0xFF141414),
-            dragHandle       = { BottomSheetDefaults.DragHandle(color = Color(0xFF444444)) }
+            sheetState = pickerSheetState,
+            containerColor = Color(0xFF141414),
+            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF444444)) }
         ) {
             AppPickerSheet(
                 apps = installedApps,
@@ -171,22 +209,22 @@ fun HooksScreen(viewModel: HooksViewModel) {
                 viewModel.clearSelectedChannels()
                 sheetState = null
             },
-            sheetState     = configSheetState,
+            sheetState = configSheetState,
             containerColor = Color(0xFF141414),
-            dragHandle     = { BottomSheetDefaults.DragHandle(color = Color(0xFF444444)) }
+            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF444444)) }
         ) {
             HookAddSheet(
-                selectedApp       = configApp,
-                channels          = channels,
+                selectedApp = configApp,
+                channels = channels,
                 isLoadingChannels = isLoadingChannels,
-                playlists         = playlists,
-                onConfirm         = { channelId, channelName, playlistId, isProgressSync ->
+                playlists = playlists,
+                onConfirm = { channelId, channelName, playlistId, isProgressSync ->
                     viewModel.addHook(
-                        packageName             = configApp.packageName,
-                        appName                 = configApp.appName,
-                        playlistId              = playlistId,
-                        isProgressSync          = isProgressSync,
-                        notificationChannelId   = channelId,
+                        packageName = configApp.packageName,
+                        appName = configApp.appName,
+                        playlistId = playlistId,
+                        isProgressSync = isProgressSync,
+                        notificationChannelId = channelId,
                         notificationChannelName = channelName
                     )
                     dismissConfigSheet()
@@ -211,7 +249,12 @@ fun HooksScreen(viewModel: HooksViewModel) {
         AlertDialog(
             onDismissRequest = { hookToDelete = null },
             title = { Text("Delete Hook?", color = Color.White, fontWeight = FontWeight.Bold) },
-            text = { Text("This will stop Glyph effects for ${hookToDelete?.hook?.appName}.", color = Color.Gray) },
+            text = {
+                Text(
+                    "This will stop Glyph effects for ${hookToDelete?.hook?.appName}.",
+                    color = Color.Gray
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     hookToDelete?.let { viewModel.deleteHook(it.hook) }
@@ -240,7 +283,7 @@ private fun HooksList(
     onBgServiceToggle: (Boolean) -> Unit,
     onDelete: (NotificationHookWithPlaylist) -> Unit,
     onToggle: (NotificationHookWithPlaylist, Boolean) -> Unit,
-    onTest:   (NotificationHookWithPlaylist) -> Unit
+    onTest: (NotificationHookWithPlaylist) -> Unit
 ) {
     val listState = rememberLazyListState()
 
@@ -260,14 +303,14 @@ private fun HooksList(
 
         items(
             items = hooks,
-            key   = { it.hook.id }
+            key = { it.hook.id }
         ) { hookWithPlaylist ->
             HookItem(
                 hookWithPlaylist = hookWithPlaylist,
-                onDelete  = { onDelete(hookWithPlaylist) },
-                onToggle  = { enabled -> onToggle(hookWithPlaylist, enabled) },
-                onTest    = { onTest(hookWithPlaylist) },
-                modifier  = Modifier.animateItem(tween(250))
+                onDelete = { onDelete(hookWithPlaylist) },
+                onToggle = { enabled -> onToggle(hookWithPlaylist, enabled) },
+                onTest = { onTest(hookWithPlaylist) },
+                modifier = Modifier.animateItem(tween(250))
             )
         }
     }
@@ -381,24 +424,38 @@ private fun AppPickerSheet(
         Spacer(Modifier.height(8.dp))
 
         OutlinedTextField(
-            value         = query,
+            value = query,
             onValueChange = { query = it },
-            placeholder   = { Text("Search apps…", color = Color(0xFF666666)) },
-            leadingIcon   = { Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF888888)) },
-            trailingIcon  = if (query.isNotEmpty()) {
-                { IconButton(onClick = { query = "" }) { Icon(Icons.Default.Clear, contentDescription = "Clear", tint = Color(0xFF888888)) } }
+            placeholder = { Text("Search apps…", color = Color(0xFF666666)) },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = null,
+                    tint = Color(0xFF888888)
+                )
+            },
+            trailingIcon = if (query.isNotEmpty()) {
+                {
+                    IconButton(onClick = { query = "" }) {
+                        Icon(
+                            Icons.Default.Clear,
+                            contentDescription = "Clear",
+                            tint = Color(0xFF888888)
+                        )
+                    }
+                }
             } else null,
-            singleLine      = true,
+            singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-            shape  = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor      = Color(0xFF444444),
-                unfocusedBorderColor    = Color(0xFF2A2A2A),
-                focusedTextColor        = Color.White,
-                unfocusedTextColor      = Color.White,
-                cursorColor             = Color.White,
-                focusedContainerColor   = Color(0xFF1E1E1E),
+                focusedBorderColor = Color(0xFF444444),
+                unfocusedBorderColor = Color(0xFF2A2A2A),
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                cursorColor = Color.White,
+                focusedContainerColor = Color(0xFF1E1E1E),
                 unfocusedContainerColor = Color(0xFF1A1A1A)
             ),
             modifier = Modifier.fillMaxWidth()
@@ -430,9 +487,9 @@ private fun AppPickerSheet(
             ) {
                 items(filtered, key = { it.packageName }) { app ->
                     AppPickerRow(
-                        app         = app,
+                        app = app,
                         onInfoClick = { onAppSelected(app) },
-                        modifier    = Modifier.animateItem(tween(200))
+                        modifier = Modifier.animateItem(tween(200))
                     )
                 }
             }
@@ -455,24 +512,24 @@ private fun AppPickerRow(
             .clip(RoundedCornerShape(10.dp))
             .combinedClickable(onClick = onInfoClick, onLongClick = onInfoClick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment     = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         AppIcon(app = app, size = 42.dp)
 
         Column(Modifier.weight(1f)) {
             Text(
-                text       = app.appName,
-                style      = MaterialTheme.typography.bodyMedium,
+                text = app.appName,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                color      = Color.White,
-                maxLines   = 1,
-                overflow   = TextOverflow.Ellipsis
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             if (app.isProgressOnly) {
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text  = "Progress sync only",
+                    text = "Progress sync only",
                     style = MaterialTheme.typography.labelSmall,
                     color = Color(0xFF00BFA5)
                 )
@@ -482,9 +539,9 @@ private fun AppPickerRow(
         if (app.isProgressOnly) {
             Surface(shape = CircleShape, color = Color(0xFF00BFA5).copy(alpha = 0.12f)) {
                 Text(
-                    text     = "Media",
-                    style    = MaterialTheme.typography.labelSmall,
-                    color    = Color(0xFF00BFA5),
+                    text = "Media",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF00BFA5),
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                 )
             }
@@ -492,10 +549,10 @@ private fun AppPickerRow(
 
         IconButton(onClick = onInfoClick, modifier = Modifier.size(36.dp)) {
             Icon(
-                imageVector        = Icons.Outlined.Info,
+                imageVector = Icons.Outlined.Info,
                 contentDescription = "Configure ${app.appName}",
-                tint               = Color(0xFF666666),
-                modifier           = Modifier.size(20.dp)
+                tint = Color(0xFF666666),
+                modifier = Modifier.size(20.dp)
             )
         }
     }
@@ -518,15 +575,17 @@ private fun AppIcon(app: AppInfo, size: androidx.compose.ui.unit.Dp) {
     ) {
         if (bitmap != null) {
             androidx.compose.foundation.Image(
-                bitmap             = bitmap,
+                bitmap = bitmap,
                 contentDescription = app.appName,
-                modifier           = Modifier.size(size).clip(CircleShape)
+                modifier = Modifier
+                    .size(size)
+                    .clip(CircleShape)
             )
         } else {
             Text(
-                text       = app.appName.firstOrNull()?.uppercase() ?: "?",
-                style      = MaterialTheme.typography.bodyLarge,
-                color      = Color(0xFF888888),
+                text = app.appName.firstOrNull()?.uppercase() ?: "?",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color(0xFF888888),
                 fontWeight = FontWeight.Black,
                 fontFamily = nothingFont
             )

@@ -1,13 +1,14 @@
 package com.smaarig.glyphbarcomposer.utils
 
 import android.content.Context
-import android.media.*
+import android.media.MediaCodec
+import android.media.MediaExtractor
+import android.media.MediaFormat
+import android.media.MediaMuxer
 import android.net.Uri
 import android.util.Log
 import java.io.File
-import java.nio.ByteBuffer
 import kotlin.math.abs
-import kotlin.math.sqrt
 
 object AudioProcessor {
     private const val TAG = "AudioProcessor"
@@ -30,7 +31,7 @@ object AudioProcessor {
             extractor.selectTrack(trackIndex)
             val format = extractor.getTrackFormat(trackIndex)
             val mime = format.getString(MediaFormat.KEY_MIME) ?: return emptyList()
-            
+
             codec = MediaCodec.createDecoderByType(mime)
             codec.configure(format, null, null, 0)
             codec.start()
@@ -42,7 +43,7 @@ object AudioProcessor {
             // We want 1 sample every 50ms
             val sampleIntervalMs = 50
             val numSamplesExpected = durationMs / sampleIntervalMs
-            
+
             // Temporary storage for current window's PCM data
             val windowAmplitudes = mutableListOf<Int>()
             var currentWindowStartTimeUs = 0L
@@ -54,10 +55,22 @@ object AudioProcessor {
                         val inputBuffer = codec.getInputBuffer(inputBufferIndex)
                         val sampleSize = extractor.readSampleData(inputBuffer!!, 0)
                         if (sampleSize < 0) {
-                            codec.queueInputBuffer(inputBufferIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                            codec.queueInputBuffer(
+                                inputBufferIndex,
+                                0,
+                                0,
+                                0,
+                                MediaCodec.BUFFER_FLAG_END_OF_STREAM
+                            )
                             isExtractorDone = true
                         } else {
-                            codec.queueInputBuffer(inputBufferIndex, 0, sampleSize, extractor.sampleTime, 0)
+                            codec.queueInputBuffer(
+                                inputBufferIndex,
+                                0,
+                                sampleSize,
+                                extractor.sampleTime,
+                                0
+                            )
                             extractor.advance()
                         }
                     }
@@ -66,7 +79,7 @@ object AudioProcessor {
                 val outputBufferIndex = codec.dequeueOutputBuffer(info, 10000)
                 if (outputBufferIndex >= 0) {
                     val outputBuffer = codec.getOutputBuffer(outputBufferIndex)
-                    
+
                     // Process PCM data (assuming 16-bit PCM)
                     if (outputBuffer != null) {
                         while (outputBuffer.remaining() >= 2) {
@@ -77,11 +90,12 @@ object AudioProcessor {
 
                     // Check if we've filled a 50ms window
                     if (info.presentationTimeUs >= currentWindowStartTimeUs + (sampleIntervalMs * 1000)) {
-                        val avg = if (windowAmplitudes.isNotEmpty()) windowAmplitudes.average().toFloat() else 0f
+                        val avg = if (windowAmplitudes.isNotEmpty()) windowAmplitudes.average()
+                            .toFloat() else 0f
                         // Normalize 32768 (max short) to 1.0, with some headroom/compression
                         val normalized = (avg / 15000f).coerceIn(0f, 1f)
                         waveform.add(normalized)
-                        
+
                         windowAmplitudes.clear()
                         currentWindowStartTimeUs = info.presentationTimeUs
                     }
@@ -92,7 +106,7 @@ object AudioProcessor {
                     }
                 }
             }
-            
+
             // Fill remaining if needed to match duration
             while (waveform.size < numSamplesExpected) waveform.add(0f)
 
@@ -136,9 +150,13 @@ object AudioProcessor {
             val channelCount = inputFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
 
             // Setup Encoder (Opus for OGG container)
-            val outputFormat = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_OPUS, sampleRate, channelCount)
+            val outputFormat = MediaFormat.createAudioFormat(
+                MediaFormat.MIMETYPE_AUDIO_OPUS,
+                sampleRate,
+                channelCount
+            )
             outputFormat.setInteger(MediaFormat.KEY_BIT_RATE, 128000)
-            
+
             encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_OPUS)
             encoder.configure(outputFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
             encoder.start()
@@ -166,10 +184,22 @@ object AudioProcessor {
                         val inputBuffer = decoder.getInputBuffer(inputBufferIndex)
                         val sampleSize = extractor.readSampleData(inputBuffer!!, 0)
                         if (sampleSize < 0) {
-                            decoder.queueInputBuffer(inputBufferIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                            decoder.queueInputBuffer(
+                                inputBufferIndex,
+                                0,
+                                0,
+                                0,
+                                MediaCodec.BUFFER_FLAG_END_OF_STREAM
+                            )
                             sawInputEOS = true
                         } else {
-                            decoder.queueInputBuffer(inputBufferIndex, 0, sampleSize, extractor.sampleTime, 0)
+                            decoder.queueInputBuffer(
+                                inputBufferIndex,
+                                0,
+                                sampleSize,
+                                extractor.sampleTime,
+                                0
+                            )
                             extractor.advance()
                         }
                     }
@@ -179,14 +209,20 @@ object AudioProcessor {
                 val outputBufferIndex = decoder.dequeueOutputBuffer(decoderInfo, 10000)
                 if (outputBufferIndex >= 0) {
                     val outputBuffer = decoder.getOutputBuffer(outputBufferIndex)
-                    
+
                     // Feed to Encoder
                     val encoderInputIndex = encoder.dequeueInputBuffer(10000)
                     if (encoderInputIndex >= 0) {
                         val encoderInputBuffer = encoder.getInputBuffer(encoderInputIndex)
                         if (outputBuffer != null) {
                             encoderInputBuffer?.put(outputBuffer)
-                            encoder.queueInputBuffer(encoderInputIndex, 0, decoderInfo.size, decoderInfo.presentationTimeUs, decoderInfo.flags)
+                            encoder.queueInputBuffer(
+                                encoderInputIndex,
+                                0,
+                                decoderInfo.size,
+                                decoderInfo.presentationTimeUs,
+                                decoderInfo.flags
+                            )
                         }
                     }
 
@@ -225,7 +261,8 @@ object AudioProcessor {
                 encoder?.stop(); encoder?.release()
                 muxer?.stop(); muxer?.release()
                 extractor.release()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
     }
 }

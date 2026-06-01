@@ -1,6 +1,11 @@
 package com.smaarig.glyphbarcomposer.data
 
-import androidx.room.*
+import androidx.room.Embedded
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
+import androidx.room.Relation
 
 @Entity(tableName = "music_studio_projects")
 data class MusicStudioProject(
@@ -27,7 +32,7 @@ data class MusicStudioEvent(
     val projectId: Long,
     val timestampMs: Long,
     val channelIntensities: Map<Int, Int>,
-    val durationMs: Int = 100 
+    val durationMs: Int = 100
 )
 
 data class MusicProjectWithEvents(

@@ -1,7 +1,12 @@
 package com.smaarig.glyphbarcomposer.data
 
-import androidx.room.*
-import com.smaarig.glyphbarcomposer.model.GlyphSequence
+import androidx.room.Embedded
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
+import androidx.room.Relation
+import androidx.room.TypeConverter
 
 @Entity(tableName = "playlists")
 data class Playlist(

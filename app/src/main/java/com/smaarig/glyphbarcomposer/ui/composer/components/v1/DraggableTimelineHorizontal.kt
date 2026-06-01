@@ -3,7 +3,18 @@ package com.smaarig.glyphbarcomposer.ui.composer.components.v1
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -114,8 +125,10 @@ fun DraggableTimelineHorizontal(
                                 )
                                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                                     repeat(7) { i ->
-                                        val intensityVal = step.channelIntensities[getChannelForIndex(i)] ?: 0
-                                        val finalIntensity = if (i == 6 && intensityVal > 0) 6 else intensityVal
+                                        val intensityVal =
+                                            step.channelIntensities[getChannelForIndex(i)] ?: 0
+                                        val finalIntensity =
+                                            if (i == 6 && intensityVal > 0) 6 else intensityVal
                                         Box(
                                             modifier = Modifier
                                                 .size(width = 4.dp, height = 14.dp)

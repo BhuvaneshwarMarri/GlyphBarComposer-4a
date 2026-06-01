@@ -30,8 +30,8 @@ class BatteryMonitor(private val context: Context) {
 
     private fun updateBatteryStatus(intent: Intent) {
         val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-        _isCharging.value = status == BatteryManager.BATTERY_STATUS_CHARGING || 
-                            status == BatteryManager.BATTERY_STATUS_FULL
+        _isCharging.value = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                status == BatteryManager.BATTERY_STATUS_FULL
 
         val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
         val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)

@@ -24,7 +24,10 @@ fun LabSliderRow(
     steps: Int = 15,
     onValueChange: (Float) -> Unit
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         Column(modifier = Modifier.width(50.dp)) {
             Text(label, color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             Text(valueText, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black)

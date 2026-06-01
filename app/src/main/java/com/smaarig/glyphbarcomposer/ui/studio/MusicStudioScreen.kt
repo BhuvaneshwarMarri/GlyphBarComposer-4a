@@ -7,22 +7,45 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.smaarig.glyphbarcomposer.ui.studio.components.*
+import com.smaarig.glyphbarcomposer.ui.studio.components.AnalysisOverlay
+import com.smaarig.glyphbarcomposer.ui.studio.components.AnalyzerCard
+import com.smaarig.glyphbarcomposer.ui.studio.components.ComposerPanel
+import com.smaarig.glyphbarcomposer.ui.studio.components.ProjectSetupView
+import com.smaarig.glyphbarcomposer.ui.studio.components.StudioHeader
+import com.smaarig.glyphbarcomposer.ui.studio.components.StudioPlayerCard
+import com.smaarig.glyphbarcomposer.ui.studio.components.TimelineCard
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioViewModel
 
 @Composable
@@ -31,11 +54,10 @@ fun MusicStudioScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val visualizerData by viewModel.visualizerData.collectAsStateWithLifecycle()
     val audioPositionMs by viewModel.audioPositionMs.collectAsStateWithLifecycle()
     val composerIntensities by viewModel.composerIntensities.collectAsStateWithLifecycle()
     val liveGlyphIntensities by viewModel.liveGlyphIntensities.collectAsStateWithLifecycle()
-    
+
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -43,7 +65,11 @@ fun MusicStudioScreen(
     var showSaveDialog by remember { mutableStateOf(false) }
 
     if (showSaveDialog) {
-        var projectName by remember { mutableStateOf(uiState.audioName?.substringBeforeLast(".") ?: "") }
+        var projectName by remember {
+            mutableStateOf(
+                uiState.audioName?.substringBeforeLast(".") ?: ""
+            )
+        }
         com.smaarig.glyphbarcomposer.ui.StyledSaveDialog(
             title = "Save Project",
             value = projectName,
@@ -89,14 +115,18 @@ fun MusicStudioScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
+    Box(modifier = modifier
+        .fillMaxSize()
+        .background(Color.Black)) {
         AnimatedContent(
             targetState = uiState.audioUri == null,
             transitionSpec = {
-                (fadeIn(animationSpec = tween(600, delayMillis = 100)) + 
-                 scaleIn(initialScale = 0.95f, animationSpec = tween(600)))
-                    .togetherWith(fadeOut(animationSpec = tween(400)) + 
-                                  scaleOut(targetScale = 1.05f, animationSpec = tween(400)))
+                (fadeIn(animationSpec = tween(600, delayMillis = 100)) +
+                        scaleIn(initialScale = 0.95f, animationSpec = tween(600)))
+                    .togetherWith(
+                        fadeOut(animationSpec = tween(400)) +
+                                scaleOut(targetScale = 1.05f, animationSpec = tween(400))
+                    )
             },
             label = "StudioContentTransition"
         ) { isSetup ->
@@ -111,7 +141,10 @@ fun MusicStudioScreen(
             } else {
                 if (isLandscape) {
                     Row(
-                        modifier = Modifier.fillMaxSize().background(Color.Black).padding(16.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black)
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
                         Column(
@@ -120,8 +153,11 @@ fun MusicStudioScreen(
                                 .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
-                            StudioHeader(uiState, viewModel, onSaveClick = { showSaveDialog = true })
-                            
+                            StudioHeader(
+                                uiState,
+                                viewModel,
+                                onSaveClick = { showSaveDialog = true })
+
                             StudioPlayerCard(
                                 uiState = uiState,
                                 audioPositionMs = audioPositionMs,
@@ -140,7 +176,7 @@ fun MusicStudioScreen(
                             verticalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
                             TimelineCard(uiState, audioPositionMs, viewModel)
-                            
+
                             ComposerPanel(
                                 intensities = composerIntensities,
                                 liveIntensities = liveGlyphIntensities,
@@ -153,7 +189,7 @@ fun MusicStudioScreen(
                                 onClear = viewModel::clearComposer,
                                 onInsert = viewModel::addMusicEvent
                             )
-                            
+
                             Spacer(Modifier.height(80.dp))
                         }
                     }
@@ -177,7 +213,7 @@ fun MusicStudioScreen(
                         )
 
                         AnalyzerCard(uiState, viewModel)
-                        
+
                         TimelineCard(uiState, audioPositionMs, viewModel)
 
                         ComposerPanel(
@@ -192,7 +228,7 @@ fun MusicStudioScreen(
                             onClear = viewModel::clearComposer,
                             onInsert = viewModel::addMusicEvent
                         )
-                        
+
                         Spacer(Modifier.height(120.dp))
                     }
                 }

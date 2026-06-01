@@ -20,16 +20,20 @@ fun WaveformRuler(
             val width = size.width
             val height = size.height
             val samples = waveform.size
-            
+
             onDrawBehind {
                 if (samples == 0) return@onDrawBehind
-                
+
                 val pxPerSample = width / samples
-                
+
                 // Background subtle glow
                 drawRect(
                     brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFF00C853).copy(alpha = 0.05f), Color.Transparent, Color(0xFF00C853).copy(alpha = 0.05f))
+                        colors = listOf(
+                            Color(0xFF00C853).copy(alpha = 0.05f),
+                            Color.Transparent,
+                            Color(0xFF00C853).copy(alpha = 0.05f)
+                        )
                     ),
                     size = size
                 )
@@ -37,7 +41,7 @@ fun WaveformRuler(
                 waveform.forEachIndexed { i, energy ->
                     val x = i * pxPerSample
                     val barHeight = (energy * height * 0.8f).coerceAtLeast(2f)
-                    
+
                     drawLine(
                         brush = Brush.verticalGradient(
                             colors = listOf(

@@ -7,19 +7,25 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.appwidget.updateAll
 import androidx.glance.state.PreferencesGlanceStateDefinition
-import androidx.datastore.preferences.core.*
 import com.nothing.ketchum.Common
 import com.nothing.ketchum.Glyph
 import com.nothing.ketchum.GlyphException
-import com.nothing.ketchum.GlyphFrame
 import com.nothing.ketchum.GlyphManager
-import com.smaarig.glyphbarcomposer.service.BatteryMonitor
+import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import com.smaarig.glyphbarcomposer.ui.widget.GlyphComposerHorizontalWidget
 import com.smaarig.glyphbarcomposer.ui.widget.GlyphComposerVerticalWidget
 import com.smaarig.glyphbarcomposer.ui.widget.INTENSITIES_KEY
-import com.smaarig.glyphbarcomposer.model.GlyphSequence
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 class GlyphController private constructor() {
     private var mGlyphManager: GlyphManager? = null
@@ -63,7 +69,10 @@ class GlyphController private constructor() {
                 _isHardwareBusy
             ) { enabled, charging, level, busy -> Quadruple(enabled, charging, level, busy) }
                 .collect { (enabled, charging, level, busy) ->
-                    Log.d(TAG, "Battery Update: enabled=$enabled, charging=$charging, level=$level, busy=$busy")
+                    Log.d(
+                        TAG,
+                        "Battery Update: enabled=$enabled, charging=$charging, level=$level, busy=$busy"
+                    )
                     if (enabled && charging && !busy) {
                         // Start battery visualization (it will auto-stop after 3s in the function)
                         startBatteryVisualization(level)
@@ -95,10 +104,10 @@ class GlyphController private constructor() {
                 val progressIndex = (level * 18 / 100).coerceIn(0, 18)
                 val fullSegments = progressIndex / 3
                 val partialIntensity = progressIndex % 3
-                
+
                 val reversedChannels = channels.take(6).reversed() // [A6, A5, A4, A3, A2, A1]
                 val intensities = mutableMapOf<Int, Int>()
-                
+
                 reversedChannels.forEachIndexed { index, ch ->
                     intensities[ch] = when {
                         index < fullSegments -> 3
@@ -110,15 +119,17 @@ class GlyphController private constructor() {
                 // Red glyph (7th channel) represents 15% charging
                 val redGlyph = channels[6]
                 intensities[redGlyph] = if (level <= 15) 3 else 0
-                
+
                 // Update preview and hardware
                 val previewList = channels.map { ch -> intensities[ch] ?: 0 }
                 _currentIntensities.value = previewList
-                
+
                 try {
                     mGlyphManager?.openSession()
-                    val sdkIntensities = channels.map { ch -> stateToSdkIntensity(intensities[ch] ?: 0) }
-                    val frameColors = IntArray(7) { i -> if (i < sdkIntensities.size) sdkIntensities[i] else 0 }
+                    val sdkIntensities =
+                        channels.map { ch -> stateToSdkIntensity(intensities[ch] ?: 0) }
+                    val frameColors =
+                        IntArray(7) { i -> if (i < sdkIntensities.size) sdkIntensities[i] else 0 }
                     mGlyphManager?.setFrameColors(frameColors)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error in battery visualization: ${e.message}")
@@ -147,6 +158,7 @@ class GlyphController private constructor() {
 
     companion object {
         private const val TAG = "GlyphController"
+
         @Volatile
         private var sInstance: GlyphController? = null
 
@@ -156,7 +168,7 @@ class GlyphController private constructor() {
             if (sInstance == null) {
                 sInstance = GlyphController()
             }
-            sInstance!!.init(context.getApplicationContext())
+            sInstance!!.init(context.applicationContext)
             return sInstance!!
         }
 
@@ -179,6 +191,7 @@ class GlyphController private constructor() {
                         it.register(Glyph.DEVICE_25111)
                         Log.d(TAG, "Registered for Phone (4a)")
                     }
+
                     Common.is20111() -> it.register(Glyph.DEVICE_20111)
                     Common.is22111() -> it.register(Glyph.DEVICE_22111)
                     Common.is23111() -> it.register(Glyph.DEVICE_23111)
@@ -221,16 +234,17 @@ class GlyphController private constructor() {
         batteryJob = null
         resetJob?.cancel()
         resetJob = null
-        
+
         try {
             mGlyphManager?.openSession()
             mGlyphManager?.turnOff()
             // Safety: also reset via setFrameColors
             mGlyphManager?.setFrameColors(IntArray(7) { 0 })
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+        }
         _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
         _isHardwareBusy.value = false
-        
+
         // Sync with widgets
         mContext?.let { context ->
             updateWidgetState(context, _currentIntensities.value)
@@ -243,22 +257,25 @@ class GlyphController private constructor() {
             intensities[6] = state
             _currentIntensities.value = intensities
         }
-        
+
         try {
             mGlyphManager?.openSession()
             val sdkIntensity = stateToSdkIntensity(state)
-            
+
             // Using the undocumented API suggested by user for red glyph hardware sync
             // We pass all current intensities to keep them in sync
             val intensities = _currentIntensities.value
             val frameColors = IntArray(7) { i ->
-                if (i == 6) sdkIntensity 
+                if (i == 6) sdkIntensity
                 else if (i < intensities.size) stateToSdkIntensity(intensities[i])
                 else 0
             }
             mGlyphManager?.setFrameColors(frameColors)
-            
-            Log.d(TAG, "Red Glyph Set via setFrameColors: $sdkIntensity, Full: ${frameColors.contentToString()}")
+
+            Log.d(
+                TAG,
+                "Red Glyph Set via setFrameColors: $sdkIntensity, Full: ${frameColors.contentToString()}"
+            )
         } catch (e: Exception) {
             Log.e(TAG, "Error in setRedGlyph: ${e.message}")
         }
@@ -301,15 +318,15 @@ class GlyphController private constructor() {
 
         try {
             mGlyphManager?.openSession()
-            
+
             // Using setFrameColors for the entire 7-glyph set to ensure perfect hardware sync
             val frameColors = IntArray(7) { i ->
                 if (i < newIntensities.size) stateToSdkIntensity(newIntensities[i]) else 0
             }
             mGlyphManager?.setFrameColors(frameColors)
-            
+
             Log.i(TAG, "Glyph Frame via setFrameColors: ${frameColors.contentToString()}")
-            
+
             // If all are zero, we explicitly turn off to be safe
             if (newIntensities.all { it == 0 }) {
                 mGlyphManager?.turnOff()
@@ -322,10 +339,10 @@ class GlyphController private constructor() {
     fun playSequence(steps: List<GlyphSequence>, loop: Boolean = false) {
         if (steps.isEmpty()) return
         stopPlayback()
-        
+
         _isPlaying.value = true
         _isHardwareBusy.value = true
-        
+
         playbackJob = controllerScope.launch {
             try {
                 do {
@@ -333,7 +350,7 @@ class GlyphController private constructor() {
                         while (_isPaused.value) {
                             delay(100)
                         }
-                        
+
                         applyGlyphStateWithIntensities(step.channelIntensities, step.durationMs)
                         delay(step.durationMs.toLong() + 50)
                     }
@@ -352,14 +369,15 @@ class GlyphController private constructor() {
         _isPlaying.value = false
         _isPaused.value = false
         _isHardwareBusy.value = false
-        
+
         // Don't turn off if hardware is busy with a single manual trigger
         if (resetJob == null) {
             try {
                 mGlyphManager?.openSession()
                 mGlyphManager?.turnOff()
                 mGlyphManager?.setFrameColors(IntArray(7) { 0 })
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+            }
             _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
             mContext?.let { updateWidgetState(it, _currentIntensities.value) }
         }
@@ -395,13 +413,13 @@ class GlyphController private constructor() {
 
         try {
             mGlyphManager?.openSession()
-            
+
             // Map active channels to intensities for setFrameColors
             val frameColors = IntArray(7) { i ->
                 if (activeChannels.contains(channels[i])) 255 else 0
             }
             mGlyphManager?.setFrameColors(frameColors)
-            
+
             if (activeChannels.isEmpty()) {
                 mGlyphManager?.turnOff()
             }
@@ -412,18 +430,18 @@ class GlyphController private constructor() {
 
     fun applySmoothProgress(percentage: Int) {
         if (mGlyphManager == null) return
-        
+
         // 18 steps total across 6 glyphs: 6 segments * 3 intensities (or continuous intensity)
         // For truly smooth, we map 0-100 to 0 - (6 * 4095)
         val totalRange = 6 * 4095
         val progress = (percentage * totalRange / 100).coerceIn(0, totalRange)
-        
+
         val fullSegments = progress / 4095
         val partialIntensity = progress % 4095
-        
+
         val reversedChannels = channels.take(6).reversed() // [A6, A5, A4, A3, A2, A1]
         val intensities = mutableMapOf<Int, Int>()
-        
+
         reversedChannels.forEachIndexed { index, ch ->
             intensities[ch] = when {
                 index < fullSegments -> 4095
@@ -431,9 +449,9 @@ class GlyphController private constructor() {
                 else -> 0
             }
         }
-        
+
         // Update Global State for Preview (approximate intensities for preview 0-3)
-        val previewList = channels.map { ch -> 
+        val previewList = channels.map { ch ->
             val raw = intensities[ch] ?: 0
             if (raw == 0) 0 else if (raw < 1365) 1 else if (raw < 2730) 2 else 3
         }.toMutableList()
@@ -453,7 +471,8 @@ class GlyphController private constructor() {
                     intensities[ch] ?: 0
                 } else {
                     // Red glyph sync
-                    val state = if (_currentIntensities.value.size >= 7) _currentIntensities.value[6] else 0
+                    val state =
+                        if (_currentIntensities.value.size >= 7) _currentIntensities.value[6] else 0
                     stateToSdkIntensity(state)
                 }
             }
@@ -475,7 +494,11 @@ class GlyphController private constructor() {
                     val manager = GlanceAppWidgetManager(context)
                     val glanceIds = manager.getGlanceIds(widget.javaClass)
                     glanceIds.forEach { glanceId ->
-                        updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+                        updateAppWidgetState(
+                            context,
+                            PreferencesGlanceStateDefinition,
+                            glanceId
+                        ) { prefs ->
                             prefs.toMutablePreferences().apply {
                                 this[INTENSITIES_KEY] = intensityStr
                             }

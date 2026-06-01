@@ -1,31 +1,25 @@
 package com.smaarig.glyphbarcomposer.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
+import android.content.Intent
 import android.util.Log
+import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.smaarig.glyphbarcomposer.data.MusicProjectWithEvents
+import com.smaarig.glyphbarcomposer.data.MusicStudioEvent
 import com.smaarig.glyphbarcomposer.data.MusicStudioProject
 import com.smaarig.glyphbarcomposer.data.Playlist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
+import com.smaarig.glyphbarcomposer.data.SequenceStep
+import com.smaarig.glyphbarcomposer.repository.GlyphRepository
+import com.smaarig.glyphbarcomposer.utils.ZipUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
-import com.smaarig.glyphbarcomposer.repository.GlyphRepository
-
-import android.content.Context
-import android.content.Intent
-import androidx.core.content.FileProvider
-import androidx.core.net.toUri
-import com.smaarig.glyphbarcomposer.data.*
-import com.smaarig.glyphbarcomposer.utils.AudioProcessor
-import com.smaarig.glyphbarcomposer.utils.ZipUtils
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.io.FileOutputStream
 
 class LibraryViewModel(
     application: Application,
@@ -106,10 +100,12 @@ class LibraryViewModel(
                 jsonFile.writeText(json.toString(), Charsets.UTF_8)
 
                 val zipFile = File(context.cacheDir, "${item.project.name}.gstudio")
-                ZipUtils.zipFiles(zipFile, mapOf(
-                    "project.json" to jsonFile,
-                    "audio.mp3" to audioFile // extension doesn't strictly matter inside zip
-                ))
+                ZipUtils.zipFiles(
+                    zipFile, mapOf(
+                        "project.json" to jsonFile,
+                        "audio.mp3" to audioFile // extension doesn't strictly matter inside zip
+                    )
+                )
 
                 shareFile(context, zipFile.name, zipFile, "application/zip")
             } else {
@@ -186,8 +182,8 @@ class LibraryViewModel(
 
                 when (type) {
                     "sequence" -> importSequence(json, name)
-                    "studio"   -> importStudio(json, name, null)
-                    else       -> Log.e(TAG, "importItem: unknown type '$type'")
+                    "studio" -> importStudio(json, name, null)
+                    else -> Log.e(TAG, "importItem: unknown type '$type'")
                 }
 
             } catch (e: Exception) {
@@ -198,7 +194,8 @@ class LibraryViewModel(
 
     private suspend fun importZipBundle(context: Context, uri: android.net.Uri) {
         try {
-            val tempDir = File(context.cacheDir, "import_${System.currentTimeMillis()}").apply { mkdirs() }
+            val tempDir =
+                File(context.cacheDir, "import_${System.currentTimeMillis()}").apply { mkdirs() }
             val extracted = ZipUtils.unzipToDirectory(context, uri, tempDir)
 
             val jsonFile = extracted.find { it.name == "project.json" } ?: return
@@ -210,8 +207,10 @@ class LibraryViewModel(
             // Copy audio to permanent location if it exists
             var finalAudioPath: String? = null
             if (audioFile != null && audioFile.exists()) {
-                val studioDir = File(context.getExternalFilesDir(null), "MusicStudio").apply { mkdirs() }
-                val permanentAudioFile = File(studioDir, "audio_${System.currentTimeMillis()}.${audioFile.extension}")
+                val studioDir =
+                    File(context.getExternalFilesDir(null), "MusicStudio").apply { mkdirs() }
+                val permanentAudioFile =
+                    File(studioDir, "audio_${System.currentTimeMillis()}.${audioFile.extension}")
                 audioFile.inputStream().use { input ->
                     permanentAudioFile.outputStream().use { output ->
                         input.copyTo(output)

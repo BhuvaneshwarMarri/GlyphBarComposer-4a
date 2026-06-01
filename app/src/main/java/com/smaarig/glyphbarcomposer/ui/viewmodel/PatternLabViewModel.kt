@@ -9,11 +9,14 @@ import com.smaarig.glyphbarcomposer.data.Playlist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import com.smaarig.glyphbarcomposer.data.SequenceStep
 import com.smaarig.glyphbarcomposer.model.GlyphSequence
+import com.smaarig.glyphbarcomposer.repository.GlyphRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import com.smaarig.glyphbarcomposer.repository.GlyphRepository
 import java.util.Random
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -195,9 +198,9 @@ class PatternLabViewModel(
     }
 
     private fun processSteps(
-        steps: List<SequenceStep>, 
-        multiplier: Float, 
-        inverted: Boolean, 
+        steps: List<SequenceStep>,
+        multiplier: Float,
+        inverted: Boolean,
         mirrored: Boolean,
         reversed: Boolean,
         pingPong: Boolean
@@ -235,7 +238,7 @@ class PatternLabViewModel(
         val state = _uiState.value
         val a = state.selectedPlaylistA
         val b = state.selectedPlaylistB
-        
+
         if (a == null && b == null) {
             _uiState.update { it.copy(previewSteps = emptyList()) }
             return
@@ -244,8 +247,22 @@ class PatternLabViewModel(
         val stepsA = a?.steps ?: emptyList()
         val stepsB = b?.steps ?: emptyList()
 
-        val processedA = processSteps(stepsA, state.speedMultiplierA, state.isInvertedA, state.isMirroredA, state.isReversedA, state.isPingPongA)
-        val processedB = processSteps(stepsB, state.speedMultiplierB, state.isInvertedB, state.isMirroredB, state.isReversedB, state.isPingPongB)
+        val processedA = processSteps(
+            stepsA,
+            state.speedMultiplierA,
+            state.isInvertedA,
+            state.isMirroredA,
+            state.isReversedA,
+            state.isPingPongA
+        )
+        val processedB = processSteps(
+            stepsB,
+            state.speedMultiplierB,
+            state.isInvertedB,
+            state.isMirroredB,
+            state.isReversedB,
+            state.isPingPongB
+        )
 
         val resultSteps = if (state.isLayered) {
             // Add offset to B
@@ -261,13 +278,15 @@ class PatternLabViewModel(
                 val sA = processedA.getOrNull(i)
                 val sB = offsetSteps.getOrNull(i)
                 val combined = mutableMapOf<Int, Int>()
-                val allChannels = (sA?.channelIntensities?.keys ?: emptySet()) + (sB?.channelIntensities?.keys ?: emptySet())
-                
+                val allChannels =
+                    (sA?.channelIntensities?.keys ?: emptySet()) + (sB?.channelIntensities?.keys
+                        ?: emptySet())
+
                 allChannels.forEach { ch ->
                     val vA = sA?.channelIntensities?.get(ch) ?: 0
                     val vB = sB?.channelIntensities?.get(ch) ?: 0
-                    
-                    combined[ch] = when(state.blendMode) {
+
+                    combined[ch] = when (state.blendMode) {
                         LabBlendMode.MAX -> max(vA, vB)
                         LabBlendMode.ADD -> (vA + vB).coerceIn(0, 3)
                         LabBlendMode.CROSSFADE -> {
@@ -290,13 +309,29 @@ class PatternLabViewModel(
             0 -> {
                 val a = state.selectedPlaylistA
                 if (a == null) emptyList()
-                else processSteps(a.steps, state.speedMultiplierA, state.isInvertedA, state.isMirroredA, state.isReversedA, state.isPingPongA)
+                else processSteps(
+                    a.steps,
+                    state.speedMultiplierA,
+                    state.isInvertedA,
+                    state.isMirroredA,
+                    state.isReversedA,
+                    state.isPingPongA
+                )
             }
+
             1 -> {
                 val b = state.selectedPlaylistB
                 if (b == null) emptyList()
-                else processSteps(b.steps, state.speedMultiplierB, state.isInvertedB, state.isMirroredB, state.isReversedB, state.isPingPongB)
+                else processSteps(
+                    b.steps,
+                    state.speedMultiplierB,
+                    state.isInvertedB,
+                    state.isMirroredB,
+                    state.isReversedB,
+                    state.isPingPongB
+                )
             }
+
             else -> state.previewSteps
         }
     }
@@ -318,18 +353,27 @@ class PatternLabViewModel(
                             val newList = channels.map { ch -> step.channelIntensities[ch] ?: 0 }
                             state.copy(currentPreviewIntensities = newList)
                         }
-                        glyphController.applyGlyphStateWithIntensities(step.channelIntensities, step.durationMs)
+                        glyphController.applyGlyphStateWithIntensities(
+                            step.channelIntensities,
+                            step.durationMs
+                        )
                         delay(step.durationMs.toLong() + 50)
                     }
                 }
-            } catch (e: Exception) { }
+            } catch (e: Exception) {
+            }
         }
     }
 
     fun stopPreview() {
         playbackJob?.cancel()
         playbackJob = null
-        _uiState.update { it.copy(isPlaying = false, currentPreviewIntensities = listOf(0, 0, 0, 0, 0, 0, 0)) }
+        _uiState.update {
+            it.copy(
+                isPlaying = false,
+                currentPreviewIntensities = listOf(0, 0, 0, 0, 0, 0, 0)
+            )
+        }
         glyphController.turnOffGlyphs()
     }
 
@@ -347,25 +391,27 @@ class PatternLabViewModel(
                 )
             }
             repository.savePlaylist(playlist, sequenceSteps)
-            _uiState.update { it.copy(
-                resultName = "", 
-                selectedPlaylistA = null, 
-                selectedPlaylistB = null, 
-                previewSteps = emptyList(),
-                isInvertedA = false,
-                isInvertedB = false,
-                isMirroredA = false,
-                isMirroredB = false,
-                isReversedA = false,
-                isReversedB = false,
-                isPingPongA = false,
-                isPingPongB = false,
-                speedMultiplierA = 1.0f,
-                speedMultiplierB = 1.0f,
-                isLayered = false,
-                offsetB = 0,
-                blendMode = LabBlendMode.MAX
-            ) }
+            _uiState.update {
+                it.copy(
+                    resultName = "",
+                    selectedPlaylistA = null,
+                    selectedPlaylistB = null,
+                    previewSteps = emptyList(),
+                    isInvertedA = false,
+                    isInvertedB = false,
+                    isMirroredA = false,
+                    isMirroredB = false,
+                    isReversedA = false,
+                    isReversedB = false,
+                    isPingPongA = false,
+                    isPingPongB = false,
+                    speedMultiplierA = 1.0f,
+                    speedMultiplierB = 1.0f,
+                    isLayered = false,
+                    offsetB = 0,
+                    blendMode = LabBlendMode.MAX
+                )
+            }
         }
     }
 

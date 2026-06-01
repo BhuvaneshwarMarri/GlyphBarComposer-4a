@@ -1,7 +1,19 @@
 package com.smaarig.glyphbarcomposer.repository
 
 import android.util.Log
-import com.smaarig.glyphbarcomposer.data.*
+import com.smaarig.glyphbarcomposer.data.ContactBinding
+import com.smaarig.glyphbarcomposer.data.ContactBindingWithPlaylist
+import com.smaarig.glyphbarcomposer.data.EventBinding
+import com.smaarig.glyphbarcomposer.data.EventBindingWithPlaylist
+import com.smaarig.glyphbarcomposer.data.MusicProjectWithEvents
+import com.smaarig.glyphbarcomposer.data.MusicStudioEvent
+import com.smaarig.glyphbarcomposer.data.MusicStudioProject
+import com.smaarig.glyphbarcomposer.data.NotificationHook
+import com.smaarig.glyphbarcomposer.data.NotificationHookWithPlaylist
+import com.smaarig.glyphbarcomposer.data.Playlist
+import com.smaarig.glyphbarcomposer.data.PlaylistDao
+import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
+import com.smaarig.glyphbarcomposer.data.SequenceStep
 import kotlinx.coroutines.flow.Flow
 
 class GlyphRepository(private val playlistDao: PlaylistDao) {
@@ -10,8 +22,10 @@ class GlyphRepository(private val playlistDao: PlaylistDao) {
     val allPlaylists: Flow<List<PlaylistWithSteps>> = playlistDao.getAllPlaylists()
     val allMusicProjects: Flow<List<MusicProjectWithEvents>> = playlistDao.getAllMusicProjects()
     val allEventBindings: Flow<List<EventBindingWithPlaylist>> = playlistDao.getAllEventBindings()
-    val allContactBindings: Flow<List<ContactBindingWithPlaylist>> = playlistDao.getAllContactBindings()
-    val allNotificationHooks: Flow<List<NotificationHookWithPlaylist>> = playlistDao.getAllNotificationHooks()
+    val allContactBindings: Flow<List<ContactBindingWithPlaylist>> =
+        playlistDao.getAllContactBindings()
+    val allNotificationHooks: Flow<List<NotificationHookWithPlaylist>> =
+        playlistDao.getAllNotificationHooks()
 
     suspend fun savePlaylist(playlist: Playlist, steps: List<SequenceStep>) {
         Log.d(TAG, "Saving playlist: ${playlist.name} with ${steps.size} steps")

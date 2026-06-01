@@ -2,21 +2,43 @@ package com.smaarig.glyphbarcomposer.ui.patternlab
 
 import android.content.res.Configuration
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.smaarig.glyphbarcomposer.ui.patternlab.components.*
+import com.smaarig.glyphbarcomposer.ui.patternlab.components.BaseTabContent
+import com.smaarig.glyphbarcomposer.ui.patternlab.components.MixerTabContent
+import com.smaarig.glyphbarcomposer.ui.patternlab.components.PatternLabHeader
+import com.smaarig.glyphbarcomposer.ui.patternlab.components.PlaylistPickerDialog
+import com.smaarig.glyphbarcomposer.ui.patternlab.components.SaveMixDialog
 import com.smaarig.glyphbarcomposer.ui.viewmodel.PatternLabUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.PatternLabViewModel
 
@@ -27,7 +49,7 @@ fun PatternLabScreen(viewModel: PatternLabViewModel) {
     var showDialogA by remember { mutableStateOf(false) }
     var showDialogB by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
-    
+
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -62,9 +84,9 @@ fun PatternLabScreen(viewModel: PatternLabViewModel) {
     if (showDialogA) {
         PlaylistPickerDialog(
             playlists = allPlaylists,
-            onSelect = { 
+            onSelect = {
                 viewModel.selectPlaylistA(it)
-                showDialogA = false 
+                showDialogA = false
             },
             onDismiss = { showDialogA = false }
         )
@@ -72,9 +94,9 @@ fun PatternLabScreen(viewModel: PatternLabViewModel) {
     if (showDialogB) {
         PlaylistPickerDialog(
             playlists = allPlaylists,
-            onSelect = { 
+            onSelect = {
                 viewModel.selectPlaylistB(it)
-                showDialogB = false 
+                showDialogB = false
             },
             onDismiss = { showDialogB = false }
         )
@@ -118,7 +140,10 @@ fun PatternLabPortrait(
                     } else Color.Transparent,
                     label = "tabBg"
                 )
-                val textCol by animateColorAsState(if (selected) Color.Black else Color.Gray, label = "tabText")
+                val textCol by animateColorAsState(
+                    if (selected) Color.Black else Color.Gray,
+                    label = "tabText"
+                )
 
                 Box(
                     modifier = Modifier
@@ -129,7 +154,13 @@ fun PatternLabPortrait(
                         .clickable { viewModel.onTabChange(index) },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(label, color = textCol, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.sp)
+                    Text(
+                        label,
+                        color = textCol,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 11.sp,
+                        letterSpacing = 1.sp
+                    )
                 }
             }
         }
@@ -137,7 +168,7 @@ fun PatternLabPortrait(
         Box(modifier = Modifier.weight(1f)) {
             PatternLabContent(uiState, viewModel, onPickA, onPickB, onSaveClick)
         }
-        
+
         Spacer(Modifier.height(100.dp))
     }
 }
@@ -183,7 +214,11 @@ fun PatternLabLandscape(
                             .height(48.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(bg)
-                            .border(1.dp, if (selected) Color.Transparent else Color(0xFF222222), RoundedCornerShape(12.dp))
+                            .border(
+                                1.dp,
+                                if (selected) Color.Transparent else Color(0xFF222222),
+                                RoundedCornerShape(12.dp)
+                            )
                             .clickable { viewModel.onTabChange(index) },
                         contentAlignment = Alignment.Center
                     ) {
@@ -234,6 +269,7 @@ private fun PatternLabContent(
             onReverseChange = viewModel::onReverseAChange,
             onPingPongChange = viewModel::onPingPongAChange
         )
+
         1 -> BaseTabContent(
             title = "SEQUENCE B",
             name = uiState.selectedPlaylistB?.playlist?.name,
@@ -249,6 +285,7 @@ private fun PatternLabContent(
             onReverseChange = viewModel::onReverseBChange,
             onPingPongChange = viewModel::onPingPongBChange
         )
+
         2 -> MixerTabContent(uiState, viewModel, onSaveClick = onSaveClick)
     }
 }

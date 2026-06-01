@@ -4,7 +4,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -13,8 +23,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,7 +64,7 @@ fun DraggableTimeline(
 
     val settledIdx = remember { derivedStateOf { listState.firstVisibleItemIndex } }
     val isScrollInProgress by listState.interactionSource.collectIsDraggedAsState()
-    
+
     // Sync hardware when scrolling manually
     // We only load step if the user is actually dragging the timeline, 
     // to prevent auto-loading when steps are added/removed.
@@ -108,7 +127,9 @@ fun DraggableTimeline(
                 LazyColumn(
                     state = listState,
                     flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
-                    modifier = Modifier.fillMaxSize().testTag("timeline_list"),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("timeline_list"),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     itemsIndexed(uiState.currentSequenceSteps) { index, step ->
@@ -125,34 +146,34 @@ fun DraggableTimeline(
                                 }
                         ) {
                             StepPreviewBox(
-                            step = step,
-                            index = index,
-                            onDelete = { viewModel.removeStep(index) },
-                            onLoad = { viewModel.loadStep(index) },
-                            enabled = !uiState.isPlaying,
-                            onDragStart = {
-                                if (!uiState.isPlaying) draggingIndex = index
-                            },
-                            onDragEnd = {
-                                val src = draggingIndex
-                                if (src != null) {
-                                    val steps = (dragOffsetY / itemHeightPx).roundToInt()
-                                    val dst = (src + steps)
-                                        .coerceIn(0, uiState.currentSequenceSteps.size - 1)
-                                    if (dst != src) viewModel.reorderSteps(src, dst)
+                                step = step,
+                                index = index,
+                                onDelete = { viewModel.removeStep(index) },
+                                onLoad = { viewModel.loadStep(index) },
+                                enabled = !uiState.isPlaying,
+                                onDragStart = {
+                                    if (!uiState.isPlaying) draggingIndex = index
+                                },
+                                onDragEnd = {
+                                    val src = draggingIndex
+                                    if (src != null) {
+                                        val steps = (dragOffsetY / itemHeightPx).roundToInt()
+                                        val dst = (src + steps)
+                                            .coerceIn(0, uiState.currentSequenceSteps.size - 1)
+                                        if (dst != src) viewModel.reorderSteps(src, dst)
+                                    }
+                                    draggingIndex = null
+                                    dragOffsetY = 0f
+                                },
+                                onDragCancel = {
+                                    draggingIndex = null
+                                    dragOffsetY = 0f
+                                },
+                                onDrag = { change, amount ->
+                                    change.consume()
+                                    if (!uiState.isPlaying) dragOffsetY += amount.y
                                 }
-                                draggingIndex = null
-                                dragOffsetY = 0f
-                            },
-                            onDragCancel = {
-                                draggingIndex = null
-                                dragOffsetY = 0f
-                            },
-                            onDrag = { change, amount ->
-                                change.consume()
-                                if (!uiState.isPlaying) dragOffsetY += amount.y
-                            }
-                        )
+                            )
                         }
                     }
                 }
@@ -195,7 +216,12 @@ fun DraggableTimeline(
                         .background(Color(0xFF1A1A1A), RoundedCornerShape(10.dp))
                         .testTag("save_button")
                 ) {
-                    Icon(Icons.Default.Save, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Icon(
+                        Icons.Default.Save,
+                        null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
             Spacer(Modifier.height(12.dp))

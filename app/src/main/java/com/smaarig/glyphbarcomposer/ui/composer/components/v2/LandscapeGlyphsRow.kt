@@ -3,7 +3,16 @@ package com.smaarig.glyphbarcomposer.ui.composer.components.v2
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -60,7 +69,10 @@ fun LandscapeGlyphsRow(
                 val intensity = uiState.glyphIntensities[index]
 
                 if (isRed) {
-                    Box(modifier = Modifier.width(1.dp).height(44.dp).background(Color(0xFF2A2A2A)))
+                    Box(modifier = Modifier
+                        .width(1.dp)
+                        .height(44.dp)
+                        .background(Color(0xFF2A2A2A)))
                 }
 
                 Column(

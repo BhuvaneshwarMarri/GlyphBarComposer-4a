@@ -11,11 +11,8 @@ import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.appwidget.updateAll
 import androidx.glance.state.PreferencesGlanceStateDefinition
-import com.nothing.ketchum.Glyph
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.service.GlyphPlaybackService
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
 
 // ─── Shared preference key ──────────────────────────────────────────────────
 val INTENSITIES_KEY = stringPreferencesKey("intensities")
@@ -28,13 +25,13 @@ object WidgetKeys {
 
 // ─── Intensity colour palette ───────────────────────────────────────────────
 fun getIntensityColor(intensity: Int): Color = when (intensity) {
-    0    -> Color(0xFF1C1C1C) // OFF (Matches CommonUi.kt)
-    1    -> Color(0xFF686868) // LOW white
-    2    -> Color(0xFFCDCDCD) // MED white
-    3    -> Color(0xFFFFFFFF) // HIGH white
-    4    -> Color(0xFFC62828) // LOW red
-    5    -> Color(0xFFEF5350) // MED red
-    6    -> Color(0xFFFF1744) // HIGH red
+    0 -> Color(0xFF1C1C1C) // OFF (Matches CommonUi.kt)
+    1 -> Color(0xFF686868) // LOW white
+    2 -> Color(0xFFCDCDCD) // MED white
+    3 -> Color(0xFFFFFFFF) // HIGH white
+    4 -> Color(0xFFC62828) // LOW red
+    5 -> Color(0xFFEF5350) // MED red
+    6 -> Color(0xFFFF1744) // HIGH red
     else -> Color(0xFF1C1C1C)
 }
 

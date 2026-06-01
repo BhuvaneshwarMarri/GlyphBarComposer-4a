@@ -1,11 +1,25 @@
 package com.smaarig.glyphbarcomposer.ui.hooks.components
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WarningAmber
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,8 +47,8 @@ fun PermissionBanner(onGrantClick: () -> Unit) {
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Default.WarningAmber, 
-                    contentDescription = null, 
+                    Icons.Default.WarningAmber,
+                    contentDescription = null,
                     tint = Color(0xFFFF5252),
                     modifier = Modifier.size(24.dp)
                 )
@@ -42,14 +56,14 @@ fun PermissionBanner(onGrantClick: () -> Unit) {
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Notification Access Required", 
-                    color = Color.White, 
+                    "Notification Access Required",
+                    color = Color.White,
                     fontWeight = FontWeight.Black,
                     fontSize = 14.sp
                 )
                 Text(
-                    "Enable access to sync glyphs with notifications.", 
-                    color = Color.Gray, 
+                    "Enable access to sync glyphs with notifications.",
+                    color = Color.Gray,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -65,7 +79,7 @@ fun PermissionBanner(onGrantClick: () -> Unit) {
                 modifier = Modifier.height(36.dp)
             ) {
                 Text(
-                    "GRANT", 
+                    "GRANT",
                     fontWeight = FontWeight.Black,
                     fontSize = 12.sp
                 )

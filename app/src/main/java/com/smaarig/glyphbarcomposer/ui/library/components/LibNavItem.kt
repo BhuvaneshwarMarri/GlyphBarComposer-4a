@@ -2,7 +2,12 @@ package com.smaarig.glyphbarcomposer.ui.library.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -23,14 +28,32 @@ fun LibNavItem(label: String, icon: ImageVector, selected: Boolean, onClick: () 
     } else Color.Transparent
 
     Surface(
-        modifier = Modifier.fillMaxWidth().height(56.dp).clickable { onClick() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .clickable { onClick() },
         color = bg,
         shape = RoundedCornerShape(16.dp),
         border = if (!selected) BorderStroke(1.dp, Color(0xFF222222)) else null
     ) {
-        Row(modifier = Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Icon(icon, null, tint = if (selected) Color.Black else Color.Gray, modifier = Modifier.size(20.dp))
-            Text(label, color = if (selected) Color.Black else Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                icon,
+                null,
+                tint = if (selected) Color.Black else Color.Gray,
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                label,
+                color = if (selected) Color.Black else Color.Gray,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp
+            )
         }
     }
 }

@@ -6,9 +6,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -17,26 +23,27 @@ import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.background
 import androidx.glance.currentState
-import androidx.glance.layout.*
+import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
+import androidx.glance.layout.Column
+import androidx.glance.layout.Row
+import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.padding
+import androidx.glance.layout.size
+import androidx.glance.layout.width
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
 import androidx.glance.text.TextAlign
-import androidx.glance.LocalContext
-import com.smaarig.glyphbarcomposer.service.GlyphPlaybackService
-import androidx.glance.appwidget.updateAll
+import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import androidx.glance.appwidget.GlanceAppWidgetManager
-import androidx.glance.appwidget.state.updateAppWidgetState
-import com.smaarig.glyphbarcomposer.ui.widget.getIntensityColor
-import com.smaarig.glyphbarcomposer.ui.widget.INTENSITIES_KEY
-import androidx.glance.Image
-import androidx.glance.ImageProvider
 import com.smaarig.glyphbarcomposer.R
+import com.smaarig.glyphbarcomposer.service.GlyphPlaybackService
 
 class GlyphSequencePlayerWidget : GlanceAppWidget() {
 
@@ -122,7 +129,13 @@ class GlyphSequencePlayerWidget : GlanceAppWidget() {
                                 provider = ImageProvider(R.drawable.ic_power_off),
                                 contentDescription = "Turn Off",
                                 modifier = GlanceModifier.size(22.dp),
-                                colorFilter = androidx.glance.ColorFilter.tint(ColorProvider(Color(0xFF00E676)))
+                                colorFilter = androidx.glance.ColorFilter.tint(
+                                    ColorProvider(
+                                        Color(
+                                            0xFF00E676
+                                        )
+                                    )
+                                )
                             )
                         }
 
@@ -171,7 +184,7 @@ class TogglePlaybackAction : ActionCallback {
         updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
             sequenceId = prefs[GlyphSequencePlayerWidget.SELECTED_SEQUENCE_ID] ?: -1L
             isPlaying = prefs[GlyphSequencePlayerWidget.IS_PLAYING] ?: false
-            
+
             // Toggle state immediately for responsive UI
             if (sequenceId != -1L) {
                 prefs.toMutablePreferences().apply {
@@ -181,11 +194,12 @@ class TogglePlaybackAction : ActionCallback {
                 prefs
             }
         }
-        
+
         if (sequenceId == -1L) return
 
         val intent = Intent(context, GlyphPlaybackService::class.java).apply {
-            action = if (isPlaying) GlyphPlaybackService.ACTION_STOP else GlyphPlaybackService.ACTION_START
+            action =
+                if (isPlaying) GlyphPlaybackService.ACTION_STOP else GlyphPlaybackService.ACTION_START
             putExtra(GlyphPlaybackService.EXTRA_PLAYLIST_ID, sequenceId)
         }
 

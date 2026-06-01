@@ -1,22 +1,31 @@
 package com.smaarig.glyphbarcomposer.service
 
-import android.app.*
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.updateAppWidgetState
-import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.appwidget.updateAll
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import com.smaarig.glyphbarcomposer.GlyphApplication
 import com.smaarig.glyphbarcomposer.R
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.ui.widget.DEFAULT_INTENSITIES
 import com.smaarig.glyphbarcomposer.ui.widget.GlyphSequencePlayerWidget
 import com.smaarig.glyphbarcomposer.ui.widget.INTENSITIES_KEY
-import kotlinx.coroutines.*
-import androidx.datastore.preferences.core.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 class GlyphPlaybackService : Service() {
 
@@ -41,6 +50,7 @@ class GlyphPlaybackService : Service() {
                     startPlayback(playlistId)
                 }
             }
+
             ACTION_STOP -> {
                 stopPlayback()
             }
@@ -65,15 +75,15 @@ class GlyphPlaybackService : Service() {
                 while (isActive) {
                     for (step in playlist.steps) {
                         if (!isActive) break
-                        
+
                         glyphController.applyGlyphStateWithIntensities(
                             step.channelIntensities,
                             step.durationMs
                         )
 
                         // Update widget visualization (mini glyph bar)
-                        val intensitiesStr = glyphController.channels.joinToString(",") { 
-                            step.channelIntensities[it]?.toString() ?: "0" 
+                        val intensitiesStr = glyphController.channels.joinToString(",") {
+                            step.channelIntensities[it]?.toString() ?: "0"
                         }
                         updateAllWidgets(true, intensitiesStr)
 
@@ -93,7 +103,7 @@ class GlyphPlaybackService : Service() {
         Log.d("GlyphPlaybackService", "stopPlayback")
         playbackJob?.cancel()
         playbackJob = null
-        
+
         // Reset widget state on stop
         serviceScope.launch {
             updateAllWidgets(false)

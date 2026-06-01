@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.update
 
 class RedGlyphViewModel(application: Application) : AndroidViewModel(application) {
     private val glyphController = GlyphController.getInstance(application)
-    
+
     private val _isRedOn = MutableStateFlow(false)
     val isRedOn = _isRedOn.asStateFlow()
 
@@ -18,7 +18,7 @@ class RedGlyphViewModel(application: Application) : AndroidViewModel(application
         val state = if (_isRedOn.value) 3 else 0
         glyphController.setRedGlyph(state)
     }
-    
+
     fun setRed(on: Boolean) {
         _isRedOn.value = on
         glyphController.setRedGlyph(if (on) 3 else 0)

@@ -1,6 +1,5 @@
 package com.smaarig.glyphbarcomposer.utils
 
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
@@ -71,14 +70,15 @@ object AppNotificationChannelHelper {
                 packageName,
                 Context.CONTEXT_IGNORE_SECURITY
             )
-            val nm = targetContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            val nm =
+                targetContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             nm?.notificationChannels?.mapNotNull { ch ->
                 if (ch.id.isNullOrEmpty()) null
                 else AppNotificationChannel(
-                    id          = ch.id,
-                    name        = ch.name?.toString() ?: ch.id,
+                    id = ch.id,
+                    name = ch.name?.toString() ?: ch.id,
                     description = ch.description,
-                    importance  = ch.importance
+                    importance = ch.importance
                 )
             }?.sortedBy { it.name } ?: emptyList()
         } catch (e: PackageManager.NameNotFoundException) {
@@ -104,11 +104,11 @@ object AppNotificationChannelHelper {
      * Returns importance label for display.
      */
     fun importanceLabel(importance: Int): String = when (importance) {
-        NotificationManager.IMPORTANCE_HIGH    -> "Urgent"
+        NotificationManager.IMPORTANCE_HIGH -> "Urgent"
         NotificationManager.IMPORTANCE_DEFAULT -> "Default"
-        NotificationManager.IMPORTANCE_LOW     -> "Low"
-        NotificationManager.IMPORTANCE_MIN     -> "Minimal"
-        NotificationManager.IMPORTANCE_NONE    -> "None"
+        NotificationManager.IMPORTANCE_LOW -> "Low"
+        NotificationManager.IMPORTANCE_MIN -> "Minimal"
+        NotificationManager.IMPORTANCE_NONE -> "None"
         else -> "Unknown"
     }
 }

@@ -1,17 +1,24 @@
 package com.smaarig.glyphbarcomposer.service
 
-import android.app.*
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import com.smaarig.glyphbarcomposer.R
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.ui.MainActivity
 import com.smaarig.glyphbarcomposer.utils.EnhancedGestureManager
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 
 class BatteryService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -22,7 +29,7 @@ class BatteryService : Service() {
     companion object {
         private const val CHANNEL_ID = "battery_sync_channel"
         private const val NOTIFICATION_ID = 1001
-        
+
         var isRunning = false
             private set
     }
@@ -36,14 +43,18 @@ class BatteryService : Service() {
             glyphController.showBatteryPeek()
         }
         gestureManager.start()
-        
+
         createNotificationChannel()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(NOTIFICATION_ID, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            startForeground(
+                NOTIFICATION_ID,
+                createNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
         } else {
             startForeground(NOTIFICATION_ID, createNotification())
         }
-        
+
         // Monitor battery and update glyphs
         serviceScope.launch {
             combine(

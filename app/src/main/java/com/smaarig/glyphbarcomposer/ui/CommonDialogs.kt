@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
@@ -46,13 +45,13 @@ fun StyledSaveDialog(
                 OutlinedTextField(
                     value = value,
                     onValueChange = onValueChange,
-                    placeholder = { 
+                    placeholder = {
                         Text(
-                            placeholder, 
+                            placeholder,
                             color = Color.Gray,
                             fontFamily = nothingFont,
                             fontSize = 14.sp
-                        ) 
+                        )
                     },
                     singleLine = true,
                     textStyle = androidx.compose.ui.text.TextStyle(
@@ -60,7 +59,9 @@ fun StyledSaveDialog(
                         fontFamily = nothingFont,
                         fontSize = 16.sp
                     ),
-                    modifier = Modifier.fillMaxWidth().testTag("save_dialog_input"),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("save_dialog_input"),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color.White,
@@ -79,8 +80,8 @@ fun StyledSaveDialog(
                 modifier = Modifier.testTag("save_dialog_confirm")
             ) {
                 Text(
-                    "SAVE", 
-                    color = if (value.isNotBlank()) Color(0xFF00C853) else Color.Gray, 
+                    "SAVE",
+                    color = if (value.isNotBlank()) Color(0xFF00C853) else Color.Gray,
                     fontWeight = FontWeight.Black,
                     fontFamily = nothingFont,
                     letterSpacing = 1.sp
@@ -90,7 +91,7 @@ fun StyledSaveDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(
-                    "CANCEL", 
+                    "CANCEL",
                     color = Color.Gray,
                     fontFamily = nothingFont,
                     letterSpacing = 1.sp

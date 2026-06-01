@@ -5,10 +5,25 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,7 +53,7 @@ fun SequenceTrack(
         derivedStateOf {
             val scrollValue = state.horizontalScrollState.value
             val viewportWidth = state.horizontalScrollState.viewportSize
-            
+
             val startTimeMs = state.pxToTime(scrollValue.toFloat())
             val endTimeMs = state.pxToTime((scrollValue + viewportWidth).toFloat())
 
@@ -48,7 +63,7 @@ fun SequenceTrack(
             }
         }
     }
-    
+
     val visibleTimeRange by remember(state) {
         derivedStateOf {
             val scrollValue = state.horizontalScrollState.value
@@ -70,11 +85,11 @@ fun SequenceTrack(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val msPerGrid = 500L
             val pxPerGrid = state.timeToPx(msPerGrid)
-            
+
             // Only draw grid lines that are visible
             val startGrid = (visibleTimeRange.start / msPerGrid).toInt()
             val endGrid = (visibleTimeRange.endInclusive / msPerGrid).toInt() + 1
-            
+
             for (i in startGrid..endGrid) {
                 val x = i * pxPerGrid
                 drawLine(Color(0xFF151515), Offset(x, 0f), Offset(x, size.height), 1f)
@@ -88,14 +103,24 @@ fun SequenceTrack(
                     state = state,
                     isSelected = event.id == selectedEventId,
                     onClick = { onSelectEvent(event) },
-                    onMove = { delta -> onMoveEvent(event, (event.timestampMs + delta).coerceAtLeast(0L)) },
+                    onMove = { delta ->
+                        onMoveEvent(
+                            event,
+                            (event.timestampMs + delta).coerceAtLeast(0L)
+                        )
+                    },
                     onResizeLeft = { delta ->
                         val start = (event.timestampMs + delta).coerceAtLeast(0L)
-                        val dur = (event.timestampMs + event.durationMs - start).toInt().coerceAtLeast(50)
+                        val dur =
+                            (event.timestampMs + event.durationMs - start).toInt().coerceAtLeast(50)
                         onResizeEvent(event, start, dur)
                     },
                     onResizeRight = { delta ->
-                        onResizeEvent(event, event.timestampMs, (event.durationMs + delta).toInt().coerceAtLeast(50))
+                        onResizeEvent(
+                            event,
+                            event.timestampMs,
+                            (event.durationMs + delta).toInt().coerceAtLeast(50)
+                        )
                     },
                     onDelete = { onDeleteEvent(event) }
                 )
@@ -122,7 +147,8 @@ fun SequenceBlock(
     var isResizing by remember(event.id) { mutableStateOf(false) }
 
     val currentTimestampMs = (event.timestampMs + moveDeltaMs + resizeLeftDeltaMs).coerceAtLeast(0L)
-    val currentDurationMs = (event.durationMs + resizeRightDeltaMs - resizeLeftDeltaMs).coerceAtLeast(50)
+    val currentDurationMs =
+        (event.durationMs + resizeRightDeltaMs - resizeLeftDeltaMs).coerceAtLeast(50)
 
     val x = state.timeToDp(currentTimestampMs)
     val widthDp = state.timeToDp(currentDurationMs).coerceAtLeast(MIN_BLOCK_WIDTH)
@@ -175,10 +201,16 @@ fun SequenceBlock(
                     }
                 }
         ) {
-            if (isDragging) Box(modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.05f)))
-            
+            if (isDragging) Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White.copy(alpha = 0.05f))
+            )
+
             Column(
-                modifier = Modifier.align(Alignment.Center).padding(2.dp),
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(2.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(1.5.dp)
             ) {
@@ -197,11 +229,11 @@ fun SequenceBlock(
                 .pointerInput(event.id, state) {
                     detectDragGestures(
                         onDragStart = { isResizing = true; onClick() },
-                        onDragEnd = { 
+                        onDragEnd = {
                             isResizing = false
                             val snapped = Math.round(resizeLeftDeltaMs / 25.0) * 25
                             onResizeLeft(snapped)
-                            resizeLeftDeltaMs = 0L 
+                            resizeLeftDeltaMs = 0L
                         },
                         onDragCancel = { isResizing = false; resizeLeftDeltaMs = 0L }
                     ) { change, drag ->
@@ -221,11 +253,11 @@ fun SequenceBlock(
                 .pointerInput(event.id, state) {
                     detectDragGestures(
                         onDragStart = { isResizing = true; onClick() },
-                        onDragEnd = { 
+                        onDragEnd = {
                             isResizing = false
                             val snapped = Math.round(resizeRightDeltaMs / 25.0) * 25
                             onResizeRight(snapped)
-                            resizeRightDeltaMs = 0L 
+                            resizeRightDeltaMs = 0L
                         },
                         onDragCancel = { isResizing = false; resizeRightDeltaMs = 0L }
                     ) { change, drag ->
@@ -248,7 +280,12 @@ fun PatternDot(event: MusicStudioEvent, index: Int) {
             .clip(CircleShape)
             .background(
                 if (intensity > 0) {
-                    if (isRed) Color(0xFFFF1744) else Color.White.copy(alpha = (intensity / 3f).coerceIn(0.4f, 1.0f))
+                    if (isRed) Color(0xFFFF1744) else Color.White.copy(
+                        alpha = (intensity / 3f).coerceIn(
+                            0.4f,
+                            1.0f
+                        )
+                    )
                 } else Color(0xFF2A2A2A)
             )
     )

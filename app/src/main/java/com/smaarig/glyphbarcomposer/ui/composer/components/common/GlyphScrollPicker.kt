@@ -5,11 +5,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,7 +43,7 @@ fun GlyphScrollPicker(
 
     val currentIntensity by rememberUpdatedState(intensity)
     val currentOnIntensityChange by rememberUpdatedState(onIntensityChange)
-    
+
     val isDragged by listState.interactionSource.collectIsDraggedAsState()
 
     // Sync selection when user touches/drags
@@ -69,7 +78,7 @@ fun GlyphScrollPicker(
                     // Handle wrapping in infinite list for shortest path
                     if (diff > states.size / 2) diff -= states.size
                     else if (diff < -states.size / 2) diff += states.size
-                    
+
                     if (intensity == 0) {
                         listState.scrollToItem(currentIdx + diff)
                     } else {
@@ -94,7 +103,7 @@ fun GlyphScrollPicker(
             val dotSpacing = 5.dp.toPx()
             val startX = 6.dp.toPx()
             val endX = size.width - 6.dp.toPx()
-            
+
             // Draw 7 dots to match the 7 glyphs theme
             for (i in 0 until 7) {
                 val y = (size.height / 2) - (3 * dotSpacing) + (i * dotSpacing)

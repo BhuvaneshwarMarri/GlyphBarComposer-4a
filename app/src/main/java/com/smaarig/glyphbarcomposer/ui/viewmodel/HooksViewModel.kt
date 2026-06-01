@@ -3,7 +3,6 @@ package com.smaarig.glyphbarcomposer.ui.viewmodel
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -59,7 +58,8 @@ class HooksViewModel(
     val isBackgroundServiceEnabled: StateFlow<Boolean> = _isBackgroundServiceEnabled.asStateFlow()
 
     private val _selectedAppChannels = MutableStateFlow<List<AppNotificationChannel>>(emptyList())
-    val selectedAppChannels: StateFlow<List<AppNotificationChannel>> = _selectedAppChannels.asStateFlow()
+    val selectedAppChannels: StateFlow<List<AppNotificationChannel>> =
+        _selectedAppChannels.asStateFlow()
 
     private val _isLoadingChannels = MutableStateFlow(false)
     val isLoadingChannels: StateFlow<Boolean> = _isLoadingChannels.asStateFlow()
@@ -75,7 +75,8 @@ class HooksViewModel(
     }
 
     private fun checkBackgroundServiceStatus() {
-        val prefs = getApplication<Application>().getSharedPreferences("glyph_prefs", Context.MODE_PRIVATE)
+        val prefs =
+            getApplication<Application>().getSharedPreferences("glyph_prefs", Context.MODE_PRIVATE)
         _isBackgroundServiceEnabled.value = prefs.getBoolean("bg_sync_enabled", false)
     }
 
@@ -131,16 +132,16 @@ class HooksViewModel(
                 packages
                     .filter { info ->
                         val isSystemCore = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                        val hasLauncher  = pm.getLaunchIntentForPackage(info.packageName) != null
+                        val hasLauncher = pm.getLaunchIntentForPackage(info.packageName) != null
                         val isKnownMedia = info.packageName in PROGRESS_ONLY_PACKAGES
                         !isSystemCore || hasLauncher || isKnownMedia
                     }
                     .mapNotNull { info ->
                         try {
                             AppInfo(
-                                packageName    = info.packageName,
-                                appName        = pm.getApplicationLabel(info).toString(),
-                                icon           = pm.getApplicationIcon(info.packageName),
+                                packageName = info.packageName,
+                                appName = pm.getApplicationLabel(info).toString(),
+                                icon = pm.getApplicationIcon(info.packageName),
                                 isProgressOnly = info.packageName in PROGRESS_ONLY_PACKAGES
                             )
                         } catch (e: PackageManager.NameNotFoundException) {
@@ -158,14 +159,15 @@ class HooksViewModel(
         _isLoadingChannels.value = true
         viewModelScope.launch {
             val channels = withContext(Dispatchers.IO) {
-                val platformChannels = GlyphNotificationListenerService.getActiveChannels(packageName)
+                val platformChannels =
+                    GlyphNotificationListenerService.getActiveChannels(packageName)
                 if (platformChannels.isNotEmpty()) {
                     platformChannels.map { ch ->
                         AppNotificationChannel(
-                            id          = ch.id,
-                            name        = ch.name?.toString() ?: ch.id,
+                            id = ch.id,
+                            name = ch.name?.toString() ?: ch.id,
                             description = ch.description,
-                            importance  = ch.importance
+                            importance = ch.importance
                         )
                     }.sortedBy { it.name }
                 } else {
@@ -205,14 +207,14 @@ class HooksViewModel(
     ) {
         viewModelScope.launch {
             val hook = NotificationHook(
-                packageName             = packageName,
-                appName                 = appName,
-                playlistId              = playlistId,
-                isProgressSync          = isProgressSync,
-                notificationType        = notificationType,
-                notificationChannelId   = notificationChannelId,
+                packageName = packageName,
+                appName = appName,
+                playlistId = playlistId,
+                isProgressSync = isProgressSync,
+                notificationType = notificationType,
+                notificationChannelId = notificationChannelId,
                 notificationChannelName = notificationChannelName,
-                extraData               = extraData
+                extraData = extraData
             )
             repository.saveNotificationHook(hook)
         }
@@ -269,7 +271,8 @@ class HooksViewModel(
                 // Create a dedicated test channel in our app
                 val testChannelId = "hook_test_channel"
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    val nm =
+                        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                     if (nm.getNotificationChannel(testChannelId) == null) {
                         val ch = NotificationChannel(
                             testChannelId,
@@ -280,7 +283,8 @@ class HooksViewModel(
                     }
                 }
 
-                val content = if (hook.isProgressSync) "Progress Sync Test" else "Trigger Test — ${playlist?.name}"
+                val content =
+                    if (hook.isProgressSync) "Progress Sync Test" else "Trigger Test — ${playlist?.name}"
 
                 // Build a dummy notification that mimics the target app
                 val notification = NotificationCompat.Builder(context, testChannelId)
