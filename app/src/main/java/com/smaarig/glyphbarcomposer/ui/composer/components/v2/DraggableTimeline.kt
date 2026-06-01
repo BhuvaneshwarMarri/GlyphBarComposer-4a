@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -107,7 +108,7 @@ fun DraggableTimeline(
                 LazyColumn(
                     state = listState,
                     flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testTag("timeline_list"),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     itemsIndexed(uiState.currentSequenceSteps) { index, step ->
@@ -177,6 +178,7 @@ fun DraggableTimeline(
                             if (uiState.isPlaying) Color(0xFF00E676) else Color.White,
                             RoundedCornerShape(10.dp)
                         )
+                        .testTag("play_button")
                 ) {
                     Icon(
                         if (uiState.isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
@@ -191,6 +193,7 @@ fun DraggableTimeline(
                         .weight(1f)
                         .fillMaxHeight()
                         .background(Color(0xFF1A1A1A), RoundedCornerShape(10.dp))
+                        .testTag("save_button")
                 ) {
                     Icon(Icons.Default.Save, null, tint = Color.White, modifier = Modifier.size(20.dp))
                 }

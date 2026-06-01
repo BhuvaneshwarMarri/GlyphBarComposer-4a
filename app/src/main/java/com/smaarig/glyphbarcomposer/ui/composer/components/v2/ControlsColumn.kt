@@ -14,6 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,6 +78,7 @@ fun ControlsColumn(
                     modifier = Modifier
                         .graphicsLayer { rotationZ = -90f }
                         .requiredWidth(340.dp)
+                        .testTag("duration_slider")
                 )
             }
         }
@@ -86,7 +88,8 @@ fun ControlsColumn(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)
-                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(14.dp)),
+                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(14.dp))
+                .testTag("add_step_button"),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.White,
                 contentColor = Color.Black

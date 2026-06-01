@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -95,6 +96,7 @@ fun GlyphsColumn(
                         viewModel.onIntensityChange(index, newVal)
                         viewModel.setSelectedChannel(index)
                     },
+                    modifier = Modifier.testTag("glyph_picker_$index"),
                     isRed = isRed,
                     enabled = !uiState.isPlaying
                 )

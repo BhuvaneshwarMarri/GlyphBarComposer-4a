@@ -34,7 +34,8 @@ class LibraryScreenTest {
                 LibraryScreen(
                     viewModel = libraryViewModel,
                     composerViewModel = composerViewModel,
-                    musicStudioViewModel = musicStudioViewModel
+                    musicStudioViewModel = musicStudioViewModel,
+                    navController = mockk(relaxed = true)
                 )
             }
         }
@@ -55,7 +56,8 @@ class LibraryScreenTest {
                 LibraryScreen(
                     viewModel = libraryViewModel,
                     composerViewModel = composerViewModel,
-                    musicStudioViewModel = musicStudioViewModel
+                    musicStudioViewModel = musicStudioViewModel,
+                    navController = mockk(relaxed = true)
                 )
             }
         }

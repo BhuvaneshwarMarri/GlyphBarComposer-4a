@@ -14,6 +14,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -59,7 +60,7 @@ fun StyledSaveDialog(
                         fontFamily = nothingFont,
                         fontSize = 16.sp
                     ),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("save_dialog_input"),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color.White,
@@ -74,7 +75,8 @@ fun StyledSaveDialog(
         confirmButton = {
             TextButton(
                 onClick = onSave,
-                enabled = value.isNotBlank()
+                enabled = value.isNotBlank(),
+                modifier = Modifier.testTag("save_dialog_confirm")
             ) {
                 Text(
                     "SAVE", 

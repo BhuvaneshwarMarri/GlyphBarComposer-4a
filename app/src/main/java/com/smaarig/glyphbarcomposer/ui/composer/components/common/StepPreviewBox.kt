@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,7 +52,8 @@ fun StepPreviewBox(
             .clip(RoundedCornerShape(12.dp))
             .background(Color(0xFF0F0F0F))
             .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(12.dp))
-            .clickable(enabled = enabled) { showMenu = !showMenu },
+            .clickable(enabled = enabled) { showMenu = !showMenu }
+            .testTag("step_box_$index"),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -68,6 +70,7 @@ fun StepPreviewBox(
                 tint = Color(0xFF333333),
                 modifier = Modifier
                     .size(28.dp)
+                    .testTag("drag_handle_$index")
                     .pointerInput(Unit) {
                         detectDragGestures(
                             onDragStart = { onDragStart() },
@@ -115,7 +118,7 @@ fun StepPreviewBox(
             // Right part: Quick actions or indicator
             IconButton(
                 onClick = onLoad,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(32.dp).testTag("retry_button_$index"),
                 enabled = enabled
             ) {
                 Icon(
@@ -145,6 +148,7 @@ fun StepPreviewBox(
                             .size(36.dp)
                             .background(Color(0xFF221111), CircleShape)
                             .border(1.dp, Color(0xFF442222), CircleShape)
+                            .testTag("delete_button_$index")
                     ) {
                         Icon(
                             Icons.Default.Delete,

@@ -22,6 +22,7 @@ import com.smaarig.glyphbarcomposer.ui.intensityColor
 fun GlyphScrollPicker(
     intensity: Int,
     onIntensityChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
     isRed: Boolean = false,
     enabled: Boolean = true
 ) {
@@ -82,7 +83,7 @@ fun GlyphScrollPicker(
     val cellWidth = 54.dp
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .width(cellWidth + 16.dp) // Extra width for side indicators
             .height(44.dp),
         contentAlignment = Alignment.Center
