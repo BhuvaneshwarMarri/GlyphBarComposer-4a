@@ -25,7 +25,7 @@ fun GlyphScrollPicker(
     isRed: Boolean = false,
     enabled: Boolean = true
 ) {
-    val states = if (isRed) listOf(0, 4, 5, 6) else listOf(0, 1, 2, 3)
+    val states = if (isRed) listOf(0, 6) else listOf(0, 1, 2, 3)
     val infiniteCount = 10000
     val startOffset = (infiniteCount / 2)
     val initialIdx = startOffset + states.indexOf(intensity).coerceAtLeast(0)
@@ -49,6 +49,8 @@ fun GlyphScrollPicker(
             .collect { idx ->
                 val newVal = states[idx % states.size]
                 if (newVal != currentIntensity) {
+                    // Slight delay to avoid rapid updates during fast scrolls
+                    kotlinx.coroutines.delay(10)
                     currentOnIntensityChange(newVal)
                 }
             }

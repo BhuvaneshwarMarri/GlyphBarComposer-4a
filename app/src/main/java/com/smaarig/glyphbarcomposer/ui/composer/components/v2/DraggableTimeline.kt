@@ -3,6 +3,7 @@ package com.smaarig.glyphbarcomposer.ui.composer.components.v2
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -42,12 +43,22 @@ fun DraggableTimeline(
     var fileName by remember { mutableStateOf("") }
 
     val settledIdx = remember { derivedStateOf { listState.firstVisibleItemIndex } }
+    val isScrollInProgress by listState.interactionSource.collectIsDraggedAsState()
     
-    // Sync hardware when scrolling manually or when snapping settles
+    // Sync hardware when scrolling manually
+    // We only load step if the user is actually dragging the timeline, 
+    // to prevent auto-loading when steps are added/removed.
     LaunchedEffect(settledIdx.value) {
-        if (!uiState.isPlaying && uiState.currentSequenceSteps.isNotEmpty()) {
+        if (isScrollInProgress && !uiState.isPlaying && uiState.currentSequenceSteps.isNotEmpty()) {
             val idx = settledIdx.value.coerceIn(0, uiState.currentSequenceSteps.size - 1)
             viewModel.loadStep(idx)
+        }
+    }
+
+    // Auto-scroll to end when a new step is added
+    LaunchedEffect(uiState.currentSequenceSteps.size) {
+        if (uiState.currentSequenceSteps.isNotEmpty()) {
+            listState.animateScrollToItem(uiState.currentSequenceSteps.size - 1)
         }
     }
 

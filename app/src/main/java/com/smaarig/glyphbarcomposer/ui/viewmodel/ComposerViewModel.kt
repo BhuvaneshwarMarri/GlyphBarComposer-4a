@@ -42,9 +42,10 @@ class ComposerViewModel(
         glyphController.currentIntensities,
         glyphController.isPlaying,
         glyphController.isPaused
-    ) { state, intensities, playing, paused ->
+    ) { state, controllerIntensities, playing, paused ->
         state.copy(
-            glyphIntensities = intensities,
+            // Use controller intensities only when playing to avoid overwriting user edits
+            glyphIntensities = if (playing) controllerIntensities else state.glyphIntensities,
             isPlaying = playing,
             isPaused = paused
         )
@@ -150,6 +151,7 @@ class ComposerViewModel(
     fun turnOffAllGlyphs() {
         glyphController.turnOffGlyphs()
         _uiState.update { it.copy(
+            glyphIntensities = listOf(0, 0, 0, 0, 0, 0, 0),
             activePlaylistId = null // Ensure everything is reset
         ) }
     }
