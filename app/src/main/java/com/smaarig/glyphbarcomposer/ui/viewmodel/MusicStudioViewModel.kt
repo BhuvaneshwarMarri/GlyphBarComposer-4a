@@ -19,11 +19,11 @@ import com.smaarig.glyphbarcomposer.utils.AudioAnalyzer
 import com.smaarig.glyphbarcomposer.utils.AudioProcessor
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -112,12 +112,7 @@ class MusicStudioViewModel(
     private var visualizer: Visualizer? = null
 
     private val _uiState = MutableStateFlow(MusicStudioUiState())
-    val uiState: StateFlow<MusicStudioUiState> = combine(
-        _uiState,
-        glyphController.isPlaying
-    ) { state, playing ->
-        state.copy(isAudioPlaying = playing && state.activeProjectId != null)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MusicStudioUiState())
+    val uiState: StateFlow<MusicStudioUiState> = _uiState.asStateFlow()
 
     private val _visualizerData = MutableStateFlow(List(16) { 0f })
     val visualizerData: StateFlow<List<Float>> = _visualizerData.asStateFlow()
@@ -234,6 +229,14 @@ class MusicStudioViewModel(
                     }
                     _audioPositionMs.value = 0
                     startAudioAnalysis()
+                }
+                setOnCompletionListener {
+                    _uiState.update { it.copy(isAudioPlaying = false) }
+                    stopMusicStudio()
+                }
+                setOnErrorListener { _, _, _ ->
+                    _uiState.update { it.copy(isAudioPlaying = false, isAnalyzing = false) }
+                    true
                 }
                 prepareAsync()
             }
@@ -414,16 +417,26 @@ class MusicStudioViewModel(
 
     fun toggleMusicPlayback() {
         val mp = mediaPlayer ?: return
-        if (mp.isPlaying) {
-            mp.pause()
-            releaseVisualizer()
+        try {
+            if (mp.isPlaying) {
+                mp.pause()
+                releaseVisualizer()
+                _uiState.update { it.copy(isAudioPlaying = false) }
+                stopMusicStudio()
+            } else {
+                // If we're at the very end, restart from beginning
+                if (mp.currentPosition >= mp.duration - 50) {
+                    mp.seekTo(0)
+                    _audioPositionMs.value = 0
+                }
+                mp.start()
+                _uiState.update { it.copy(isAudioPlaying = true) }
+                setupVisualizer()
+                startMusicStudio()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
             _uiState.update { it.copy(isAudioPlaying = false) }
-            stopMusicStudio()
-        } else {
-            _uiState.update { it.copy(isAudioPlaying = true) }
-            mp.start()
-            setupVisualizer()
-            startMusicStudio()
         }
     }
 
@@ -441,8 +454,20 @@ class MusicStudioViewModel(
             var lastPos = (_audioPositionMs.value - 1).coerceAtLeast(0)
             var prevActiveIds = setOf<Long>()
 
-            while (mediaPlayer?.isPlaying == true) {
-                val pos = mediaPlayer?.currentPosition ?: 0
+            // Robust check for isPlaying status with small retry/delay to handle native lag
+            var retryCount = 0
+            while (mediaPlayer?.isPlaying != true && retryCount < 10) {
+                if (!isActive || !_uiState.value.isAudioPlaying) return@launch
+                delay(20)
+                retryCount++
+            }
+
+            while (isActive && mediaPlayer?.isPlaying == true) {
+                val pos = try {
+                    mediaPlayer?.currentPosition ?: 0
+                } catch (e: Exception) {
+                    0
+                }
                 _audioPositionMs.value = pos
 
                 if (pos < lastPos - 100) {
@@ -478,8 +503,13 @@ class MusicStudioViewModel(
                 delay(16)
             }
 
-            _uiState.update { it.copy(isAudioPlaying = false) }
-            glyphController.turnOffGlyphs()
+            // If we exited naturally (not cancelled) and reached the end
+            if (isActive && (mediaPlayer?.currentPosition ?: 0) >= (mediaPlayer?.duration
+                    ?: 0) - 100
+            ) {
+                _uiState.update { it.copy(isAudioPlaying = false) }
+                glyphController.turnOffGlyphs()
+            }
         }
     }
 

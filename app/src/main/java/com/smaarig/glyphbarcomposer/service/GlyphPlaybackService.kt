@@ -8,16 +8,13 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.glance.appwidget.GlanceAppWidgetManager
-import androidx.glance.appwidget.state.updateAppWidgetState
-import androidx.glance.appwidget.updateAll
-import androidx.glance.state.PreferencesGlanceStateDefinition
 import com.smaarig.glyphbarcomposer.GlyphApplication
 import com.smaarig.glyphbarcomposer.R
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.ui.widget.DEFAULT_INTENSITIES
 import com.smaarig.glyphbarcomposer.ui.widget.GlyphSequencePlayerWidget
 import com.smaarig.glyphbarcomposer.ui.widget.INTENSITIES_KEY
+import com.smaarig.glyphbarcomposer.ui.widget.updateAllWidgets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -69,7 +66,7 @@ class GlyphPlaybackService : Service() {
             startForeground(NOTIFICATION_ID, createNotification(playlist.playlist.name))
 
             // Update widget state to PLAYING
-            updateAllWidgets(true)
+            updateAllWidgets(this@GlyphPlaybackService, isPlaying = true, playlistId = playlistId, playlistName = playlist.playlist.name)
 
             try {
                 while (isActive) {
@@ -82,17 +79,17 @@ class GlyphPlaybackService : Service() {
                         )
 
                         // Update widget visualization (mini glyph bar)
-                        val intensitiesStr = glyphController.channels.joinToString(",") {
-                            step.channelIntensities[it]?.toString() ?: "0"
+                        val intensities = glyphController.channels.map {
+                            step.channelIntensities[it] ?: 0
                         }
-                        updateAllWidgets(true, intensitiesStr)
+                        updateAllWidgets(this@GlyphPlaybackService, intensities = intensities)
 
                         delay(step.durationMs.toLong() + 50)
                     }
                 }
             } finally {
                 glyphController.turnOffGlyphs()
-                updateAllWidgets(false, DEFAULT_INTENSITIES)
+                updateAllWidgets(this@GlyphPlaybackService, isPlaying = false)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
@@ -106,25 +103,9 @@ class GlyphPlaybackService : Service() {
 
         // Reset widget state on stop
         serviceScope.launch {
-            updateAllWidgets(false)
+            updateAllWidgets(this@GlyphPlaybackService, isPlaying = false)
             stopSelf()
         }
-    }
-
-    private suspend fun updateAllWidgets(isPlaying: Boolean, intensities: String? = null) {
-        val manager = GlanceAppWidgetManager(this)
-        val glanceIds = manager.getGlanceIds(GlyphSequencePlayerWidget::class.java)
-        glanceIds.forEach { glanceId ->
-            updateAppWidgetState(this, PreferencesGlanceStateDefinition, glanceId) { prefs ->
-                prefs.toMutablePreferences().apply {
-                    this[GlyphSequencePlayerWidget.IS_PLAYING] = isPlaying
-                    if (intensities != null) {
-                        this[INTENSITIES_KEY] = intensities
-                    }
-                }
-            }
-        }
-        GlyphSequencePlayerWidget().updateAll(this)
     }
 
     private fun createNotification(name: String): Notification {

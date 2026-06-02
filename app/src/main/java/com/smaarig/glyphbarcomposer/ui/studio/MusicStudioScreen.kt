@@ -161,6 +161,7 @@ fun MusicStudioScreen(
                             StudioPlayerCard(
                                 uiState = uiState,
                                 audioPositionMs = audioPositionMs,
+                                isAudioPlaying = uiState.isAudioPlaying,
                                 onPlayPause = viewModel::toggleMusicPlayback,
                                 onSeek = viewModel::seekMusic,
                                 onChangeAudio = { fileLauncher.launch("audio/*") }
@@ -207,6 +208,7 @@ fun MusicStudioScreen(
                         StudioPlayerCard(
                             uiState = uiState,
                             audioPositionMs = audioPositionMs,
+                            isAudioPlaying = uiState.isAudioPlaying,
                             onPlayPause = viewModel::toggleMusicPlayback,
                             onSeek = viewModel::seekMusic,
                             onChangeAudio = { fileLauncher.launch("audio/*") }

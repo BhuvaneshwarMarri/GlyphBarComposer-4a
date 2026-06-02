@@ -290,15 +290,17 @@ private fun HooksList(
 
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .navigationBarsPadding(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(bottom = 120.dp)
+        contentPadding = PaddingValues(bottom = 100.dp)
     ) {
         item {
             BackgroundServiceCard(
                 isEnabled = isBgServiceEnabled,
                 onToggle = onBgServiceToggle,
-                modifier = Modifier.animateItem()
+                modifier = Modifier
             )
         }
 
@@ -313,6 +315,10 @@ private fun HooksList(
                 onTest = { onTest(hookWithPlaylist) },
                 modifier = Modifier.animateItem(tween(250))
             )
+        }
+
+        item {
+            Spacer(Modifier.height(48.dp))
         }
     }
 }

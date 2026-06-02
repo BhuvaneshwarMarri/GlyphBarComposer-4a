@@ -51,6 +51,7 @@ import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioUiState
 fun StudioPlayerCard(
     uiState: MusicStudioUiState,
     audioPositionMs: Int,
+    isAudioPlaying: Boolean,
     onPlayPause: () -> Unit,
     onSeek: (Float) -> Unit,
     onChangeAudio: () -> Unit
@@ -76,7 +77,7 @@ fun StudioPlayerCard(
                 Box(
                     modifier = Modifier
                         .size(56.dp)
-                        .graphicsLayer { if (uiState.isAudioPlaying) rotationZ = rotation }
+                        .graphicsLayer { if (isAudioPlaying) rotationZ = rotation }
                         .clip(CircleShape)
                         .background(Color(0xFF080808))
                         .border(1.5.dp, Color(0xFF333333), CircleShape),
@@ -97,7 +98,7 @@ fun StudioPlayerCard(
                     }
                     Icon(
                         Icons.Default.MusicNote, null,
-                        tint = if (uiState.isAudioPlaying) Color(0xFF00C853) else Color(0xFF555555),
+                        tint = if (isAudioPlaying) Color(0xFF00C853) else Color(0xFF555555),
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -167,7 +168,7 @@ fun StudioPlayerCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        if (uiState.isAudioPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        if (isAudioPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         null,
                         tint = if (uiState.isAnalysisComplete) Color.Black else Color(0xFF333333),
                         modifier = Modifier.size(28.dp)

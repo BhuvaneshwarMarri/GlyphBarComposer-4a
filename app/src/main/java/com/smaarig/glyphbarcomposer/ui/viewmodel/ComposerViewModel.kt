@@ -1,6 +1,7 @@
 package com.smaarig.glyphbarcomposer.ui.viewmodel
 
 import android.app.Application
+import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nothing.ketchum.Glyph
@@ -10,6 +11,7 @@ import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import com.smaarig.glyphbarcomposer.data.SequenceStep
 import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import com.smaarig.glyphbarcomposer.repository.GlyphRepository
+import com.smaarig.glyphbarcomposer.service.GlyphPlaybackService
 import com.smaarig.glyphbarcomposer.utils.PreferenceManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -163,6 +165,11 @@ class ComposerViewModel(
     }
 
     fun turnOffAllGlyphs() {
+        // Stop playback service if running
+        getApplication<Application>().stopService(
+            Intent(getApplication(), GlyphPlaybackService::class.java)
+        )
+
         glyphController.turnOffGlyphs()
         _uiState.update {
             it.copy(
@@ -184,7 +191,7 @@ class ComposerViewModel(
 
     fun startPlayback(steps: List<GlyphSequence>, playlistId: Long? = null, presetName: String? = null) {
         if (steps.isEmpty()) return
-        glyphController.playSequence(steps, loop = true)
+        glyphController.playSequence(steps, loop = true, id = playlistId, name = presetName)
         _uiState.update { it.copy(activePlaylistId = playlistId, activePresetName = presetName) }
     }
 
@@ -251,7 +258,7 @@ class ComposerViewModel(
             val steps = playlist.steps.sortedBy { it.stepIndex }.map {
                 GlyphSequence(it.channelIntensities, it.durationMs)
             }
-            startPlayback(steps, playlist.playlist.id)
+            startPlayback(steps, playlist.playlist.id, playlist.playlist.name)
         }
     }
 

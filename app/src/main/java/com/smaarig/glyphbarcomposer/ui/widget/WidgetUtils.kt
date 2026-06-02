@@ -13,6 +13,8 @@ import androidx.glance.appwidget.updateAll
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.service.GlyphPlaybackService
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 
 // ─── Shared preference key ──────────────────────────────────────────────────
 val INTENSITIES_KEY = stringPreferencesKey("intensities")
@@ -130,6 +132,63 @@ class PowerOffAction : ActionCallback {
             updateAppWidgetState(context, PreferencesGlanceStateDefinition, id) { prefs ->
                 prefs.toMutablePreferences().apply {
                     this[GlyphSequencePlayerWidget.IS_PLAYING] = false
+                }
+            }
+        }
+        GlyphSequencePlayerWidget().updateAll(context)
+    }
+}
+
+/**
+ * Unified helper to sync ALL app widgets with the current global state.
+ */
+fun updateAllWidgets(
+    context: Context,
+    intensities: List<Int>? = null,
+    isPlaying: Boolean? = null,
+    playlistId: Long? = null,
+    playlistName: String? = null
+) {
+    val intensityStr = intensities?.joinToString(",")
+    val manager = GlanceAppWidgetManager(context)
+
+    MainScope().launch {
+        // 1. Update Intensity Widgets (Horizontal & Vertical)
+        listOf(
+            GlyphComposerHorizontalWidget::class.java,
+            GlyphComposerVerticalWidget::class.java
+        ).forEach { widgetClass ->
+            val glanceIds = manager.getGlanceIds(widgetClass)
+            glanceIds.forEach { glanceId ->
+                updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+                    prefs.toMutablePreferences().apply {
+                        if (intensityStr != null) {
+                            this[INTENSITIES_KEY] = intensityStr
+                        }
+                    }
+                }
+            }
+        }
+        GlyphComposerHorizontalWidget().updateAll(context)
+        GlyphComposerVerticalWidget().updateAll(context)
+
+        // 2. Update Sequence Player Widget
+        val playerGlanceIds = manager.getGlanceIds(GlyphSequencePlayerWidget::class.java)
+        playerGlanceIds.forEach { glanceId ->
+            updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+                prefs.toMutablePreferences().apply {
+                    if (isPlaying != null) {
+                        this[GlyphSequencePlayerWidget.IS_PLAYING] = isPlaying
+                    }
+                    if (intensityStr != null) {
+                        this[INTENSITIES_KEY] = intensityStr
+                    }
+                    if (playlistId != null) {
+                        this[GlyphSequencePlayerWidget.SELECTED_SEQUENCE_ID] = playlistId
+                    }
+                    if (playlistName != null) {
+                        this[GlyphSequencePlayerWidget.SELECTED_SEQUENCE_NAME] = playlistName
+                    }
                 }
             }
         }

@@ -3,10 +3,6 @@ package com.smaarig.glyphbarcomposer.controller
 import android.content.ComponentName
 import android.content.Context
 import android.util.Log
-import androidx.glance.appwidget.GlanceAppWidgetManager
-import androidx.glance.appwidget.state.updateAppWidgetState
-import androidx.glance.appwidget.updateAll
-import androidx.glance.state.PreferencesGlanceStateDefinition
 import com.nothing.ketchum.Common
 import com.nothing.ketchum.Glyph
 import com.nothing.ketchum.GlyphException
@@ -15,6 +11,7 @@ import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import com.smaarig.glyphbarcomposer.ui.widget.GlyphComposerHorizontalWidget
 import com.smaarig.glyphbarcomposer.ui.widget.GlyphComposerVerticalWidget
 import com.smaarig.glyphbarcomposer.ui.widget.INTENSITIES_KEY
+import com.smaarig.glyphbarcomposer.ui.widget.updateAllWidgets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -225,7 +222,7 @@ class GlyphController private constructor() {
             mGlyphManager?.init(mCallback)
         }
         // Initial sync to ensure widgets match app state on startup
-        updateWidgetState(context.applicationContext, _currentIntensities.value)
+        updateAllWidgets(context.applicationContext, intensities = _currentIntensities.value)
     }
 
     fun turnOffGlyphs() {
@@ -247,7 +244,7 @@ class GlyphController private constructor() {
 
         // Sync with widgets
         mContext?.let { context ->
-            updateWidgetState(context, _currentIntensities.value)
+            updateAllWidgets(context, intensities = _currentIntensities.value, isPlaying = false)
         }
     }
 
@@ -282,7 +279,7 @@ class GlyphController private constructor() {
 
         // Sync with widgets
         mContext?.let { context ->
-            updateWidgetState(context, _currentIntensities.value)
+            updateAllWidgets(context, intensities = _currentIntensities.value)
         }
     }
 
@@ -303,7 +300,7 @@ class GlyphController private constructor() {
 
         // Sync with widgets
         mContext?.let { context ->
-            updateWidgetState(context, newIntensities)
+            updateAllWidgets(context, intensities = newIntensities)
         }
 
         // Auto-reset hardware busy state after duration, but DON'T reset _currentIntensities
@@ -336,7 +333,7 @@ class GlyphController private constructor() {
         }
     }
 
-    fun playSequence(steps: List<GlyphSequence>, loop: Boolean = false) {
+    fun playSequence(steps: List<GlyphSequence>, loop: Boolean = false, name: String? = null, id: Long? = null) {
         if (steps.isEmpty()) return
         stopPlayback()
 
@@ -345,6 +342,11 @@ class GlyphController private constructor() {
 
         playbackJob = controllerScope.launch {
             try {
+                // Sync start of playback to widgets
+                mContext?.let { context ->
+                    updateAllWidgets(context, isPlaying = true, playlistId = id, playlistName = name)
+                }
+
                 do {
                     for (step in steps) {
                         while (_isPaused.value) {
@@ -379,13 +381,16 @@ class GlyphController private constructor() {
             } catch (e: Exception) {
             }
             _currentIntensities.value = listOf(0, 0, 0, 0, 0, 0, 0)
-            mContext?.let { updateWidgetState(it, _currentIntensities.value) }
+            mContext?.let { updateAllWidgets(it, intensities = _currentIntensities.value, isPlaying = false) }
         }
     }
 
     fun togglePausePlayback() {
         if (_isPlaying.value) {
             _isPaused.value = !_isPaused.value
+            mContext?.let { context ->
+                updateAllWidgets(context, isPlaying = !_isPaused.value)
+            }
         }
     }
 
@@ -401,7 +406,7 @@ class GlyphController private constructor() {
 
         // Sync with widgets
         mContext?.let { context ->
-            updateWidgetState(context, newIntensities)
+            updateAllWidgets(context, intensities = newIntensities)
         }
 
         // Auto-reset busy state only
@@ -479,36 +484,6 @@ class GlyphController private constructor() {
             mGlyphManager?.setFrameColors(frameColors)
         } catch (e: Exception) {
             Log.e(TAG, "Error in smooth progress: ${e.message}")
-        }
-    }
-
-    private fun updateWidgetState(context: Context, intensities: List<Int>) {
-        val intensityStr = intensities.joinToString(",")
-        controllerScope.launch {
-            try {
-                // Update both horizontal and vertical widgets
-                listOf(
-                    GlyphComposerHorizontalWidget(),
-                    GlyphComposerVerticalWidget()
-                ).forEach { widget ->
-                    val manager = GlanceAppWidgetManager(context)
-                    val glanceIds = manager.getGlanceIds(widget.javaClass)
-                    glanceIds.forEach { glanceId ->
-                        updateAppWidgetState(
-                            context,
-                            PreferencesGlanceStateDefinition,
-                            glanceId
-                        ) { prefs ->
-                            prefs.toMutablePreferences().apply {
-                                this[INTENSITIES_KEY] = intensityStr
-                            }
-                        }
-                    }
-                    widget.updateAll(context)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to update widget state: ${e.message}")
-            }
         }
     }
 
