@@ -3,6 +3,7 @@ package com.smaarig.glyphbarcomposer.ui.hooks.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,7 +73,14 @@ fun HookItem(
     // Debounce toggle to prevent rapid flipping
     var isToggling by remember { mutableStateOf(false) }
 
-    // App icon from PackageManager
+    // Stable lambda refs so callers don't cause recomposition
+    val currentOnDelete by rememberUpdatedState(onDelete)
+    val currentOnToggle by rememberUpdatedState(onToggle)
+    val currentOnTest by rememberUpdatedState(onTest)
+
+    // App icon: keyed strictly to packageName so it only re-runs when the
+    // package changes, not on every recomposition caused by list state changes.
+    // Falls back to PackageManager if iconBitmap wasn't pre-decoded.
     val appIcon = remember(hook.packageName) {
         runCatching {
             context.packageManager.getApplicationIcon(hook.packageName).toBitmap().asImageBitmap()
@@ -83,7 +92,6 @@ fun HookItem(
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
     ) {
-        // Main card
         Surface(
             color = Color(0xFF111111),
             shape = RoundedCornerShape(24.dp),
@@ -106,7 +114,7 @@ fun HookItem(
                     contentAlignment = Alignment.Center
                 ) {
                     if (appIcon != null) {
-                        androidx.compose.foundation.Image(
+                        Image(
                             bitmap = appIcon,
                             contentDescription = hook.appName,
                             modifier = Modifier
@@ -165,7 +173,7 @@ fun HookItem(
                         onClick = {
                             if (!isTesting) {
                                 isTesting = true
-                                onTest()
+                                currentOnTest()
                                 scope.launch {
                                     delay(1500)
                                     isTesting = false
@@ -195,7 +203,7 @@ fun HookItem(
 
                     // Delete button
                     IconButton(
-                        onClick = onDelete,
+                        onClick = { currentOnDelete() },
                         modifier = Modifier.size(36.dp)
                     ) {
                         Icon(
@@ -212,7 +220,7 @@ fun HookItem(
                         onCheckedChange = { newVal ->
                             if (!isToggling) {
                                 isToggling = true
-                                onToggle(newVal)
+                                currentOnToggle(newVal)
                                 scope.launch {
                                     delay(300)
                                     isToggling = false

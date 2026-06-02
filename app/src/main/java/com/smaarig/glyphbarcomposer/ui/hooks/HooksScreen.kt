@@ -1,22 +1,19 @@
 package com.smaarig.glyphbarcomposer.ui.hooks
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,7 +22,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -62,21 +58,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -147,37 +146,22 @@ fun HooksScreen(viewModel: HooksViewModel) {
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .padding(horizontal = 16.dp, vertical = 24.dp)
     ) {
-        HooksHeader(onAddClick = { sheetState = SheetState.AppPicker })
-
-        AnimatedVisibility(
-            visible = !isPermissionGranted,
-            enter = fadeIn(tween(300)) + slideInVertically { -it },
-            exit = fadeOut(tween(200))
-        ) {
-            Column {
-                PermissionBanner { viewModel.openPermissionSettings(context) }
-                Spacer(Modifier.height(16.dp))
-            }
-        }
-
-        if (hooks.isEmpty() && isPermissionGranted) {
-            EmptyHooksView()
-        } else {
-            HooksList(
-                hooks = hooks,
-                isBgServiceEnabled = isBgServiceEnabled,
-                onBgServiceToggle = { viewModel.toggleBackgroundService(it) },
-                onDelete = { hookToDelete = it },
-                onToggle = { hook, enabled -> viewModel.toggleHook(hook.hook, enabled) },
-                onTest = { viewModel.testHook(it, context) }
-            )
-        }
+        HooksList(
+            hooks = hooks,
+            isPermissionGranted = isPermissionGranted,
+            isBgServiceEnabled = isBgServiceEnabled,
+            onAddClick = { sheetState = SheetState.AppPicker },
+            onGrantPermission = { viewModel.openPermissionSettings(context) },
+            onBgServiceToggle = { viewModel.toggleBackgroundService(it) },
+            onDelete = { hookToDelete = it },
+            onToggle = { hook, enabled -> viewModel.toggleHook(hook.hook, enabled) },
+            onTest = { viewModel.testHook(it, context) }
+        )
     }
 
     // Sheet 1: App Picker
@@ -275,12 +259,15 @@ fun HooksScreen(viewModel: HooksViewModel) {
     }
 }
 
-// ─── Hooks list with stable keys and no re-composition stutter ───────────────
+// ─── Hooks list ───────────────────────────────────────────────────────────────
 
 @Composable
 private fun HooksList(
     hooks: List<NotificationHookWithPlaylist>,
+    isPermissionGranted: Boolean,
     isBgServiceEnabled: Boolean,
+    onAddClick: () -> Unit,
+    onGrantPermission: () -> Unit,
     onBgServiceToggle: (Boolean) -> Unit,
     onDelete: (NotificationHookWithPlaylist) -> Unit,
     onToggle: (NotificationHookWithPlaylist, Boolean) -> Unit,
@@ -294,34 +281,63 @@ private fun HooksList(
             .fillMaxSize()
             .navigationBarsPadding(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(bottom = 100.dp)
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 100.dp),
+        // Disable overscroll rubber-band — avoids fighting with sheet drag
+        overscrollEffect = null
     ) {
-        item {
-            BackgroundServiceCard(
-                isEnabled = isBgServiceEnabled,
-                onToggle = onBgServiceToggle,
-                modifier = Modifier
-            )
+        item(key = "header") {
+            HooksHeader(onAddClick = onAddClick)
         }
 
-        items(
-            items = hooks,
-            key = { it.hook.id }
-        ) { hookWithPlaylist ->
-            HookItem(
-                hookWithPlaylist = hookWithPlaylist,
-                onDelete = { onDelete(hookWithPlaylist) },
-                onToggle = { enabled -> onToggle(hookWithPlaylist, enabled) },
-                onTest = { onTest(hookWithPlaylist) },
-                modifier = Modifier.animateItem(tween(250))
-            )
+        if (!isPermissionGranted) {
+            item(key = "permission_banner") {
+                PermissionBanner(onGrantPermission)
+            }
         }
 
-        item {
+        if (hooks.isEmpty() && isPermissionGranted) {
+            item(key = "empty_view") {
+                Box(
+                    modifier = Modifier.fillParentMaxHeight(0.7f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    EmptyHooksView()
+                }
+            }
+        } else if (isPermissionGranted) {
+            item(key = "bg_service_card") {
+                BackgroundServiceCard(
+                    isEnabled = isBgServiceEnabled,
+                    onToggle = onBgServiceToggle
+                )
+            }
+
+            items(
+                count = hooks.size,
+                key = { hooks[it].hook.id },
+                contentType = { "hook_item" }
+            ) { index ->
+                val hookWithPlaylist = hooks[index]
+                // rememberUpdatedState prevents lambda captures from
+                // causing recomposition of every HookItem when the list changes
+                val currentHook by rememberUpdatedState(hookWithPlaylist)
+                HookItem(
+                    hookWithPlaylist = hookWithPlaylist,
+                    onDelete = { onDelete(currentHook) },
+                    onToggle = { enabled -> onToggle(currentHook, enabled) },
+                    onTest = { onTest(currentHook) },
+                    modifier = Modifier.animateItem(tween(250))
+                )
+            }
+        }
+
+        item(key = "bottom_spacer") {
             Spacer(Modifier.height(48.dp))
         }
     }
 }
+
+// ─── Background Service Card ──────────────────────────────────────────────────
 
 @Composable
 private fun BackgroundServiceCard(
@@ -364,7 +380,8 @@ private fun BackgroundServiceCard(
                     fontSize = 15.sp
                 )
                 Text(
-                    if (isEnabled) "Active: Hooks run while app is closed" else "Inactive: Hooks stop if app is closed",
+                    if (isEnabled) "Active: Hooks run while app is closed"
+                    else "Inactive: Hooks stop if app is closed",
                     color = Color.Gray,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
@@ -387,7 +404,7 @@ private fun BackgroundServiceCard(
     }
 }
 
-// ─── App Picker Sheet ────────────────────────────────────────────────────────
+// ─── App Picker Sheet ─────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -405,106 +422,116 @@ private fun AppPickerSheet(
         else apps.filter { it.appName.contains(query, ignoreCase = true) }
     }
 
-    Column(
+    LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.92f)
-            .padding(horizontal = 16.dp)
+            // Do NOT use fillMaxHeight here — ModalBottomSheet manages its own
+            // height. Constraining the inner list creates a size conflict that
+            // causes scroll events to leak into the sheet's drag handler.
             .navigationBarsPadding()
+            // Intercept nested scroll so overscroll at list boundaries does
+            // not propagate up to the sheet's drag handler (fixes stutter).
+            .nestedScroll(rememberNestedScrollInteropConnection()),
+        // Remove rubber-band bounce at list edges — independently triggers
+        // the sheet drag threshold and causes the oscillation loop.
+        overscrollEffect = null,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp)
     ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                "Select App",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-            IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color(0xFF888888))
+        item(key = "picker_header") {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "Select App",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color(0xFF888888))
+                }
             }
         }
 
-        Spacer(Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            placeholder = { Text("Search apps…", color = Color(0xFF666666)) },
-            leadingIcon = {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = null,
-                    tint = Color(0xFF888888)
-                )
-            },
-            trailingIcon = if (query.isNotEmpty()) {
-                {
-                    IconButton(onClick = { query = "" }) {
-                        Icon(
-                            Icons.Default.Clear,
-                            contentDescription = "Clear",
-                            tint = Color(0xFF888888)
-                        )
+        item(key = "search_field") {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = { Text("Search apps…", color = Color(0xFF666666)) },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF888888))
+                },
+                trailingIcon = if (query.isNotEmpty()) {
+                    {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear", tint = Color(0xFF888888))
+                        }
                     }
-                }
-            } else null,
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF444444),
-                unfocusedBorderColor = Color(0xFF2A2A2A),
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                cursorColor = Color.White,
-                focusedContainerColor = Color(0xFF1E1E1E),
-                unfocusedContainerColor = Color(0xFF1A1A1A)
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
+                } else null,
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF444444),
+                    unfocusedBorderColor = Color(0xFF2A2A2A),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = Color.White,
+                    focusedContainerColor = Color(0xFF1E1E1E),
+                    unfocusedContainerColor = Color(0xFF1A1A1A)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
-        Spacer(Modifier.height(6.dp))
-
-        Text(
-            "Tap an app to set up its notification hook",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF555555),
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        item(key = "picker_hint") {
+            Text(
+                "Tap an app to set up its notification hook",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF555555),
+                modifier = Modifier.padding(top = 6.dp, bottom = 8.dp)
+            )
+        }
 
         if (filtered.isEmpty()) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(top = 48.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No apps found", color = Color(0xFF444444))
+            item(key = "no_results") {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No apps found", color = Color(0xFF444444))
+                }
             }
         } else {
-            LazyColumn(
-                state = listState,
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(filtered, key = { it.packageName }) { app ->
-                    AppPickerRow(
-                        app = app,
-                        onInfoClick = { onAppSelected(app) },
-                        modifier = Modifier.animateItem(tween(200))
-                    )
-                }
+            // Use count+key instead of items(list, key) to avoid boxing every
+            // AppInfo into List<Any> on each frame. contentType tells Compose
+            // all rows share the same structure so slots are reused aggressively.
+            items(
+                count = filtered.size,
+                key = { filtered[it].packageName },
+                contentType = { "app_row" }
+            ) { index ->
+                val app = filtered[index]
+                AppPickerRow(
+                    app = app,
+                    onInfoClick = { onAppSelected(app) },
+                    modifier = Modifier.animateItem(tween(200))
+                )
             }
         }
     }
 }
 
-// ─── App Picker Row ──────────────────────────────────────────────────────────
+// ─── App Picker Row ───────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -513,6 +540,12 @@ private fun AppPickerRow(
     onInfoClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Bitmap is pre-decoded on the IO thread in the ViewModel (app.iconBitmap).
+    // asImageBitmap() here is instant — no IO, no decoding on the UI thread.
+    val bitmap = remember(app.packageName) {
+        app.iconBitmap?.asImageBitmap()
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -522,7 +555,9 @@ private fun AppPickerRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        AppIcon(app = app, size = 42.dp)
+        // Pass the pre-computed bitmap so AppIconComposable doesn't need
+        // to do any conversion work during scroll frames.
+        AppIconComposable(bitmap = bitmap, appName = app.appName, size = 42.dp)
 
         Column(Modifier.weight(1f)) {
             Text(
@@ -565,13 +600,16 @@ private fun AppPickerRow(
     }
 }
 
-// ─── App Icon ────────────────────────────────────────────────────────────────
+// ─── App Icon ─────────────────────────────────────────────────────────────────
+// Extracted into its own composable so its recomposition scope is narrow:
+// only redraws when bitmap reference changes, not when sibling text changes.
 
 @Composable
-private fun AppIcon(app: AppInfo, size: androidx.compose.ui.unit.Dp) {
-    val bitmap = remember(app.packageName) {
-        runCatching { app.icon?.toBitmap()?.asImageBitmap() }.getOrNull()
-    }
+private fun AppIconComposable(
+    bitmap: ImageBitmap?,
+    appName: String,
+    size: Dp
+) {
     Box(
         modifier = Modifier
             .size(size)
@@ -581,16 +619,16 @@ private fun AppIcon(app: AppInfo, size: androidx.compose.ui.unit.Dp) {
         contentAlignment = Alignment.Center
     ) {
         if (bitmap != null) {
-            androidx.compose.foundation.Image(
+            Image(
                 bitmap = bitmap,
-                contentDescription = app.appName,
+                contentDescription = appName,
                 modifier = Modifier
                     .size(size)
                     .clip(CircleShape)
             )
         } else {
             Text(
-                text = app.appName.firstOrNull()?.uppercase() ?: "?",
+                text = appName.firstOrNull()?.uppercase() ?: "?",
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color(0xFF888888),
                 fontWeight = FontWeight.Black,

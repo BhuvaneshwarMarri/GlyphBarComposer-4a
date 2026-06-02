@@ -6,11 +6,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -67,180 +67,178 @@ fun HookAddSheet(
     var selectedPresetName by remember { mutableStateOf<String?>(null) }
     var isProgressSync by remember { mutableStateOf(isProgressOnly) }
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.Black)
-            .padding(horizontal = 20.dp, vertical = 20.dp)
-            .navigationBarsPadding()
+            .navigationBarsPadding(),
+        contentPadding = PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text(
-            text = "ADD HOOK — ${selectedApp.appName.uppercase()}",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Black,
-            color = Color.White,
-            fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont,
-            letterSpacing = 2.sp
-        )
-
-        Spacer(Modifier.height(24.dp))
+        item {
+            Text(
+                text = "ADD HOOK — ${selectedApp.appName.uppercase()}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Black,
+                color = Color.White,
+                fontFamily = com.smaarig.glyphbarcomposer.ui.theme.nothingFont,
+                letterSpacing = 2.sp
+            )
+            Spacer(Modifier.height(14.dp))
+        }
 
         if (isProgressOnly) {
-            // ... (rest of media app flow remains same)
-            // Media app flow: Just show info and confirm
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = Color(0xFF111111),
-                modifier = Modifier.fillMaxWidth(),
-                border = BorderStroke(1.dp, Color(0xFF00C853).copy(alpha = 0.5f))
-            ) {
-                Row(
-                    Modifier.padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+            item {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color(0xFF111111),
+                    modifier = Modifier.fillMaxWidth(),
+                    border = BorderStroke(1.dp, Color(0xFF00C853).copy(alpha = 0.5f))
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF00C853).copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        Modifier.padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Icon(
-                            Icons.Default.Sync,
-                            contentDescription = null,
-                            tint = Color(0xFF00C853),
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    Column {
-                        Text(
-                            "Sync Progress Bar",
-                            color = Color.White,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 15.sp
-                        )
-                        Text(
-                            "is selected for ${selectedApp.appName}",
-                            color = Color.Gray,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF00C853).copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Sync,
+                                contentDescription = null,
+                                tint = Color(0xFF00C853),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                "Sync Progress Bar",
+                                color = Color.White,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 15.sp
+                            )
+                            Text(
+                                "is selected for ${selectedApp.appName}",
+                                color = Color.Gray,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-            Text(
-                "Media apps automatically sync their progress to your Glyph lights. No sequence selection needed.",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF555555),
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
+            item {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "Media apps automatically sync their progress to your Glyph lights. No sequence selection needed.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF555555),
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+            }
         } else {
-            // Regular app flow: Just sequence selection (Channels removed per request)
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 400.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                item {
-                    SectionLabel("PRESET SEQUENCES")
-                    Spacer(Modifier.height(8.dp))
-                }
+            item {
+                SectionLabel("PRESET SEQUENCES")
+                Spacer(Modifier.height(8.dp))
+            }
 
-                items(com.smaarig.glyphbarcomposer.ui.library.components.presetSequences) { preset ->
+            items(com.smaarig.glyphbarcomposer.ui.library.components.presetSequences) { preset ->
+                PlaylistRow(
+                    name = preset.name,
+                    subtitle = preset.description,
+                    selected = selectedPresetName == preset.name,
+                    onClick = {
+                        selectedPresetName = if (selectedPresetName == preset.name) null else preset.name
+                        selectedPlaylistId = null
+                        isProgressSync = false
+                    }
+                )
+            }
+
+            item {
+                Spacer(Modifier.height(16.dp))
+                SectionLabel("MY SEQUENCES")
+                Spacer(Modifier.height(8.dp))
+            }
+
+            if (playlists.isEmpty()) {
+                item {
+                    Text(
+                        "No sequences yet. Create one in the Composer tab first.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFFF5252),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else {
+                items(playlists, key = { it.playlist.id }) { pwSteps ->
+                    val pl = pwSteps.playlist
                     PlaylistRow(
-                        name = preset.name,
-                        subtitle = preset.description,
-                        selected = selectedPresetName == preset.name,
+                        name = pl.name,
+                        subtitle = "${pwSteps.steps.size} steps",
+                        selected = selectedPlaylistId == pl.id,
                         onClick = {
-                            selectedPresetName = if (selectedPresetName == preset.name) null else preset.name
-                            selectedPlaylistId = null
+                            selectedPlaylistId = if (selectedPlaylistId == pl.id) null else pl.id
+                            selectedPresetName = null
                             isProgressSync = false
                         }
                     )
                 }
-
-                item {
-                    Spacer(Modifier.height(16.dp))
-                    SectionLabel("MY SEQUENCES")
-                    Spacer(Modifier.height(8.dp))
-                }
-
-                if (playlists.isEmpty()) {
-                    item {
-                        Text(
-                            "No sequences yet. Create one in the Composer tab first.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFFF5252),
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                } else {
-                    items(playlists, key = { it.playlist.id }) { pwSteps ->
-                        val pl = pwSteps.playlist
-                        PlaylistRow(
-                            name = pl.name,
-                            subtitle = "${pwSteps.steps.size} steps",
-                            selected = selectedPlaylistId == pl.id,
-                            onClick = {
-                                selectedPlaylistId = if (selectedPlaylistId == pl.id) null else pl.id
-                                selectedPresetName = null
-                                isProgressSync = false
-                            }
-                        )
-                    }
-                }
             }
         }
 
-        Spacer(Modifier.height(32.dp))
+        item {
+            Spacer(Modifier.height(22.dp))
 
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedButton(
-                onClick = onDismiss,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(52.dp),
-                shape = RoundedCornerShape(26.dp),
-                border = BorderStroke(1.dp, Color(0xFF333333)),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    "CANCEL",
-                    fontWeight = FontWeight.Black,
-                    fontSize = 13.sp,
-                    letterSpacing = 1.sp
-                )
-            }
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(26.dp),
+                    border = BorderStroke(1.dp, Color(0xFF333333)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
+                ) {
+                    Text(
+                        "CANCEL",
+                        fontWeight = FontWeight.Black,
+                        fontSize = 13.sp,
+                        letterSpacing = 1.sp
+                    )
+                }
 
-            Button(
-                onClick = {
-                    onConfirm(null, null, selectedPlaylistId, selectedPresetName, isProgressSync)
-                },
-                enabled = isProgressSync || selectedPlaylistId != null || selectedPresetName != null,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(52.dp),
-                shape = RoundedCornerShape(26.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color.Black,
-                    disabledContainerColor = Color(0xFF1A1A1A),
-                    disabledContentColor = Color(0xFF444444)
-                )
-            ) {
-                Text(
-                    "ADD HOOK",
-                    fontWeight = FontWeight.Black,
-                    fontSize = 13.sp,
-                    letterSpacing = 1.sp
-                )
+                Button(
+                    onClick = {
+                        onConfirm(null, null, selectedPlaylistId, selectedPresetName, isProgressSync)
+                    },
+                    enabled = isProgressSync || selectedPlaylistId != null || selectedPresetName != null,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(26.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Color.Black,
+                        disabledContainerColor = Color(0xFF1A1A1A),
+                        disabledContentColor = Color(0xFF444444)
+                    )
+                ) {
+                    Text(
+                        "ADD HOOK",
+                        fontWeight = FontWeight.Black,
+                        fontSize = 13.sp,
+                        letterSpacing = 1.sp
+                    )
+                }
             }
         }
     }

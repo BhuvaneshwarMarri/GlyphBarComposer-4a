@@ -18,6 +18,7 @@ ksp = "2.3.6"
 mockk = "1.13.12"
 kotlinxCoroutinesTest = "1.10.1"
 robolectric = "4.14.1"
+foundation = "1.11.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -50,6 +51,7 @@ kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 mockk-android-v1149 = { module = "io.mockk:mockk-android", version.ref = "mockkAndroid" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidx-test-core = { group = "androidx.test", name = "core", version = "1.6.1" }
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

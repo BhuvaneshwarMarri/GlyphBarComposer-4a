@@ -7,10 +7,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.os.Build
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.smaarig.glyphbarcomposer.data.NotificationHook
@@ -34,6 +36,9 @@ data class AppInfo(
     val packageName: String,
     val appName: String,
     val icon: android.graphics.drawable.Drawable?,
+    // Pre-decoded bitmap — converted on the IO thread during app list load
+    // so the UI thread never has to call toBitmap() during a scroll frame.
+    val iconBitmap: Bitmap? = null,
     val isProgressOnly: Boolean = false
 )
 
@@ -102,7 +107,7 @@ class HooksViewModel(
                     context.startService(intent)
                 }
             } else {
-                context.startService(intent) // Send STOP_FOREGROUND action
+                context.startService(intent)
             }
         } catch (e: Exception) {
             _testHookResult.value = "Failed to start service: ${e.message}"
@@ -138,10 +143,15 @@ class HooksViewModel(
                     }
                     .mapNotNull { info ->
                         try {
+                            val icon = pm.getApplicationIcon(info.packageName)
                             AppInfo(
                                 packageName = info.packageName,
                                 appName = pm.getApplicationLabel(info).toString(),
-                                icon = pm.getApplicationIcon(info.packageName),
+                                icon = icon,
+                                // Decode bitmap here on the IO thread so the UI
+                                // thread never calls toBitmap() during a scroll frame.
+                                // asImageBitmap() in the composable is then instant.
+                                iconBitmap = runCatching { icon.toBitmap() }.getOrNull(),
                                 isProgressOnly = info.packageName in PROGRESS_ONLY_PACKAGES
                             )
                         } catch (e: PackageManager.NameNotFoundException) {
@@ -223,7 +233,6 @@ class HooksViewModel(
     }
 
     fun deleteHook(hook: NotificationHook) {
-        // Tell the service to cancel any active glyph sequence for this hook
         GlyphNotificationListenerService.cancelHookPlayback(hook.id)
         viewModelScope.launch { repository.deleteNotificationHook(hook) }
     }
@@ -235,7 +244,6 @@ class HooksViewModel(
      */
     fun toggleHook(hook: NotificationHook, enabled: Boolean) {
         if (!enabled) {
-            // Cancel active glyph sequence immediately
             GlyphNotificationListenerService.cancelHookPlayback(hook.id)
         }
         viewModelScope.launch {
@@ -271,7 +279,6 @@ class HooksViewModel(
 
         viewModelScope.launch {
             try {
-                // ... (existing notification channel code)
                 val testChannelId = "hook_test_channel"
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     val nm =
@@ -290,7 +297,6 @@ class HooksViewModel(
                 val content =
                     if (hook.isProgressSync) "Progress Sync Test" else "Trigger Test — $targetName"
 
-                // Build a dummy notification that mimics the target app
                 val notification = NotificationCompat.Builder(context, testChannelId)
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
                     .setContentTitle("Test: ${hook.appName}")
@@ -299,11 +305,9 @@ class HooksViewModel(
                     .setAutoCancel(true)
                     .build()
 
-                // Post with a unique ID so it doesn't collide
                 val notifId = (hook.id % Int.MAX_VALUE).toInt() + 10_000
                 NotificationManagerCompat.from(context).notify(notifId, notification)
 
-                // Also directly trigger the glyph sequence via the service
                 val triggered = GlyphNotificationListenerService.triggerTestForHook(
                     hookWithPlaylist
                 )
