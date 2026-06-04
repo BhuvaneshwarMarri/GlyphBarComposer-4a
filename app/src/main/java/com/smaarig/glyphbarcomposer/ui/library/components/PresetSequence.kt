@@ -9,17 +9,10 @@ import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.smaarig.glyphbarcomposer.controller.GlyphConstants
 import com.smaarig.glyphbarcomposer.model.GlyphSequence
 
-private val ch = listOf(
-    com.nothing.ketchum.Glyph.Code_25111.A_1,
-    com.nothing.ketchum.Glyph.Code_25111.A_2,
-    com.nothing.ketchum.Glyph.Code_25111.A_3,
-    com.nothing.ketchum.Glyph.Code_25111.A_4,
-    com.nothing.ketchum.Glyph.Code_25111.A_5,
-    com.nothing.ketchum.Glyph.Code_25111.A_6,
-    com.nothing.ketchum.Glyph.Code_22111.E1
-)
+private val ch = GlyphConstants.PHONE_4A_CHANNELS
 
 data class PresetSequence(
     val name: String,

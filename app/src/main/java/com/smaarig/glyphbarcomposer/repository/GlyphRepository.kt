@@ -58,6 +58,10 @@ class GlyphRepository(private val playlistDao: PlaylistDao) {
         playlistDao.deleteMusicProject(project)
     }
 
+    suspend fun getMusicProjectById(id: Long): MusicStudioProject? {
+        return playlistDao.getMusicProjectById(id)
+    }
+
     suspend fun updateMusicProject(project: MusicStudioProject) {
         Log.d(TAG, "Updating music project: ${project.name}")
         playlistDao.updateMusicProject(project)

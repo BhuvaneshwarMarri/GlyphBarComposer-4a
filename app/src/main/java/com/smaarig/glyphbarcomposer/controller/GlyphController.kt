@@ -25,6 +25,11 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class GlyphController private constructor() {
+    enum class GlyphOwner { NONE, COMPOSER, STUDIO, PATTERN_LAB, BATTERY }
+
+    private val _activeOwner = MutableStateFlow(GlyphOwner.NONE)
+    val activeOwner = _activeOwner.asStateFlow()
+
     private var mGlyphManager: GlyphManager? = null
     private var mContext: Context? = null
     private val controllerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -50,11 +55,7 @@ class GlyphController private constructor() {
     private val _isCharging = MutableStateFlow(false)
     private val _isHardwareBusy = MutableStateFlow(false)
 
-    val channels = listOf(
-        Glyph.Code_25111.A_1, Glyph.Code_25111.A_2, Glyph.Code_25111.A_3,
-        Glyph.Code_25111.A_4, Glyph.Code_25111.A_5, Glyph.Code_25111.A_6,
-        Glyph.Code_22111.E1 // Red glyph (channel 24)
-    )
+    val channels = GlyphConstants.PHONE_4A_CHANNELS
 
     init {
         // Start battery monitoring loop
@@ -153,6 +154,19 @@ class GlyphController private constructor() {
         _isBatteryFeatureEnabled.value = enabled
     }
 
+    fun acquireControl(owner: GlyphOwner) {
+        if (_activeOwner.value != GlyphOwner.NONE && _activeOwner.value != owner) {
+            stopPlayback() // gracefully stop previous owner
+        }
+        _activeOwner.value = owner
+    }
+
+    fun releaseControl(owner: GlyphOwner) {
+        if (_activeOwner.value == owner) {
+            _activeOwner.value = GlyphOwner.NONE
+        }
+    }
+
     companion object {
         private const val TAG = "GlyphController"
 
@@ -249,6 +263,10 @@ class GlyphController private constructor() {
     }
 
     fun setRedGlyph(state: Int) {
+        // Red glyph usually comes from manual composer or battery, we allow it if no other owner holds control
+        // or if it's the composer. For simplicity in this legacy method, we check ownership.
+        if (_activeOwner.value != GlyphOwner.NONE && _activeOwner.value != GlyphOwner.COMPOSER) return
+
         val intensities = _currentIntensities.value.toMutableList()
         if (intensities.size >= 7) {
             intensities[6] = state
@@ -283,11 +301,15 @@ class GlyphController private constructor() {
         }
     }
 
-    fun applyGlyphStateWithIntensities(channelIntensities: Map<Int, Int>, durationMs: Int) {
+    fun applyGlyphStateWithIntensities(channelIntensities: Map<Int, Int>, durationMs: Int, owner: GlyphOwner = GlyphOwner.NONE) {
         if (mGlyphManager == null) {
             Log.e(TAG, "applyGlyphStateWithIntensities: GlyphManager is null")
             return
         }
+
+        // Reject write if a different owner currently holds control
+        val active = _activeOwner.value
+        if (active != GlyphOwner.NONE && active != owner) return
 
         if (!_isPlaying.value) {
             _isHardwareBusy.value = true
@@ -333,8 +355,12 @@ class GlyphController private constructor() {
         }
     }
 
-    fun playSequence(steps: List<GlyphSequence>, loop: Boolean = false, name: String? = null, id: Long? = null) {
+    fun playSequence(steps: List<GlyphSequence>, loop: Boolean = false, name: String? = null, id: Long? = null, owner: GlyphOwner = GlyphOwner.NONE) {
         if (steps.isEmpty()) return
+        
+        // Ownership check
+        if (_activeOwner.value != GlyphOwner.NONE && _activeOwner.value != owner) return
+        
         stopPlayback()
 
         _isPlaying.value = true
@@ -347,14 +373,21 @@ class GlyphController private constructor() {
                     updateAllWidgets(context, isPlaying = true, playlistId = id, playlistName = name)
                 }
 
+                var expectedTimeMs = android.os.SystemClock.elapsedRealtime()
+
                 do {
                     for (step in steps) {
                         while (_isPaused.value) {
-                            delay(100)
+                            delay(50)
+                            expectedTimeMs = android.os.SystemClock.elapsedRealtime()
                         }
 
-                        applyGlyphStateWithIntensities(step.channelIntensities, step.durationMs)
-                        delay(step.durationMs.toLong() + 50)
+                        applyGlyphStateWithIntensities(step.channelIntensities, step.durationMs, owner)
+                        expectedTimeMs += step.durationMs.toLong()
+                        val remaining = expectedTimeMs - android.os.SystemClock.elapsedRealtime()
+                        if (remaining > 0) {
+                            delay(remaining)
+                        }
                     }
                 } while (loop && isActive)
             } finally {
@@ -395,46 +428,18 @@ class GlyphController private constructor() {
     }
 
     fun applyGlyphState(activeChannels: List<Int>, durationMs: Int) {
-        if (mGlyphManager == null) return
-
-        _isHardwareBusy.value = true
-        batteryJob?.cancel()
-
-        // Update Global State for Preview (legacy mode)
-        val newIntensities = channels.map { ch -> if (activeChannels.contains(ch)) 3 else 0 }
-        _currentIntensities.value = newIntensities
-
-        // Sync with widgets
-        mContext?.let { context ->
-            updateAllWidgets(context, intensities = newIntensities)
+        val intensityMap = channels.associate { ch ->
+            ch to if (activeChannels.contains(ch)) 3 else 0
         }
-
-        // Auto-reset busy state only
-        resetJob?.cancel()
-        resetJob = controllerScope.launch {
-            delay(durationMs.toLong())
-            _isHardwareBusy.value = false
-        }
-
-        try {
-            mGlyphManager?.openSession()
-
-            // Map active channels to intensities for setFrameColors
-            val frameColors = IntArray(7) { i ->
-                if (activeChannels.contains(channels[i])) 255 else 0
-            }
-            mGlyphManager?.setFrameColors(frameColors)
-
-            if (activeChannels.isEmpty()) {
-                mGlyphManager?.turnOff()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error in applyGlyphState: ${e.message}")
-        }
+        applyGlyphStateWithIntensities(intensityMap, durationMs, GlyphOwner.COMPOSER)
     }
 
     fun applySmoothProgress(percentage: Int) {
         if (mGlyphManager == null) return
+
+        // Smooth progress is often used by Battery or special features.
+        // If Battery holds control, it's fine.
+        if (_activeOwner.value != GlyphOwner.NONE && _activeOwner.value != GlyphOwner.BATTERY) return
 
         // 18 steps total across 6 glyphs: 6 segments * 3 intensities (or continuous intensity)
         // For truly smooth, we map 0-100 to 0 - (6 * 4095)

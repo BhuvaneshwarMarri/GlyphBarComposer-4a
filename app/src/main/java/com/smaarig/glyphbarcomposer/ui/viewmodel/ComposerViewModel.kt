@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nothing.ketchum.Glyph
+import com.smaarig.glyphbarcomposer.controller.GlyphConstants
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.data.Playlist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
@@ -69,15 +70,7 @@ class ComposerViewModel(
     private var loadStepJob: Job? = null
     private var intensityUpdateJob: Job? = null
 
-    private val channels = listOf(
-        Glyph.Code_25111.A_1,
-        Glyph.Code_25111.A_2,
-        Glyph.Code_25111.A_3,
-        Glyph.Code_25111.A_4,
-        Glyph.Code_25111.A_5,
-        Glyph.Code_25111.A_6,
-        Glyph.Code_22111.E1
-    )
+    private val channels = GlyphConstants.PHONE_4A_CHANNELS
 
     fun toggleVersion(isOld: Boolean) {
         prefManager.useOldVersion = isOld
@@ -97,7 +90,7 @@ class ComposerViewModel(
         intensityUpdateJob = viewModelScope.launch {
             delay(20) // Debounce physical Glyph update
             val intensityMap = getIntensitiesMap()
-            glyphController.applyGlyphStateWithIntensities(intensityMap, 2000)
+            glyphController.applyGlyphStateWithIntensities(intensityMap, 2000, GlyphController.GlyphOwner.COMPOSER)
         }
     }
 
@@ -155,7 +148,7 @@ class ComposerViewModel(
         loadStepJob?.cancel()
         loadStepJob = viewModelScope.launch {
             delay(10) // Debounce hardware sync for scrolling
-            glyphController.applyGlyphStateWithIntensities(step.channelIntensities, 2000)
+            glyphController.applyGlyphStateWithIntensities(step.channelIntensities, 2000, GlyphController.GlyphOwner.COMPOSER)
         }
     }
 
@@ -170,6 +163,7 @@ class ComposerViewModel(
             Intent(getApplication(), GlyphPlaybackService::class.java)
         )
 
+        glyphController.releaseControl(GlyphController.GlyphOwner.COMPOSER)
         glyphController.turnOffGlyphs()
         _uiState.update {
             it.copy(
@@ -186,12 +180,14 @@ class ComposerViewModel(
 
     fun stopPlayback() {
         glyphController.stopPlayback()
+        glyphController.releaseControl(GlyphController.GlyphOwner.COMPOSER)
         _uiState.update { it.copy(activePlaylistId = null, activePresetName = null) }
     }
 
     fun startPlayback(steps: List<GlyphSequence>, playlistId: Long? = null, presetName: String? = null) {
         if (steps.isEmpty()) return
-        glyphController.playSequence(steps, loop = true, id = playlistId, name = presetName)
+        glyphController.acquireControl(GlyphController.GlyphOwner.COMPOSER)
+        glyphController.playSequence(steps, loop = true, id = playlistId, name = presetName, owner = GlyphController.GlyphOwner.COMPOSER)
         _uiState.update { it.copy(activePlaylistId = playlistId, activePresetName = presetName) }
     }
 
@@ -267,6 +263,7 @@ class ComposerViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        glyphController.releaseControl(GlyphController.GlyphOwner.COMPOSER)
         glyphController.turnOffGlyphs()
     }
 }

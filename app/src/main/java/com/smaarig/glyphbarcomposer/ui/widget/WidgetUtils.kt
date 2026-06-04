@@ -63,15 +63,9 @@ fun cycleIntensity(current: Int, isRed: Boolean): Int {
  *   the launcher has rendered the new state.
  *
  * FIX 2 – Channel/index mismatch for the red glyph:
- *   The channels list used in IndividualCycleAction was defined locally and
- *   included Glyph.Code_22111.E1 at index 6. When passed to the controller's
- *   applyGlyphStateWithIntensities(), the controller rebuilds the frame using
- *   its OWN channels list (also Code_22111.E1 at index 6), so the numeric
- *   channel code was correct. However the intensityMap was built with
- *   `channels.mapIndexed { i, ch -> ch to finalIntensities[i] }` which meant
- *   Code_22111.E1's integer value was used as the Map key. The controller then
- *   does `channelIntensities[ch]` using the same integer key — so it was
- *   consistent, but only by accident.
+ *   The channels list used in IndividualCycleAction is now delegated to the
+ *   controller via GlyphConstants.PHONE_4A_CHANNELS. This ensures that the
+ *   correct channel codes are used across both the app and the widget.
  *
  *   To make this explicit and safe (so a future refactor can't silently break
  *   it), the action now delegates ALL channel knowledge to the controller via

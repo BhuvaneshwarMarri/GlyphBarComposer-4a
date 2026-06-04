@@ -71,6 +71,7 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
+import com.smaarig.glyphbarcomposer.controller.GlyphConstants
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.service.BatteryService
 import com.smaarig.glyphbarcomposer.ui.theme.nothingFont
@@ -159,19 +160,11 @@ fun getChannelForIndex(index: Int): Int = when (index) {
     3 -> com.nothing.ketchum.Glyph.Code_25111.A_4
     4 -> com.nothing.ketchum.Glyph.Code_25111.A_5
     5 -> com.nothing.ketchum.Glyph.Code_25111.A_6
-    6 -> com.nothing.ketchum.Glyph.Code_22111.E1
+    6 -> GlyphConstants.PHONE_4A_CHANNELS[6]
     else -> 0
 }
 
-val glyphChannels = listOf(
-    com.nothing.ketchum.Glyph.Code_25111.A_1,
-    com.nothing.ketchum.Glyph.Code_25111.A_2,
-    com.nothing.ketchum.Glyph.Code_25111.A_3,
-    com.nothing.ketchum.Glyph.Code_25111.A_4,
-    com.nothing.ketchum.Glyph.Code_25111.A_5,
-    com.nothing.ketchum.Glyph.Code_25111.A_6,
-    com.nothing.ketchum.Glyph.Code_22111.E1
-)
+val glyphChannels = GlyphConstants.PHONE_4A_CHANNELS
 
 @Composable
 fun YouTubePlayer(

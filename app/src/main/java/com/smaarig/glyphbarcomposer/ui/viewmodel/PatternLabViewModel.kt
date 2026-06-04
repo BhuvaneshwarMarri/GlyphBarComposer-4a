@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nothing.ketchum.Glyph
+import com.smaarig.glyphbarcomposer.controller.GlyphConstants
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.data.Playlist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
@@ -59,15 +60,7 @@ class PatternLabViewModel(
     val allPlaylists = repository.allPlaylists
     private var playbackJob: Job? = null
 
-    private val channels = listOf(
-        Glyph.Code_25111.A_1,
-        Glyph.Code_25111.A_2,
-        Glyph.Code_25111.A_3,
-        Glyph.Code_25111.A_4,
-        Glyph.Code_25111.A_5,
-        Glyph.Code_25111.A_6,
-        Glyph.Code_22111.E1
-    )
+    private val channels = GlyphConstants.PHONE_4A_CHANNELS
 
     private val mirrorMap = mapOf(
         Glyph.Code_25111.A_1 to Glyph.Code_25111.A_6,
@@ -337,7 +330,12 @@ class PatternLabViewModel(
     }
 
     fun togglePreview() {
-        if (_uiState.value.isPlaying) stopPreview() else startPreview()
+        if (_uiState.value.isPlaying) {
+            stopPreview()
+        } else {
+            glyphController.acquireControl(GlyphController.GlyphOwner.PATTERN_LAB)
+            startPreview()
+        }
     }
 
     private fun startPreview() {
@@ -355,7 +353,8 @@ class PatternLabViewModel(
                         }
                         glyphController.applyGlyphStateWithIntensities(
                             step.channelIntensities,
-                            step.durationMs
+                            step.durationMs,
+                            GlyphController.GlyphOwner.PATTERN_LAB
                         )
                         delay(step.durationMs.toLong() + 50)
                     }
@@ -368,6 +367,7 @@ class PatternLabViewModel(
     fun stopPreview() {
         playbackJob?.cancel()
         playbackJob = null
+        glyphController.releaseControl(GlyphController.GlyphOwner.PATTERN_LAB)
         _uiState.update {
             it.copy(
                 isPlaying = false,
@@ -417,6 +417,7 @@ class PatternLabViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        glyphController.releaseControl(GlyphController.GlyphOwner.PATTERN_LAB)
         stopPreview()
     }
 }

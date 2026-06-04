@@ -10,6 +10,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nothing.ketchum.Glyph
+import com.smaarig.glyphbarcomposer.controller.GlyphConstants
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.data.MusicProjectWithEvents
 import com.smaarig.glyphbarcomposer.data.MusicStudioEvent
@@ -17,6 +18,7 @@ import com.smaarig.glyphbarcomposer.data.MusicStudioProject
 import com.smaarig.glyphbarcomposer.repository.GlyphRepository
 import com.smaarig.glyphbarcomposer.utils.AudioAnalyzer
 import com.smaarig.glyphbarcomposer.utils.AudioProcessor
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -25,10 +27,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.atomic.AtomicLong
@@ -141,14 +143,10 @@ class MusicStudioViewModel(
     private val MIN_PULSE_INTERVAL = 80L
     private val SENSITIVITY = 1.25f
 
-    val channels = listOf(
-        Glyph.Code_25111.A_1, Glyph.Code_25111.A_2, Glyph.Code_25111.A_3,
-        Glyph.Code_25111.A_4, Glyph.Code_25111.A_5, Glyph.Code_25111.A_6,
-        Glyph.Code_22111.E1
-    )
+    private val channels = GlyphConstants.PHONE_4A_CHANNELS
 
     init {
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.Default) {
             for (fft in fftChannel) analyzeFft(fft)
         }
     }
@@ -204,7 +202,7 @@ class MusicStudioViewModel(
 
         val previewMap =
             channels.mapIndexed { i, ch -> ch to _composerIntensities.value[i] }.toMap()
-        glyphController.applyGlyphStateWithIntensities(previewMap, 2000)
+        glyphController.applyGlyphStateWithIntensities(previewMap, 2000, GlyphController.GlyphOwner.STUDIO)
     }
 
     fun clearComposer() {
@@ -265,7 +263,7 @@ class MusicStudioViewModel(
         if (duration <= 0) return
 
         analysisJob?.cancel()
-        analysisJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+        analysisJob = viewModelScope.launch(Dispatchers.Default) {
             _uiState.update {
                 it.copy(
                     musicEvents = emptyList(),
@@ -460,6 +458,7 @@ class MusicStudioViewModel(
 
     private fun startMusicStudio() {
         musicStudioJob?.cancel()
+        glyphController.acquireControl(GlyphController.GlyphOwner.STUDIO)
         musicStudioJob = viewModelScope.launch {
             var lastPos = (_audioPositionMs.value - 1).coerceAtLeast(0)
             var prevActiveIds = setOf<Long>()
@@ -500,11 +499,13 @@ class MusicStudioViewModel(
                     }
                     if (merged.isNotEmpty()) glyphController.applyGlyphStateWithIntensities(
                         merged,
-                        50
+                        50,
+                        GlyphController.GlyphOwner.STUDIO
                     )
                     else if (prevActiveIds.isNotEmpty()) glyphController.applyGlyphStateWithIntensities(
                         emptyMap(),
-                        50
+                        50,
+                        GlyphController.GlyphOwner.STUDIO
                     )
                     prevActiveIds = nowIds
                 }
@@ -526,6 +527,7 @@ class MusicStudioViewModel(
     private fun stopMusicStudio() {
         musicStudioJob?.cancel()
         glyphController.turnOffGlyphs()
+        glyphController.releaseControl(GlyphController.GlyphOwner.STUDIO)
         _uiState.update { it.copy(activeProjectId = null) }
         _visualizerData.value = List(16) { 0f }
         fftChannel.tryReceive() // drain pending item
@@ -663,7 +665,7 @@ class MusicStudioViewModel(
 
         if (anyBeat && now - lastFftPulseTime > MIN_PULSE_INTERVAL) {
             glyphController.applyGlyphStateWithIntensities(
-                channels.mapIndexed { i, ch -> ch to detected[i] }.toMap(), 100
+                channels.mapIndexed { i, ch -> ch to detected[i] }.toMap(), 100, GlyphController.GlyphOwner.STUDIO
             )
             lastFftPulseTime = now
         }
@@ -684,9 +686,13 @@ class MusicStudioViewModel(
             val finalAudioPath: String
             if (state.editingProjectId != null) {
                 // Keep existing path if editing
-                val existingProject = repository.allMusicProjects.first()
-                    .find { it.project.id == state.editingProjectId }
-                finalAudioPath = existingProject?.project?.localAudioPath ?: ""
+                val existingProject = repository.getMusicProjectById(state.editingProjectId)
+                if (existingProject == null || existingProject.localAudioPath.isBlank()) {
+                    Log.e("MusicStudioViewModel", "Cannot find existing audio path for project ${state.editingProjectId}")
+                    _uiState.update { it.copy(isSaving = false) }
+                    return@launch
+                }
+                finalAudioPath = existingProject.localAudioPath
             } else {
                 val dir = File(
                     getApplication<Application>().getExternalFilesDir(null),
@@ -694,8 +700,10 @@ class MusicStudioViewModel(
                 ).apply { mkdirs() }
                 val file = File(dir, "audio_${System.currentTimeMillis()}.mp3")
                 try {
-                    getApplication<Application>().contentResolver.openInputStream(uri)?.use { ins ->
-                        FileOutputStream(file).use { out -> ins.copyTo(out) }
+                    withContext(Dispatchers.IO) {
+                        getApplication<Application>().contentResolver.openInputStream(uri)?.use { ins ->
+                            FileOutputStream(file).use { out -> ins.copyTo(out) }
+                        }
                     }
                     finalAudioPath = file.absolutePath
                 } catch (e: Exception) {
@@ -758,7 +766,7 @@ class MusicStudioViewModel(
                     }
                     _audioPositionMs.value = 0
                     // Extract waveform for UI
-                    viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+                    viewModelScope.launch(Dispatchers.Default) {
                         val waveform = AudioProcessor.extractWaveform(
                             getApplication(),
                             f.absolutePath.toUri(),
@@ -816,10 +824,12 @@ class MusicStudioViewModel(
             ).apply { mkdirs() }
             val file = File(dir, "audio_${System.currentTimeMillis()}.mp3")
             try {
-                getApplication<Application>().contentResolver.openInputStream(audioUri)
-                    ?.use { ins ->
-                        FileOutputStream(file).use { out -> ins.copyTo(out) }
-                    }
+                withContext(Dispatchers.IO) {
+                    getApplication<Application>().contentResolver.openInputStream(audioUri)
+                        ?.use { ins ->
+                            FileOutputStream(file).use { out -> ins.copyTo(out) }
+                        }
+                }
             } catch (e: Exception) {
                 Log.e("MusicStudioViewModel", "Failed to copy relinked audio", e)
                 return@launch
@@ -889,6 +899,7 @@ class MusicStudioViewModel(
         super.onCleared()
         releaseVisualizer()
         mediaPlayer?.release()
+        glyphController.releaseControl(GlyphController.GlyphOwner.STUDIO)
         glyphController.turnOffGlyphs()
     }
 }

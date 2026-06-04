@@ -48,6 +48,9 @@ interface PlaylistDao {
     @Delete
     suspend fun deleteMusicProject(project: MusicStudioProject)
 
+    @Query("SELECT * FROM music_studio_projects WHERE id = :projectId LIMIT 1")
+    suspend fun getMusicProjectById(projectId: Long): MusicStudioProject?
+
     @Update
     suspend fun updateMusicProject(project: MusicStudioProject)
 

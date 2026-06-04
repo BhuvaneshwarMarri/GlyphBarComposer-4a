@@ -55,10 +55,16 @@ class Converters {
 
     @TypeConverter
     fun toMap(data: String): Map<Int, Int> {
-        if (data.isEmpty()) return emptyMap()
-        return data.split(",").associate {
-            val parts = it.split(":")
-            parts[0].toInt() to parts[1].toInt()
+        if (data.isBlank()) return emptyMap()
+        return buildMap {
+            data.split(",").forEach { entry ->
+                val parts = entry.split(":")
+                if (parts.size == 2) {
+                    val key = parts[0].trim().toIntOrNull()
+                    val value = parts[1].trim().toIntOrNull()
+                    if (key != null && value != null) put(key, value)
+                }
+            }
         }
     }
 

@@ -193,38 +193,33 @@ class LibraryViewModel(
     }
 
     private suspend fun importZipBundle(context: Context, uri: android.net.Uri) {
+        val tempDir = File(context.cacheDir, "import_${System.currentTimeMillis()}").apply { mkdirs() }
         try {
-            val tempDir =
-                File(context.cacheDir, "import_${System.currentTimeMillis()}").apply { mkdirs() }
             val extracted = ZipUtils.unzipToDirectory(context, uri, tempDir)
 
-            val jsonFile = extracted.find { it.name == "project.json" } ?: return
-            val audioFile = extracted.find { it.name != "project.json" }
+            val jsonFile = extracted.find { it.name == "project.json" }
+                ?: throw IllegalArgumentException("No project.json in archive")
+            val audioFile = extracted.find { it.name == "audio.mp3" }
 
             val json = JSONObject(jsonFile.readText(Charsets.UTF_8))
-            val name = json.optString("name", "Imported")
+            val name = json.optString("name", "Imported Project")
 
-            // Copy audio to permanent location if it exists
             var finalAudioPath: String? = null
             if (audioFile != null && audioFile.exists()) {
-                val studioDir =
-                    File(context.getExternalFilesDir(null), "MusicStudio").apply { mkdirs() }
-                val permanentAudioFile =
-                    File(studioDir, "audio_${System.currentTimeMillis()}.${audioFile.extension}")
-                audioFile.inputStream().use { input ->
-                    permanentAudioFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                finalAudioPath = permanentAudioFile.absolutePath
+                val dest = File(
+                    context.getExternalFilesDir(null),
+                    "MusicStudio/audio_${System.currentTimeMillis()}.mp3"
+                ).also { it.parentFile?.mkdirs() }
+                audioFile.copyTo(dest, overwrite = true)
+                finalAudioPath = dest.absolutePath
             }
 
             importStudio(json, name, finalAudioPath)
 
-            // Cleanup temp
-            tempDir.deleteRecursively()
         } catch (e: Exception) {
             Log.e(TAG, "importZipBundle failed", e)
+        } finally {
+            tempDir.deleteRecursively()
         }
     }
 
