@@ -34,7 +34,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "glyph_database"
                 )
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(MIGRATION_1_3, MIGRATION_2_3, MIGRATION_3_13)
                     .build()
                 INSTANCE = instance
                 instance

@@ -172,8 +172,8 @@ class GlyphController private constructor() {
         private fun stateToSdkIntensity(state: Int): Int {
             return when {
                 state >= 10 -> state.coerceIn(0, 4095)
-                state == 1 || state == 4 -> 500   // Low
-                state == 2 || state == 5 -> 1500  // Medium
+                state == 1 || state == 4 -> 200   // Low
+                state == 2 || state == 5 -> 1000  // Medium
                 state == 3 || state == 6 -> 4000  // High / Full (SDK DEFAULT_LIGHT)
                 else -> 0
             }

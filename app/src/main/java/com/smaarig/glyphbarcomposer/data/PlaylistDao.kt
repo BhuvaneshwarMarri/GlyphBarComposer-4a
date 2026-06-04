@@ -101,4 +101,18 @@ interface PlaylistDao {
 
     @Query("DELETE FROM music_studio_events WHERE projectId = :projectId")
     suspend fun deleteEventsForProject(projectId: Long)
+
+    @Transaction
+    suspend fun replacePlaylistSteps(playlist: Playlist, steps: List<SequenceStep>) {
+        insertPlaylist(playlist)
+        deleteStepsForPlaylist(playlist.id)
+        insertSteps(steps)
+    }
+
+    @Transaction
+    suspend fun replaceMusicProjectEvents(project: MusicStudioProject, events: List<MusicStudioEvent>) {
+        insertMusicProject(project)
+        deleteEventsForProject(project.id)
+        insertMusicEvents(events)
+    }
 }

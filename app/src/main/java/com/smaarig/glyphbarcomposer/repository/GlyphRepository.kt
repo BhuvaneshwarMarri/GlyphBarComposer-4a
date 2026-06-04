@@ -29,15 +29,12 @@ class GlyphRepository(private val playlistDao: PlaylistDao) {
 
     suspend fun savePlaylist(playlist: Playlist, steps: List<SequenceStep>) {
         Log.d(TAG, "Saving playlist: ${playlist.name} with ${steps.size} steps")
-        val id = if (playlist.id != 0L) {
-            playlistDao.insertPlaylist(playlist)
-            playlistDao.deleteStepsForPlaylist(playlist.id)
-            playlist.id
+        if (playlist.id != 0L) {
+            playlistDao.replacePlaylistSteps(playlist, steps.map { it.copy(playlistId = playlist.id) })
         } else {
-            playlistDao.insertPlaylist(playlist)
+            val newId = playlistDao.insertPlaylist(playlist)
+            playlistDao.insertSteps(steps.map { it.copy(playlistId = newId) })
         }
-        val stepsWithId = steps.map { it.copy(playlistId = id) }
-        playlistDao.insertSteps(stepsWithId)
     }
 
     suspend fun deletePlaylist(playlist: Playlist) {
@@ -47,15 +44,13 @@ class GlyphRepository(private val playlistDao: PlaylistDao) {
 
     suspend fun saveMusicProject(project: MusicStudioProject, events: List<MusicStudioEvent>) {
         Log.d(TAG, "Saving music project: ${project.name} with ${events.size} events")
-        val id = if (project.id != 0L) {
-            playlistDao.insertMusicProject(project)
-            playlistDao.deleteEventsForProject(project.id)
-            project.id
+        if (project.id != 0L) {
+            val eventsWithId = events.map { it.copy(projectId = project.id) }
+            playlistDao.replaceMusicProjectEvents(project, eventsWithId)
         } else {
-            playlistDao.insertMusicProject(project)
+            val newId = playlistDao.insertMusicProject(project)
+            playlistDao.insertMusicEvents(events.map { it.copy(projectId = newId) })
         }
-        val eventsWithId = events.map { it.copy(projectId = id) }
-        playlistDao.insertMusicEvents(eventsWithId)
     }
 
     suspend fun deleteMusicProject(project: MusicStudioProject) {

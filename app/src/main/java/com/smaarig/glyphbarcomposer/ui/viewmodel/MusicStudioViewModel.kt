@@ -18,6 +18,7 @@ import com.smaarig.glyphbarcomposer.repository.GlyphRepository
 import com.smaarig.glyphbarcomposer.utils.AudioAnalyzer
 import com.smaarig.glyphbarcomposer.utils.AudioProcessor
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -133,7 +134,8 @@ class MusicStudioViewModel(
     private fun nextEventId() = eventIdCounter.getAndIncrement()
 
     // Live FFT visualizer state (PRO_SYNC_FFT live mode while playing, no saved events)
-    private val energyHistory = List(7) { mutableListOf<Float>() }
+    private val fftChannel = Channel<ByteArray>(Channel.CONFLATED)
+    private val energyHistory = List(7) { ArrayDeque<Float>() }
     private val HISTORY_SIZE = 15
     private var lastFftPulseTime = 0L
     private val MIN_PULSE_INTERVAL = 80L
@@ -144,6 +146,12 @@ class MusicStudioViewModel(
         Glyph.Code_25111.A_4, Glyph.Code_25111.A_5, Glyph.Code_25111.A_6,
         Glyph.Code_22111.E1
     )
+
+    init {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            for (fft in fftChannel) analyzeFft(fft)
+        }
+    }
 
     // ── Actions ───────────────────────────────────────────────────────────────
 
@@ -209,6 +217,7 @@ class MusicStudioViewModel(
         analysisJob?.cancel()
         mediaPlayer?.release()
         releaseVisualizer()
+        fftChannel.tryReceive() // drain pending item
         energyHistory.forEach { it.clear() }
 
         try {
@@ -444,6 +453,7 @@ class MusicStudioViewModel(
         val clamped = positionMs.toInt().coerceIn(0, _uiState.value.audioDurationMs)
         mediaPlayer?.seekTo(clamped)
         _audioPositionMs.value = clamped
+        fftChannel.tryReceive() // drain pending item
         energyHistory.forEach { it.clear() }
         if (_uiState.value.isAudioPlaying) startMusicStudio()
     }
@@ -518,6 +528,7 @@ class MusicStudioViewModel(
         glyphController.turnOffGlyphs()
         _uiState.update { it.copy(activeProjectId = null) }
         _visualizerData.value = List(16) { 0f }
+        fftChannel.tryReceive() // drain pending item
         energyHistory.forEach { it.clear() }
     }
 
@@ -646,8 +657,8 @@ class MusicStudioViewModel(
                 }
                 anyBeat = true
             }
-            history.add(energy)
-            if (history.size > HISTORY_SIZE) history.removeAt(0)
+            history.addLast(energy)
+            if (history.size > HISTORY_SIZE) history.removeFirst()
         }
 
         if (anyBeat && now - lastFftPulseTime > MIN_PULSE_INTERVAL) {
@@ -864,7 +875,7 @@ class MusicStudioViewModel(
                 setDataCaptureListener(object : Visualizer.OnDataCaptureListener {
                     override fun onWaveFormDataCapture(v: Visualizer?, d: ByteArray?, r: Int) {}
                     override fun onFftDataCapture(v: Visualizer?, fft: ByteArray?, r: Int) {
-                        fft?.let { analyzeFft(it) }
+                        fft?.let { fftChannel.trySend(it.copyOf()) }
                     }
                 }, Visualizer.getMaxCaptureRate() / 2, false, true)
                 enabled = true
