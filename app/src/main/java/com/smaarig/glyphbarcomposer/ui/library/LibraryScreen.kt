@@ -35,8 +35,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.smaarig.glyphbarcomposer.data.MusicProjectWithEvents
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
+import com.smaarig.glyphbarcomposer.model.ImportResult
 import com.smaarig.glyphbarcomposer.ui.AppOrientation
 import com.smaarig.glyphbarcomposer.ui.Screen
+import com.smaarig.glyphbarcomposer.ui.library.components.ImportResultDialog
 import com.smaarig.glyphbarcomposer.ui.library.components.LibNavItem
 import com.smaarig.glyphbarcomposer.ui.library.components.LibraryHeader
 import com.smaarig.glyphbarcomposer.ui.library.components.SequencesTab
@@ -61,6 +63,7 @@ fun LibraryScreen(
     val compState by composerViewModel.uiState.collectAsStateWithLifecycle()
     val compPlaybackState by composerViewModel.playbackState.collectAsStateWithLifecycle()
     val studioState by musicStudioViewModel.uiState.collectAsStateWithLifecycle()
+    val importState by viewModel.importState.collectAsStateWithLifecycle()
 
     val orientation = rememberAppOrientation()
     val context = LocalContext.current
@@ -87,7 +90,7 @@ fun LibraryScreen(
                     musicStudioViewModel.editMusicProject(it)
                     navController.navigate(Screen.MusicStudio.route)
                 },
-                onSharePlaylist = { viewModel.exportPlaylist(context, it) },
+                onSharePlaylist = { viewModel.exportPlaylistAsJson(context, it) },
                 onShareStudio = { viewModel.exportMusicProject(context, it) }
             )
         } else {
@@ -109,8 +112,16 @@ fun LibraryScreen(
                     musicStudioViewModel.editMusicProject(it)
                     navController.navigate(Screen.MusicStudio.route)
                 },
-                onSharePlaylist = { viewModel.exportPlaylist(context, it) },
+                onSharePlaylist = { viewModel.exportPlaylistAsJson(context, it) },
                 onShareStudio = { viewModel.exportMusicProject(context, it) }
+            )
+        }
+
+        if (importState is com.smaarig.glyphbarcomposer.ui.viewmodel.ImportState.Failed) {
+            val failed = importState as com.smaarig.glyphbarcomposer.ui.viewmodel.ImportState.Failed
+            ImportResultDialog(
+                result = ImportResult.Failure(failed.errors),
+                onDismiss = { viewModel.clearImportState() }
             )
         }
     }

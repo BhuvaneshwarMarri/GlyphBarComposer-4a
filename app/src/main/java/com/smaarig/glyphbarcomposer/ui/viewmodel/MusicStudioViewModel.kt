@@ -716,7 +716,8 @@ class MusicStudioViewModel(
                     getApplication<Application>().getExternalFilesDir(null),
                     "MusicStudio"
                 ).apply { mkdirs() }
-                val file = File(dir, "audio_${System.currentTimeMillis()}.mp3")
+                val ext = resolveAudioExtension(uri)
+                val file = File(dir, "audio_${System.currentTimeMillis()}.$ext")
                 try {
                     withContext(Dispatchers.IO) {
                         getApplication<Application>().contentResolver.openInputStream(uri)?.use { ins ->
@@ -840,7 +841,8 @@ class MusicStudioViewModel(
                 getApplication<Application>().getExternalFilesDir(null),
                 "MusicStudio"
             ).apply { mkdirs() }
-            val file = File(dir, "audio_${System.currentTimeMillis()}.mp3")
+            val ext = resolveAudioExtension(audioUri)
+            val file = File(dir, "audio_${System.currentTimeMillis()}.$ext")
             try {
                 withContext(Dispatchers.IO) {
                     getApplication<Application>().contentResolver.openInputStream(audioUri)
@@ -872,6 +874,20 @@ class MusicStudioViewModel(
             }
             repository.deleteMusicProject(project)
         }
+    }
+
+    private fun resolveAudioExtension(uri: Uri): String {
+        val fromDisplayName = try {
+            val cursor = getApplication<Application>().contentResolver.query(
+                uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null
+            )
+            cursor?.use {
+                if (it.moveToFirst()) it.getString(0) else null
+            }
+        } catch (e: Exception) { null }
+
+        val ext = fromDisplayName?.substringAfterLast('.', "")?.lowercase()
+        return if (ext in listOf("mp3", "ogg", "m4a", "wav", "flac", "aac")) ext!! else "mp3"
     }
 
     // ─────────────────────────────────────────────────────────────────────────

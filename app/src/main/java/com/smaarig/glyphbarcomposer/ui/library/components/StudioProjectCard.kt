@@ -92,6 +92,15 @@ fun StudioProjectCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    val extension = project.project.localAudioPath.substringAfterLast('.', "").uppercase()
+                    if (extension.isNotEmpty()) {
+                        Text(
+                            "[$extension] ",
+                            color = if (isActive) Color.Black else Color.Gray,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
                     Text(
                         "${project.events.size} sync events",
                         color = Color.Gray,

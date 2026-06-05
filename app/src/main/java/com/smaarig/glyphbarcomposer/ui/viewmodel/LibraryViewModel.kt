@@ -13,13 +13,29 @@ import com.smaarig.glyphbarcomposer.data.MusicStudioProject
 import com.smaarig.glyphbarcomposer.data.Playlist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import com.smaarig.glyphbarcomposer.data.SequenceStep
+import com.smaarig.glyphbarcomposer.model.ImportError
+import com.smaarig.glyphbarcomposer.model.ImportResult
 import com.smaarig.glyphbarcomposer.repository.GlyphRepository
+import com.smaarig.glyphbarcomposer.utils.CsvSequenceImporter
+import com.smaarig.glyphbarcomposer.utils.JsonSequenceImporter
+import com.smaarig.glyphbarcomposer.utils.SequenceImportManager
 import com.smaarig.glyphbarcomposer.utils.ZipUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+
+sealed class ImportState {
+    object Idle : ImportState()
+    data class Success(val name: String) : ImportState()
+    data class Failed(val errors: List<ImportError>) : ImportState()
+}
 
 class LibraryViewModel(
     application: Application,
@@ -33,6 +49,11 @@ class LibraryViewModel(
     val allPlaylists: Flow<List<PlaylistWithSteps>> = repository.allPlaylists
     val allMusicProjects: Flow<List<MusicProjectWithEvents>> = repository.allMusicProjects
 
+    private val _importState = MutableStateFlow<ImportState>(ImportState.Idle)
+    val importState: StateFlow<ImportState> = _importState.asStateFlow()
+
+    fun clearImportState() { _importState.value = ImportState.Idle }
+
     // ── Delete ───────────────────────────────────────────────────────────────
 
     fun deletePlaylist(playlist: Playlist) {
@@ -44,6 +65,45 @@ class LibraryViewModel(
     }
 
     // ── Export / Share ───────────────────────────────────────────────────────
+
+    fun exportPlaylistAsJson(context: Context, item: PlaylistWithSteps) {
+        viewModelScope.launch {
+            try {
+                val json = JsonSequenceImporter.export(item)
+                shareFile(context, "${item.playlist.name}.gbseq.json", json, "application/vnd.glyphbar.sequence+json")
+            } catch (e: Exception) {
+                Log.e(TAG, "exportPlaylistAsJson failed", e)
+            }
+        }
+    }
+
+    fun exportPlaylistAsCsv(context: Context, item: PlaylistWithSteps) {
+        viewModelScope.launch {
+            try {
+                val csv = CsvSequenceImporter.export(item)
+                shareFile(context, "${item.playlist.name}.gbseq.csv", csv, "text/csv")
+            } catch (e: Exception) {
+                Log.e(TAG, "exportPlaylistAsCsv failed", e)
+            }
+        }
+    }
+
+    private fun shareFile(context: Context, fileName: String, content: String, mimeType: String) {
+        val file = File(context.cacheDir, fileName)
+        file.writeText(content, Charsets.UTF_8)
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = mimeType
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, fileName)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "Share Glyph Item"))
+    }
 
     fun exportPlaylist(context: Context, item: PlaylistWithSteps) {
         try {
@@ -153,14 +213,74 @@ class LibraryViewModel(
 
     // ── Import ───────────────────────────────────────────────────────────────
 
+    fun importSequenceFromUri(context: Context, uri: android.net.Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = SequenceImportManager.importFromUri(context, uri)
+            withContext(Dispatchers.Main) {
+                when (result) {
+                    is ImportResult.Success -> {
+                        val playlist = Playlist(name = result.name)
+                        val steps = result.steps.mapIndexed { index, seq ->
+                            SequenceStep(
+                                playlistId = 0,
+                                stepIndex = index,
+                                channelIntensities = seq.channelIntensities,
+                                durationMs = seq.durationMs
+                            )
+                        }
+                        repository.savePlaylist(playlist, steps)
+                        _importState.value = ImportState.Success(result.name)
+                    }
+                    is ImportResult.Failure -> {
+                        _importState.value = ImportState.Failed(result.errors)
+                    }
+                    null -> {
+                        _importState.value = ImportState.Failed(
+                            listOf(ImportError("UNKNOWN_FORMAT", "Unrecognised file format."))
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     fun importItem(context: Context, uri: android.net.Uri) {
         viewModelScope.launch {
             try {
+                // 1. Try new JSON/CSV formats first via SequenceImportManager
+                val newResult = withContext(Dispatchers.IO) {
+                    SequenceImportManager.importFromUri(context, uri)
+                }
+
+                if (newResult != null) {
+                    when (newResult) {
+                        is ImportResult.Success -> {
+                            val playlist = Playlist(name = newResult.name)
+                            val steps = newResult.steps.mapIndexed { index, seq ->
+                                SequenceStep(
+                                    playlistId = 0,
+                                    stepIndex = index,
+                                    channelIntensities = seq.channelIntensities,
+                                    durationMs = seq.durationMs
+                                )
+                            }
+                            repository.savePlaylist(playlist, steps)
+                            _importState.value = ImportState.Success(newResult.name)
+                        }
+                        is ImportResult.Failure -> {
+                            _importState.value = ImportState.Failed(newResult.errors)
+                        }
+                    }
+                    return@launch
+                }
+
+                // 2. Fall back to existing ZIP bundle import
                 if (ZipUtils.isZipFile(context, uri)) {
                     importZipBundle(context, uri)
                     return@launch
                 }
 
+                // 3. Fall back to legacy JSON import
                 val content = context.contentResolver
                     .openInputStream(uri)
                     ?.bufferedReader(Charsets.UTF_8)
@@ -168,26 +288,34 @@ class LibraryViewModel(
 
                 if (content.isNullOrBlank()) {
                     Log.e(TAG, "importItem: empty content from URI $uri")
+                    _importState.value = ImportState.Failed(listOf(ImportError("EMPTY_FILE", "The file is empty.")))
                     return@launch
                 }
 
                 val json = JSONObject(content)
-
-                // Detect type from inside the JSON — never trust MIME or file extension
-                // because intermediary apps (WhatsApp, Telegram) change both.
                 val type = json.optString("type")
                 val name = json.optString("name", "Imported")
 
                 Log.d(TAG, "importItem: type=$type name=$name")
 
                 when (type) {
-                    "sequence" -> importSequence(json, name)
-                    "studio" -> importStudio(json, name, null)
-                    else -> Log.e(TAG, "importItem: unknown type '$type'")
+                    "sequence" -> {
+                        importSequence(json, name)
+                        _importState.value = ImportState.Success(name)
+                    }
+                    "studio" -> {
+                        importStudio(json, name, null)
+                        _importState.value = ImportState.Success(name)
+                    }
+                    else -> {
+                        Log.e(TAG, "importItem: unknown type '$type'")
+                        _importState.value = ImportState.Failed(listOf(ImportError("UNKNOWN_FORMAT", "Unrecognised file format or data type.")))
+                    }
                 }
 
             } catch (e: Exception) {
                 Log.e(TAG, "importItem failed for URI $uri", e)
+                _importState.value = ImportState.Failed(listOf(ImportError("IMPORT_ERROR", e.message ?: "Unknown error during import.")))
             }
         }
     }
