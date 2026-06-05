@@ -3,18 +3,21 @@ package com.smaarig.glyphbarcomposer.viewmodel
 import android.app.Application
 import android.content.Context
 import android.util.Log
+import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.data.Playlist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import com.smaarig.glyphbarcomposer.data.SequenceStep
 import com.smaarig.glyphbarcomposer.repository.GlyphRepository
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.unmockkAll
 import io.mockk.verify
-import io.mockk.coVerify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -30,6 +33,7 @@ class ComposerViewModelTest {
     private lateinit var viewModel: ComposerViewModel
     private val application = mockk<Application>(relaxed = true)
     private val repository = mockk<GlyphRepository>(relaxed = true)
+    private val glyphController = mockk<GlyphController>(relaxed = true)
     private val testDispatcher = UnconfinedTestDispatcher()
 
     @Before
@@ -40,6 +44,14 @@ class ComposerViewModelTest {
         every { Log.e(any(), any()) } returns 0
         every { Log.w(any<String>(), any<String>()) } returns 0
         every { Log.i(any(), any()) } returns 0
+
+        mockkStatic(GlyphController::class)
+        every { GlyphController.getInstance(any()) } returns glyphController
+        
+        // Mock StateFlows in GlyphController
+        every { glyphController.isPlaying } returns MutableStateFlow(false)
+        every { glyphController.isPaused } returns MutableStateFlow(false)
+        every { glyphController.currentIntensities } returns MutableStateFlow(List(7) { 0 })
         
         // Mock SharedPreferences for PreferenceManager inside ViewModel
         val sharedPrefs = mockk<android.content.SharedPreferences>(relaxed = true)
@@ -52,6 +64,7 @@ class ComposerViewModelTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkAll()
     }
 
     @Test
@@ -137,13 +150,10 @@ class ComposerViewModelTest {
     }
 
     @Test
-    fun `stopPlayback resets playing state and intensities`() {
-        viewModel.onIntensityChange(0, 3)
+    fun `stopPlayback calls controller stop`() {
         viewModel.stopPlayback()
-        
-        val state = viewModel.uiState.value
-        assertEquals(false, state.isPlaying)
-        assertEquals(0, state.glyphIntensities[0])
+        verify { glyphController.stopPlayback() }
+        verify { glyphController.releaseControl(GlyphController.GlyphOwner.COMPOSER) }
     }
 
     @Test
@@ -164,18 +174,9 @@ class ComposerViewModelTest {
     }
 
     @Test
-    fun `togglePause toggles isPaused if isPlaying`() {
-        viewModel.addStep()
-        viewModel.startPlayback(viewModel.uiState.value.currentSequenceSteps)
-        
-        assertEquals(true, viewModel.uiState.value.isPlaying)
-        assertEquals(false, viewModel.uiState.value.isPaused)
-        
+    fun `togglePause calls controller toggle`() {
         viewModel.togglePause()
-        assertEquals(true, viewModel.uiState.value.isPaused)
-        
-        viewModel.togglePause()
-        assertEquals(false, viewModel.uiState.value.isPaused)
+        verify { glyphController.togglePausePlayback() }
     }
 
     @Test
@@ -186,8 +187,7 @@ class ComposerViewModelTest {
         
         viewModel.playSequence(playlistWithSteps)
         
-        val state = viewModel.uiState.value
-        assertEquals(true, state.isPlaying)
-        assertEquals(1L, state.activePlaylistId)
+        verify { glyphController.acquireControl(GlyphController.GlyphOwner.COMPOSER) }
+        verify { glyphController.playSequence(any(), any(), any(), any(), any()) }
     }
 }

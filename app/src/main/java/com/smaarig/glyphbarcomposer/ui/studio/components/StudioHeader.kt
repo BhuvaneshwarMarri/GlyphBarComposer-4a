@@ -20,31 +20,31 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.smaarig.glyphbarcomposer.ui.ScreenHeader
-import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioUiState
-import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioViewModel
 
 @Composable
 fun StudioHeader(
-    uiState: MusicStudioUiState,
-    viewModel: MusicStudioViewModel,
-    onSaveClick: () -> Unit
+    hasEvents: Boolean,
+    showSaveSuccess: Boolean,
+    isSaving: Boolean,
+    onSaveClick: () -> Unit,
+    onResetProject: () -> Unit
 ) {
     ScreenHeader(
         title = "MUSIC STUDIO",
         subtitle = "Sync patterns to audio",
         modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
         actions = {
-            if (uiState.musicEvents.isNotEmpty()) {
+            if (hasEvents) {
                 IconButton(
-                    onClick = { if (!uiState.showSaveSuccess && !uiState.isSaving) onSaveClick() },
+                    onClick = { if (!showSaveSuccess && !isSaving) onSaveClick() },
                     modifier = Modifier
                         .clip(CircleShape)
                         .background(
-                            if (uiState.showSaveSuccess) Color(0xFF00C853) else Color(0x1A00C853)
+                            if (showSaveSuccess) Color(0xFF00C853) else Color(0x1A00C853)
                         )
                 ) {
                     AnimatedContent(
-                        targetState = uiState.showSaveSuccess,
+                        targetState = showSaveSuccess,
                         label = "saveIcon"
                     ) { success ->
                         if (success) {
@@ -55,7 +55,7 @@ fun StudioHeader(
                                 modifier = Modifier.size(20.dp)
                             )
                         } else {
-                            if (uiState.isSaving) {
+                            if (isSaving) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
                                     color = Color(0xFF00C853),
@@ -75,7 +75,7 @@ fun StudioHeader(
                 Spacer(Modifier.width(12.dp))
             }
             IconButton(
-                onClick = viewModel::resetProject,
+                onClick = onResetProject,
                 modifier = Modifier
                     .clip(CircleShape)
                     .background(Color(0x1AFF5252))

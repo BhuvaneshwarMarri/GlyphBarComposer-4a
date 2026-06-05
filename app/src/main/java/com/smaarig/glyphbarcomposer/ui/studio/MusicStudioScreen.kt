@@ -154,20 +154,34 @@ fun MusicStudioScreen(
                             verticalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
                             StudioHeader(
-                                uiState,
-                                viewModel,
-                                onSaveClick = { showSaveDialog = true })
+                                hasEvents = uiState.musicEvents.isNotEmpty(),
+                                showSaveSuccess = uiState.showSaveSuccess,
+                                isSaving = uiState.isSaving,
+                                onSaveClick = { showSaveDialog = true },
+                                onResetProject = viewModel::resetProject
+                            )
 
                             StudioPlayerCard(
-                                uiState = uiState,
+                                audioName = uiState.audioName,
+                                audioDurationMs = uiState.audioDurationMs,
                                 audioPositionMs = audioPositionMs,
                                 isAudioPlaying = uiState.isAudioPlaying,
+                                isAnalysisComplete = uiState.isAnalysisComplete,
                                 onPlayPause = viewModel::toggleMusicPlayback,
                                 onSeek = viewModel::seekMusic,
                                 onChangeAudio = { fileLauncher.launch("audio/*") }
                             )
 
-                            AnalyzerCard(uiState, viewModel)
+                            AnalyzerCard(
+                                selectedAlgorithm = uiState.selectedAlgorithm,
+                                includeRedGlyph = uiState.includeRedGlyph,
+                                isAnalyzing = uiState.isAnalyzing,
+                                bpmOverride = uiState.bpmOverride,
+                                onAlgorithmSelect = viewModel::setAlgorithm,
+                                onToggleRedGlyph = viewModel::toggleRedGlyph,
+                                onBpmChange = viewModel::setBpmOverride,
+                                onReanalyze = viewModel::reanalyze
+                            )
                         }
 
                         Column(
@@ -176,7 +190,15 @@ fun MusicStudioScreen(
                                 .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
-                            TimelineCard(uiState, audioPositionMs, viewModel)
+                            TimelineCard(
+                                uiState = uiState,
+                                audioPositionMs = audioPositionMs,
+                                onSelectEvent = viewModel::selectEvent,
+                                onMoveEvent = viewModel::updateEventPosition,
+                                onResizeEvent = viewModel::updateEventStartAndDuration,
+                                onDeleteEvent = viewModel::deleteMusicEvent,
+                                onSeekMusic = viewModel::seekMusic
+                            )
 
                             ComposerPanel(
                                 intensities = composerIntensities,
@@ -203,20 +225,45 @@ fun MusicStudioScreen(
                             .padding(horizontal = 16.dp, vertical = 24.dp),
                         verticalArrangement = Arrangement.spacedBy(28.dp)
                     ) {
-                        StudioHeader(uiState, viewModel, onSaveClick = { showSaveDialog = true })
+                        StudioHeader(
+                            hasEvents = uiState.musicEvents.isNotEmpty(),
+                            showSaveSuccess = uiState.showSaveSuccess,
+                            isSaving = uiState.isSaving,
+                            onSaveClick = { showSaveDialog = true },
+                            onResetProject = viewModel::resetProject
+                        )
 
                         StudioPlayerCard(
-                            uiState = uiState,
+                            audioName = uiState.audioName,
+                            audioDurationMs = uiState.audioDurationMs,
                             audioPositionMs = audioPositionMs,
                             isAudioPlaying = uiState.isAudioPlaying,
+                            isAnalysisComplete = uiState.isAnalysisComplete,
                             onPlayPause = viewModel::toggleMusicPlayback,
                             onSeek = viewModel::seekMusic,
                             onChangeAudio = { fileLauncher.launch("audio/*") }
                         )
 
-                        AnalyzerCard(uiState, viewModel)
+                        AnalyzerCard(
+                            selectedAlgorithm = uiState.selectedAlgorithm,
+                            includeRedGlyph = uiState.includeRedGlyph,
+                            isAnalyzing = uiState.isAnalyzing,
+                            bpmOverride = uiState.bpmOverride,
+                            onAlgorithmSelect = viewModel::setAlgorithm,
+                            onToggleRedGlyph = viewModel::toggleRedGlyph,
+                            onBpmChange = viewModel::setBpmOverride,
+                            onReanalyze = viewModel::reanalyze
+                        )
 
-                        TimelineCard(uiState, audioPositionMs, viewModel)
+                        TimelineCard(
+                            uiState = uiState,
+                            audioPositionMs = audioPositionMs,
+                            onSelectEvent = viewModel::selectEvent,
+                            onMoveEvent = viewModel::updateEventPosition,
+                            onResizeEvent = viewModel::updateEventStartAndDuration,
+                            onDeleteEvent = viewModel::deleteMusicEvent,
+                            onSeekMusic = viewModel::seekMusic
+                        )
 
                         ComposerPanel(
                             intensities = composerIntensities,

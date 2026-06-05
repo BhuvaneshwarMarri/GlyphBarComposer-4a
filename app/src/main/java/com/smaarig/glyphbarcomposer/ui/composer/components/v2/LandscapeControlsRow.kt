@@ -29,13 +29,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
-import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
 
 @Composable
 fun LandscapeControlsRow(
-    uiState: ComposerUiState,
-    viewModel: ComposerViewModel,
+    durationMs: Float,
+    isPlaying: Boolean,
+    onDurationChange: (Float) -> Unit,
+    onAddStep: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -56,15 +56,15 @@ fun LandscapeControlsRow(
             ) {
                 Text("DURATION", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    "${uiState.durationMs.toInt()}ms",
+                    "${durationMs.toInt()}ms",
                     color = Color.White,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Black
                 )
             }
             Slider(
-                value = uiState.durationMs,
-                onValueChange = viewModel::onDurationChange,
+                value = durationMs,
+                onValueChange = onDurationChange,
                 valueRange = 100f..2000f,
                 steps = 18,
                 colors = SliderDefaults.colors(
@@ -76,13 +76,14 @@ fun LandscapeControlsRow(
         }
 
         Button(
-            onClick = viewModel::addStep,
+            onClick = onAddStep,
+            enabled = !isPlaying,
             modifier = Modifier
                 .height(44.dp)
                 .width(120.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color.White,
-                contentColor = Color.Black
+                containerColor = if (isPlaying) Color.DarkGray else Color.White,
+                contentColor = if (isPlaying) Color.Gray else Color.Black
             ),
             shape = RoundedCornerShape(10.dp),
             contentPadding = PaddingValues(0.dp)

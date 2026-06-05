@@ -25,13 +25,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smaarig.glyphbarcomposer.ui.composer.components.common.GlyphScrollPicker
-import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
-import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
 
 @Composable
 fun GlyphsColumn(
-    uiState: ComposerUiState,
-    viewModel: ComposerViewModel,
+    selectedChannelIndex: Int,
+    glyphIntensities: List<Int>,
+    playbackIntensities: List<Int>,
+    isPlaying: Boolean,
+    onIntensityChange: (Int, Int) -> Unit,
+    onChannelSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -63,8 +65,8 @@ fun GlyphsColumn(
 
         repeat(7) { index ->
             val isRed = index == 6
-            val isSelected = uiState.selectedChannelIndex == index
-            val intensity = uiState.glyphIntensities[index]
+            val isSelected = selectedChannelIndex == index
+            val intensity = if (isPlaying) playbackIntensities[index] else glyphIntensities[index]
 
             if (isRed) {
                 Spacer(Modifier.height(12.dp))
@@ -101,12 +103,12 @@ fun GlyphsColumn(
                 GlyphScrollPicker(
                     intensity = intensity,
                     onIntensityChange = { newVal ->
-                        viewModel.onIntensityChange(index, newVal)
-                        viewModel.setSelectedChannel(index)
+                        onIntensityChange(index, newVal)
+                        onChannelSelect(index)
                     },
                     modifier = Modifier.testTag("glyph_picker_$index"),
                     isRed = isRed,
-                    enabled = !uiState.isPlaying
+                    enabled = !isPlaying
                 )
             }
 

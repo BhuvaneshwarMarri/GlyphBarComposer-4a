@@ -40,11 +40,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smaarig.glyphbarcomposer.ui.viewmodel.BeatAlgorithm
-import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioUiState
-import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioViewModel
 
 @Composable
-fun AnalyzerCard(uiState: MusicStudioUiState, viewModel: MusicStudioViewModel) {
+fun AnalyzerCard(
+    selectedAlgorithm: BeatAlgorithm,
+    includeRedGlyph: Boolean,
+    isAnalyzing: Boolean,
+    bpmOverride: Int,
+    onAlgorithmSelect: (BeatAlgorithm) -> Unit,
+    onToggleRedGlyph: (Boolean) -> Unit,
+    onBpmChange: (Int) -> Unit,
+    onReanalyze: () -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
             "SYNC ENGINE",
@@ -82,7 +89,7 @@ fun AnalyzerCard(uiState: MusicStudioUiState, viewModel: MusicStudioViewModel) {
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    uiState.selectedAlgorithm.displayName,
+                                    selectedAlgorithm.displayName,
                                     color = Color.White,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Black,
@@ -116,7 +123,7 @@ fun AnalyzerCard(uiState: MusicStudioUiState, viewModel: MusicStudioViewModel) {
                                         )
                                     },
                                     onClick = {
-                                        viewModel.setAlgorithm(algo)
+                                        onAlgorithmSelect(algo)
                                         expanded = false
                                     }
                                 )
@@ -130,24 +137,24 @@ fun AnalyzerCard(uiState: MusicStudioUiState, viewModel: MusicStudioViewModel) {
                             .size(height = 42.dp, width = 56.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(
-                                if (uiState.includeRedGlyph) Color(0xFFFF1744).copy(0.15f) else Color(
+                                if (includeRedGlyph) Color(0xFFFF1744).copy(0.15f) else Color(
                                     0xFF1A1A1A
                                 )
                             )
                             .border(
                                 1.dp,
-                                if (uiState.includeRedGlyph) Color(0xFFFF1744).copy(0.5f) else Color(
+                                if (includeRedGlyph) Color(0xFFFF1744).copy(0.5f) else Color(
                                     0xFF2A2A2A
                                 ),
                                 RoundedCornerShape(12.dp)
                             )
-                            .clickable { viewModel.toggleRedGlyph(!uiState.includeRedGlyph) },
+                            .clickable { onToggleRedGlyph(!includeRedGlyph) },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             Icons.Default.Adjust,
                             null,
-                            tint = if (uiState.includeRedGlyph) Color(0xFFFF1744) else Color(
+                            tint = if (includeRedGlyph) Color(0xFFFF1744) else Color(
                                 0xFF444444
                             ),
                             modifier = Modifier.size(18.dp)
@@ -156,8 +163,8 @@ fun AnalyzerCard(uiState: MusicStudioUiState, viewModel: MusicStudioViewModel) {
 
                     // 3. Generate Button
                     Button(
-                        onClick = viewModel::reanalyze,
-                        enabled = !uiState.isAnalyzing,
+                        onClick = onReanalyze,
+                        enabled = !isAnalyzing,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.White,
                             contentColor = Color.Black,
@@ -167,7 +174,7 @@ fun AnalyzerCard(uiState: MusicStudioUiState, viewModel: MusicStudioViewModel) {
                         modifier = Modifier.height(42.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp)
                     ) {
-                        if (uiState.isAnalyzing) {
+                        if (isAnalyzing) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 color = Color.Black,
@@ -179,7 +186,7 @@ fun AnalyzerCard(uiState: MusicStudioUiState, viewModel: MusicStudioViewModel) {
                     }
                 }
 
-                if (uiState.selectedAlgorithm == BeatAlgorithm.BPM_GRID) {
+                if (selectedAlgorithm == BeatAlgorithm.BPM_GRID) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -197,7 +204,7 @@ fun AnalyzerCard(uiState: MusicStudioUiState, viewModel: MusicStudioViewModel) {
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(
-                                onClick = { viewModel.setBpmOverride(uiState.bpmOverride - 5) },
+                                onClick = { onBpmChange(bpmOverride - 5) },
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Text(
@@ -208,14 +215,14 @@ fun AnalyzerCard(uiState: MusicStudioUiState, viewModel: MusicStudioViewModel) {
                                 )
                             }
                             Text(
-                                "${uiState.bpmOverride} BPM",
+                                "$bpmOverride BPM",
                                 color = Color.White,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Black,
                                 modifier = Modifier.padding(horizontal = 12.dp)
                             )
                             IconButton(
-                                onClick = { viewModel.setBpmOverride(uiState.bpmOverride + 5) },
+                                onClick = { onBpmChange(bpmOverride + 5) },
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Text(

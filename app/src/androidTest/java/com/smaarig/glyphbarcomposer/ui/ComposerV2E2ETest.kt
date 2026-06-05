@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import com.smaarig.glyphbarcomposer.ui.composer.ComposerScreen
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.PlaybackState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
 import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import io.mockk.*
@@ -19,8 +20,10 @@ class ComposerV2E2ETest {
     val composeTestRule = createComposeRule()
 
     private val uiStateFlow = MutableStateFlow(ComposerUiState(useOldVersion = false))
+    private val playbackStateFlow = MutableStateFlow(PlaybackState())
     private val viewModel = mockk<ComposerViewModel>(relaxed = true).apply {
         every { uiState } returns uiStateFlow
+        every { playbackState } returns playbackStateFlow
     }
     private val redViewModel = mockk<RedGlyphViewModel>(relaxed = true)
 
@@ -160,14 +163,14 @@ class ComposerV2E2ETest {
 
         // 3. Play Sequence
         composeTestRule.onNodeWithTag("play_button").performClick()
-        verify { viewModel.startPlayback(any(), any()) }
+        verify { viewModel.startPlayback(any()) }
 
         // Update state to isPlaying = true to test Stop button
-        uiStateFlow.value = uiStateFlow.value.copy(isPlaying = true)
+        playbackStateFlow.value = playbackStateFlow.value.copy(isPlaying = true)
         composeTestRule.onNodeWithTag("play_button").performClick()
         verify { viewModel.stopPlayback() }
         
-        uiStateFlow.value = uiStateFlow.value.copy(isPlaying = false)
+        playbackStateFlow.value = playbackStateFlow.value.copy(isPlaying = false)
 
         // 4. Save Sequence
         composeTestRule.onNodeWithTag("save_button").performClick()

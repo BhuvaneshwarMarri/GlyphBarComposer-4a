@@ -59,6 +59,7 @@ fun LibraryScreen(
     val playlists by viewModel.allPlaylists.collectAsStateWithLifecycle(emptyList())
     val studioProjects by viewModel.allMusicProjects.collectAsStateWithLifecycle(emptyList())
     val compState by composerViewModel.uiState.collectAsStateWithLifecycle()
+    val compPlaybackState by composerViewModel.playbackState.collectAsStateWithLifecycle()
     val studioState by musicStudioViewModel.uiState.collectAsStateWithLifecycle()
 
     val orientation = rememberAppOrientation()
@@ -74,6 +75,7 @@ fun LibraryScreen(
                 playlists = playlists,
                 studioProjects = studioProjects,
                 compState = compState,
+                compPlaybackState = compPlaybackState,
                 studioState = studioState,
                 composerViewModel = composerViewModel,
                 musicStudioViewModel = musicStudioViewModel,
@@ -95,6 +97,7 @@ fun LibraryScreen(
                 playlists = playlists,
                 studioProjects = studioProjects,
                 compState = compState,
+                compPlaybackState = compPlaybackState,
                 studioState = studioState,
                 composerViewModel = composerViewModel,
                 musicStudioViewModel = musicStudioViewModel,
@@ -120,6 +123,7 @@ fun LibraryPortrait(
     playlists: List<PlaylistWithSteps>,
     studioProjects: List<MusicProjectWithEvents>,
     compState: ComposerUiState,
+    compPlaybackState: com.smaarig.glyphbarcomposer.ui.viewmodel.PlaybackState,
     studioState: MusicStudioUiState,
     composerViewModel: ComposerViewModel,
     musicStudioViewModel: MusicStudioViewModel,
@@ -140,7 +144,7 @@ fun LibraryPortrait(
                 composerViewModel.stopPlayback()
                 if (studioState.isAudioPlaying) musicStudioViewModel.toggleMusicPlayback()
             },
-            isAnyPlaying = compState.isPlaying || studioState.isAudioPlaying
+            isAnyPlaying = compPlaybackState.isPlaying || studioState.isAudioPlaying
         )
 
         Row(
@@ -187,8 +191,8 @@ fun LibraryPortrait(
         Box(modifier = Modifier.weight(1f)) {
             if (selectedTab == 0) {
                 SequencesTab(
-                    compState.isPlaying,
-                    compState.isPaused,
+                    compPlaybackState.isPlaying,
+                    compPlaybackState.isPaused,
                     compState.activePlaylistId,
                     compState.activePresetName,
                     playlists,
@@ -217,6 +221,7 @@ fun LibraryLandscape(
     playlists: List<PlaylistWithSteps>,
     studioProjects: List<MusicProjectWithEvents>,
     compState: ComposerUiState,
+    compPlaybackState: com.smaarig.glyphbarcomposer.ui.viewmodel.PlaybackState,
     studioState: MusicStudioUiState,
     composerViewModel: ComposerViewModel,
     musicStudioViewModel: MusicStudioViewModel,
@@ -241,7 +246,7 @@ fun LibraryLandscape(
                     composerViewModel.stopPlayback()
                     if (studioState.isAudioPlaying) musicStudioViewModel.toggleMusicPlayback()
                 },
-                isAnyPlaying = compState.isPlaying || studioState.isAudioPlaying
+                isAnyPlaying = compPlaybackState.isPlaying || studioState.isAudioPlaying
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -263,8 +268,8 @@ fun LibraryLandscape(
             .fillMaxHeight()) {
             if (selectedTab == 0) {
                 SequencesTab(
-                    compState.isPlaying,
-                    compState.isPaused,
+                    compPlaybackState.isPlaying,
+                    compPlaybackState.isPaused,
                     compState.activePlaylistId,
                     compState.activePresetName,
                     playlists,

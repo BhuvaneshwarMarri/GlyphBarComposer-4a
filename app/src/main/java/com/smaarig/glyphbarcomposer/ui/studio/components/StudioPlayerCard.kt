@@ -45,13 +45,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioUiState
 
 @Composable
 fun StudioPlayerCard(
-    uiState: MusicStudioUiState,
+    audioName: String?,
+    audioDurationMs: Int,
     audioPositionMs: Int,
     isAudioPlaying: Boolean,
+    isAnalysisComplete: Boolean,
     onPlayPause: () -> Unit,
     onSeek: (Float) -> Unit,
     onChangeAudio: () -> Unit
@@ -107,12 +108,12 @@ fun StudioPlayerCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        uiState.audioName ?: "Select a Track",
+                        audioName ?: "Select a Track",
                         color = Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp,
                         maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        "${formatTime(audioPositionMs)} / ${formatTime(uiState.audioDurationMs)}",
+                        "${formatTime(audioPositionMs)} / ${formatTime(audioDurationMs)}",
                         color = Color.Gray, fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -143,8 +144,8 @@ fun StudioPlayerCard(
                 Slider(
                     value = audioPositionMs.toFloat(),
                     onValueChange = onSeek,
-                    valueRange = 0f..uiState.audioDurationMs.toFloat().coerceAtLeast(1f),
-                    enabled = uiState.isAnalysisComplete,
+                    valueRange = 0f..audioDurationMs.toFloat().coerceAtLeast(1f),
+                    enabled = isAnalysisComplete,
                     colors = SliderDefaults.colors(
                         thumbColor = Color.White,
                         activeTrackColor = Color.White,
@@ -160,17 +161,17 @@ fun StudioPlayerCard(
                         .size(48.dp)
                         .clip(CircleShape)
                         .background(
-                            if (uiState.isAnalysisComplete) Color.White else Color(
+                            if (isAnalysisComplete) Color.White else Color(
                                 0xFF1A1A1A
                             )
                         )
-                        .clickable(enabled = uiState.isAnalysisComplete) { onPlayPause() },
+                        .clickable(enabled = isAnalysisComplete) { onPlayPause() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         if (isAudioPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         null,
-                        tint = if (uiState.isAnalysisComplete) Color.Black else Color(0xFF333333),
+                        tint = if (isAnalysisComplete) Color.Black else Color(0xFF333333),
                         modifier = Modifier.size(28.dp)
                     )
                 }

@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import com.smaarig.glyphbarcomposer.ui.composer.ComposerScreen
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.PlaybackState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
 import io.mockk.every
 import io.mockk.mockk
@@ -20,8 +21,10 @@ class ComposerScreenTest {
     val composeTestRule = createComposeRule()
 
     private val uiStateFlow = MutableStateFlow(ComposerUiState())
+    private val playbackStateFlow = MutableStateFlow(PlaybackState())
     private val viewModel = mockk<ComposerViewModel>(relaxed = true).apply {
         every { uiState } returns uiStateFlow
+        every { playbackState } returns playbackStateFlow
     }
     private val redViewModel = mockk<RedGlyphViewModel>(relaxed = true)
 

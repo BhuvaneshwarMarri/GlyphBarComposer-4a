@@ -39,16 +39,37 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import com.smaarig.glyphbarcomposer.ui.composer.components.v2.DraggableTimeline
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.PlaybackState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
 
 @Composable
 fun ComposerScreenOldLandscape(
-    uiState: ComposerUiState,
-    viewModel: ComposerViewModel,
-    redViewModel: RedGlyphViewModel
+    glyphIntensities: List<Int>,
+    currentSequenceSteps: List<GlyphSequence>,
+    durationMs: Float,
+    isPlaying: Boolean,
+    isPaused: Boolean,
+    selectedChannelIndex: Int,
+    activePlaylistId: Long?,
+    activePresetName: String?,
+    onIntensityChange: (Int, Int) -> Unit,
+    onDurationChange: (Float) -> Unit,
+    onAddStep: () -> Unit,
+    onRemoveStep: (Int) -> Unit,
+    onClearSequence: () -> Unit,
+    onLoadStep: (Int) -> Unit,
+    onStartPlayback: () -> Unit,
+    onStopPlayback: () -> Unit,
+    onTogglePause: () -> Unit,
+    onSavePlaylist: (String) -> Unit,
+    onPlaySequence: (com.smaarig.glyphbarcomposer.data.PlaylistWithSteps) -> Unit,
+    onDeletePlaylist: (com.smaarig.glyphbarcomposer.data.Playlist) -> Unit,
+    onChannelSelect: (Int) -> Unit,
+    onRedToggle: (Boolean) -> Unit
 ) {
     var showSaveDialog by remember { mutableStateOf(false) }
     var fileName by remember { mutableStateOf("") }
@@ -60,7 +81,7 @@ fun ComposerScreenOldLandscape(
             onValueChange = { fileName = it },
             onSave = {
                 if (fileName.isNotBlank()) {
-                    viewModel.savePlaylist(fileName)
+                    onSavePlaylist(fileName)
                     showSaveDialog = false
                     fileName = ""
                 }
@@ -100,15 +121,15 @@ fun ComposerScreenOldLandscape(
                     repeat(6) { index ->
                         OldGlyphButton(
                             index = index,
-                            intensity = uiState.glyphIntensities[index],
-                            isSelected = uiState.selectedChannelIndex == index,
+                            intensity = glyphIntensities[index],
+                            isSelected = selectedChannelIndex == index,
                             isRed = false,
                             onIntensityChange = { newVal ->
-                                viewModel.onIntensityChange(index, newVal)
-                                viewModel.setSelectedChannel(index)
+                                onIntensityChange(index, newVal)
+                                onChannelSelect(index)
                             },
-                            onSelect = { viewModel.setSelectedChannel(index) },
-                            enabled = !uiState.isPlaying
+                            onSelect = { onChannelSelect(index) },
+                            enabled = !isPlaying
                         )
                     }
 
@@ -121,16 +142,16 @@ fun ComposerScreenOldLandscape(
 
                     OldGlyphButton(
                         index = 6,
-                        intensity = uiState.glyphIntensities[6],
-                        isSelected = uiState.selectedChannelIndex == 6,
+                        intensity = glyphIntensities[6],
+                        isSelected = selectedChannelIndex == 6,
                         isRed = true,
                         onIntensityChange = { newVal ->
-                            viewModel.onIntensityChange(6, newVal)
-                            viewModel.setSelectedChannel(6)
-                            redViewModel.setRed(newVal > 0)
+                            onIntensityChange(6, newVal)
+                            onChannelSelect(6)
+                            onRedToggle(newVal > 0)
                         },
-                        onSelect = { viewModel.setSelectedChannel(6) },
-                        enabled = !uiState.isPlaying
+                        onSelect = { onChannelSelect(6) },
+                        enabled = !isPlaying
                     )
                 }
             }
@@ -156,15 +177,15 @@ fun ComposerScreenOldLandscape(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "${uiState.durationMs.toInt()}ms",
+                        "${durationMs.toInt()}ms",
                         color = Color.White,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Black
                     )
                 }
                 Slider(
-                    value = uiState.durationMs,
-                    onValueChange = viewModel::onDurationChange,
+                    value = durationMs,
+                    onValueChange = onDurationChange,
                     valueRange = 100f..2000f,
                     steps = 18,
                     colors = SliderDefaults.colors(
@@ -181,7 +202,7 @@ fun ComposerScreenOldLandscape(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = viewModel::addStep,
+                    onClick = onAddStep,
                     modifier = Modifier
                         .weight(1f)
                         .height(44.dp),
@@ -196,9 +217,9 @@ fun ComposerScreenOldLandscape(
                     Text("ADD STEP", fontWeight = FontWeight.Black, fontSize = 11.sp)
                 }
 
-                if (uiState.currentSequenceSteps.isNotEmpty()) {
+                if (currentSequenceSteps.isNotEmpty()) {
                     IconButton(
-                        onClick = viewModel::clearSequence,
+                        onClick = onClearSequence,
                         modifier = Modifier
                             .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
@@ -217,6 +238,16 @@ fun ComposerScreenOldLandscape(
         }
 
         // Right Column: Timeline (Switched to Vertical for Landscape V1 mapping)
-        DraggableTimeline(uiState, viewModel, Modifier.weight(1f))
+        DraggableTimeline(
+            steps = currentSequenceSteps,
+            isPlaying = isPlaying,
+            onRemoveStep = onRemoveStep,
+            onReorderSteps = { from, to -> /* V1 timeline doesn't support reordering, but DraggableTimeline needs a lambda */ },
+            onLoadStep = onLoadStep,
+            onStartPlayback = onStartPlayback,
+            onStopPlayback = onStopPlayback,
+            onSave = onSavePlaylist,
+            modifier = Modifier.weight(1f)
+        )
     }
 }

@@ -34,13 +34,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
-import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
 
 @Composable
 fun ControlsColumn(
-    uiState: ComposerUiState,
-    viewModel: ComposerViewModel,
+    durationMs: Float,
+    isPlaying: Boolean,
+    onDurationChange: (Float) -> Unit,
+    onAddStep: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -70,7 +70,7 @@ fun ControlsColumn(
             modifier = Modifier.weight(1f)
         ) {
             Text(
-                "${uiState.durationMs.toInt()}ms",
+                "${durationMs.toInt()}ms",
                 color = Color.White,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
@@ -82,8 +82,8 @@ fun ControlsColumn(
                 contentAlignment = Alignment.Center
             ) {
                 Slider(
-                    value = uiState.durationMs,
-                    onValueChange = viewModel::onDurationChange,
+                    value = durationMs,
+                    onValueChange = onDurationChange,
                     valueRange = 100f..2000f,
                     steps = 18,
                     colors = SliderDefaults.colors(
@@ -100,15 +100,16 @@ fun ControlsColumn(
         }
 
         Button(
-            onClick = viewModel::addStep,
+            onClick = onAddStep,
+            enabled = !isPlaying,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)
                 .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(14.dp))
                 .testTag("add_step_button"),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color.White,
-                contentColor = Color.Black
+                containerColor = if (isPlaying) Color.DarkGray else Color.White,
+                contentColor = if (isPlaying) Color.Gray else Color.Black
             ),
             shape = RoundedCornerShape(14.dp),
             contentPadding = PaddingValues(0.dp),

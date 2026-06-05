@@ -486,8 +486,7 @@ class MusicStudioViewModel(
 
                 val events = _uiState.value.musicEvents
                 // Increased lookahead/windowing for smoother playback sync
-                val nowActive =
-                    events.filter { e -> pos >= e.timestampMs - 20 && pos < e.timestampMs + e.durationMs - 10 }
+                val nowActive = findActiveEvents(events, pos)
                 val nowIds = nowActive.map { it.id }.toSet()
 
                 if (nowIds != prevActiveIds) {
@@ -522,6 +521,25 @@ class MusicStudioViewModel(
                 glyphController.turnOffGlyphs()
             }
         }
+    }
+
+    private fun findActiveEvents(events: List<MusicStudioEvent>, posMs: Int): List<MusicStudioEvent> {
+        if (events.isEmpty()) return emptyList()
+        // Binary search for the first potentially-active event
+        var lo = 0; var hi = events.size
+        while (lo < hi) {
+            val mid = (lo + hi).ushr(1)
+            if (events[mid].timestampMs + events[mid].durationMs - 10 <= posMs - 20) lo = mid + 1
+            else hi = mid
+        }
+        val result = mutableListOf<MusicStudioEvent>()
+        var i = lo
+        while (i < events.size && events[i].timestampMs - 20 <= posMs) {
+            val e = events[i]
+            if (posMs >= e.timestampMs - 20 && posMs < e.timestampMs + e.durationMs - 10) result += e
+            i++
+        }
+        return result
     }
 
     private fun stopMusicStudio() {

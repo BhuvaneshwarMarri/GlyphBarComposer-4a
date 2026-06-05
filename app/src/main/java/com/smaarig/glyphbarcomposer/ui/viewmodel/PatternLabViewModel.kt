@@ -1,6 +1,7 @@
 package com.smaarig.glyphbarcomposer.ui.viewmodel
 
 import android.app.Application
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nothing.ketchum.Glyph
@@ -11,6 +12,7 @@ import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import com.smaarig.glyphbarcomposer.data.SequenceStep
 import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import com.smaarig.glyphbarcomposer.repository.GlyphRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,12 +20,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Random
 import kotlin.math.max
 import kotlin.math.roundToInt
 
 enum class LabBlendMode { MAX, ADD, CROSSFADE }
 
+@Stable
 data class PatternLabUiState(
     val selectedPlaylistA: PlaylistWithSteps? = null,
     val selectedPlaylistB: PlaylistWithSteps? = null,
@@ -59,6 +63,7 @@ class PatternLabViewModel(
 
     val allPlaylists = repository.allPlaylists
     private var playbackJob: Job? = null
+    private var previewJob: Job? = null
 
     private val channels = GlyphConstants.PHONE_4A_CHANNELS
 
@@ -228,14 +233,22 @@ class PatternLabViewModel(
     }
 
     private fun updatePreview() {
-        val state = _uiState.value
+        previewJob?.cancel()
+        previewJob = viewModelScope.launch {
+            delay(50L) // debounce
+            val state = _uiState.value
+            val resultSteps = withContext(Dispatchers.Default) {
+                computePreviewSteps(state)
+            }
+            _uiState.update { it.copy(previewSteps = resultSteps) }
+        }
+    }
+
+    private fun computePreviewSteps(state: PatternLabUiState): List<GlyphSequence> {
         val a = state.selectedPlaylistA
         val b = state.selectedPlaylistB
 
-        if (a == null && b == null) {
-            _uiState.update { it.copy(previewSteps = emptyList()) }
-            return
-        }
+        if (a == null && b == null) return emptyList()
 
         val stepsA = a?.steps ?: emptyList()
         val stepsB = b?.steps ?: emptyList()
@@ -257,15 +270,13 @@ class PatternLabViewModel(
             state.isPingPongB
         )
 
-        val resultSteps = if (state.isLayered) {
+        return if (state.isLayered) {
             // Add offset to B
             val offsetSteps = if (state.offsetB > 0) {
                 listOf(GlyphSequence(emptyMap(), state.offsetB)) + processedB
             } else processedB
 
-            // Normalize both to common time slices (simple version: find a common tick or just blend overlapping)
-            // For a robust blend, we'd need to resample. 
-            // Minimal version: Just append or use the layered logic with max length
+            // Normalize both to common time slices
             val maxLen = max(processedA.size, offsetSteps.size)
             (0 until maxLen).map { i ->
                 val sA = processedA.getOrNull(i)
@@ -293,7 +304,6 @@ class PatternLabViewModel(
         } else {
             processedA + processedB
         }
-        _uiState.update { it.copy(previewSteps = resultSteps) }
     }
 
     private fun getTabSpecificSteps(): List<GlyphSequence> {

@@ -1,5 +1,7 @@
 package com.smaarig.glyphbarcomposer.ui.composer.components.v2
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -34,51 +36,71 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import com.smaarig.glyphbarcomposer.ui.composer.components.common.EmptyTimelinePlaceholder
 import com.smaarig.glyphbarcomposer.ui.composer.components.common.StepPreviewBox
-import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
-import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
 
+@kotlinx.coroutines.FlowPreview
 @Composable
 fun DraggableTimeline(
-    uiState: ComposerUiState,
-    viewModel: ComposerViewModel,
+    steps: List<GlyphSequence>,
+    isPlaying: Boolean,
+    onRemoveStep: (Int) -> Unit,
+    onReorderSteps: (from: Int, to: Int) -> Unit,
+    onLoadStep: (Int) -> Unit,
+    onStartPlayback: () -> Unit,
+    onStopPlayback: () -> Unit,
+    onSave: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var draggingIndex by remember { mutableStateOf<Int?>(null) }
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
+    var targetIndex by remember { mutableStateOf<Int?>(null) }
+
     val listState = rememberLazyListState()
+    val density = LocalDensity.current
+    val itemHeightPx = remember(density) { with(density) { 94.dp.toPx() } } // 88dp + 6dp spacing
+
     var showSaveDialog by remember { mutableStateOf(false) }
     var fileName by remember { mutableStateOf("") }
 
-    val settledIdx = remember { derivedStateOf { listState.firstVisibleItemIndex } }
-    val isScrollInProgress by listState.interactionSource.collectIsDraggedAsState()
-
     // Sync hardware when scrolling manually
-    // We only load step if the user is actually dragging the timeline, 
-    // to prevent auto-loading when steps are added/removed.
-    LaunchedEffect(settledIdx.value) {
-        if (isScrollInProgress && !uiState.isPlaying && uiState.currentSequenceSteps.isNotEmpty()) {
-            val idx = settledIdx.value.coerceIn(0, uiState.currentSequenceSteps.size - 1)
-            viewModel.loadStep(idx)
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            listState.isScrollInProgress to listState.firstVisibleItemIndex
         }
+            .filter { (scrolling, _) -> !scrolling }
+            .map { (_, idx) -> idx }
+            .distinctUntilChanged()
+            .debounce(150L)
+            .collect { idx ->
+                if (!isPlaying && steps.isNotEmpty()) {
+                    onLoadStep(idx.coerceIn(0, steps.size - 1))
+                }
+            }
     }
 
     // Auto-scroll to end when a new step is added
-    LaunchedEffect(uiState.currentSequenceSteps.size) {
-        if (uiState.currentSequenceSteps.isNotEmpty()) {
-            listState.animateScrollToItem(uiState.currentSequenceSteps.size - 1)
+    LaunchedEffect(steps.size) {
+        if (steps.isNotEmpty()) {
+            listState.animateScrollToItem(steps.size - 1)
         }
     }
 
@@ -89,7 +111,7 @@ fun DraggableTimeline(
             onValueChange = { fileName = it },
             onSave = {
                 if (fileName.isNotBlank()) {
-                    viewModel.savePlaylist(fileName)
+                    onSave(fileName)
                     showSaveDialog = false
                     fileName = ""
                 }
@@ -98,8 +120,6 @@ fun DraggableTimeline(
             placeholder = "Sequence Name"
         )
     }
-
-    val itemHeightPx = 183f
 
     Column(
         modifier = modifier
@@ -121,7 +141,7 @@ fun DraggableTimeline(
         )
 
         Box(modifier = Modifier.weight(1f)) {
-            if (uiState.currentSequenceSteps.isEmpty()) {
+            if (steps.isEmpty()) {
                 EmptyTimelinePlaceholder()
             } else {
                 LazyColumn(
@@ -132,46 +152,71 @@ fun DraggableTimeline(
                         .testTag("timeline_list"),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    itemsIndexed(uiState.currentSequenceSteps) { index, step ->
+                    itemsIndexed(steps) { index, step ->
                         val isDragging = draggingIndex == index
+
+                        val displacement = animateFloatAsState(
+                            targetValue = when {
+                                isDragging -> 0f
+                                draggingIndex == null || targetIndex == null -> 0f
+                                index in (targetIndex!! until draggingIndex!!) -> itemHeightPx
+                                index in (draggingIndex!! + 1..targetIndex!!) -> -itemHeightPx
+                                else -> 0f
+                            },
+                            animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow),
+                            label = "item_displacement"
+                        )
 
                         Box(
                             modifier = Modifier
                                 .zIndex(if (isDragging) 1f else 0f)
                                 .graphicsLayer {
-                                    translationY = if (isDragging) dragOffsetY else 0f
-                                    alpha = if (isDragging) 0.78f else 1f
-                                    scaleX = if (isDragging) 1.03f else 1f
-                                    scaleY = if (isDragging) 1.03f else 1f
+                                    translationY = if (isDragging) dragOffsetY else displacement.value
+                                    alpha = if (isDragging) 0.85f else 1f
+                                    scaleX = if (isDragging) 1.04f else 1f
+                                    scaleY = if (isDragging) 1.04f else 1f
                                 }
                         ) {
                             StepPreviewBox(
                                 step = step,
                                 index = index,
-                                onDelete = { viewModel.removeStep(index) },
-                                onLoad = { viewModel.loadStep(index) },
-                                enabled = !uiState.isPlaying,
+                                onDelete = { onRemoveStep(index) },
+                                onLoad = { onLoadStep(index) },
+                                enabled = !isPlaying,
                                 onDragStart = {
-                                    if (!uiState.isPlaying) draggingIndex = index
+                                    if (!isPlaying) {
+                                        draggingIndex = index
+                                        targetIndex = index
+                                    }
                                 },
                                 onDragEnd = {
                                     val src = draggingIndex
-                                    if (src != null) {
-                                        val steps = (dragOffsetY / itemHeightPx).roundToInt()
-                                        val dst = (src + steps)
-                                            .coerceIn(0, uiState.currentSequenceSteps.size - 1)
-                                        if (dst != src) viewModel.reorderSteps(src, dst)
+                                    val dest = targetIndex
+                                    if (src != null && dest != null && src != dest) {
+                                        onReorderSteps(src, dest)
                                     }
                                     draggingIndex = null
+                                    targetIndex = null
                                     dragOffsetY = 0f
                                 },
                                 onDragCancel = {
                                     draggingIndex = null
+                                    targetIndex = null
                                     dragOffsetY = 0f
                                 },
                                 onDrag = { change, amount ->
                                     change.consume()
-                                    if (!uiState.isPlaying) dragOffsetY += amount.y
+                                    if (!isPlaying && draggingIndex != null) {
+                                        dragOffsetY += amount.y
+
+                                        // Calculate target index based on current drag position
+                                        val newTargetIndex = (draggingIndex!! + (dragOffsetY / itemHeightPx).roundToInt())
+                                            .coerceIn(0, steps.size - 1)
+
+                                        if (newTargetIndex != targetIndex) {
+                                            targetIndex = newTargetIndex
+                                        }
+                                    }
                                 }
                             )
                         }
@@ -180,7 +225,7 @@ fun DraggableTimeline(
             }
         }
 
-        if (uiState.currentSequenceSteps.isNotEmpty() && draggingIndex == null) {
+        if (steps.isNotEmpty() && draggingIndex == null) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -189,20 +234,20 @@ fun DraggableTimeline(
             ) {
                 IconButton(
                     onClick = {
-                        if (uiState.isPlaying) viewModel.stopPlayback()
-                        else viewModel.startPlayback(uiState.currentSequenceSteps)
+                        if (isPlaying) onStopPlayback()
+                        else onStartPlayback()
                     },
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
                         .background(
-                            if (uiState.isPlaying) Color(0xFF00E676) else Color.White,
+                            if (isPlaying) Color(0xFF00E676) else Color.White,
                             RoundedCornerShape(10.dp)
                         )
                         .testTag("play_button")
                 ) {
                     Icon(
-                        if (uiState.isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                        if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
                         null,
                         tint = Color.Black,
                         modifier = Modifier.size(20.dp)

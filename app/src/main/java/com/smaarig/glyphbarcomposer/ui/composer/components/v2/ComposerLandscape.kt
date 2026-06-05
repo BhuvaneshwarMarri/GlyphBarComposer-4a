@@ -14,16 +14,30 @@ import androidx.compose.ui.unit.dp
 import com.smaarig.glyphbarcomposer.ui.composer.components.ComposerHeader
 import com.smaarig.glyphbarcomposer.ui.composer.components.v1.ComposerScreenOldLandscape
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
-import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
-import com.smaarig.glyphbarcomposer.ui.viewmodel.RedGlyphViewModel
+import com.smaarig.glyphbarcomposer.ui.viewmodel.PlaybackState
 
 @Composable
 fun ComposerLandscape(
     uiState: ComposerUiState,
-    viewModel: ComposerViewModel,
-    redViewModel: RedGlyphViewModel,
-    powerScale: Float,
-    onPowerClick: () -> Unit
+    playbackState: PlaybackState,
+    onToggleVersion: (Boolean) -> Unit,
+    onClearSequence: () -> Unit,
+    onTurnOffAll: () -> Unit,
+    onIntensityChange: (Int, Int) -> Unit,
+    onChannelSelect: (Int) -> Unit,
+    onDurationChange: (Float) -> Unit,
+    onAddStep: () -> Unit,
+    onRemoveStep: (Int) -> Unit,
+    onReorderSteps: (Int, Int) -> Unit,
+    onLoadStep: (Int) -> Unit,
+    onStartPlayback: () -> Unit,
+    onStopPlayback: () -> Unit,
+    onSavePlaylist: (String) -> Unit,
+    onRedToggle: (Boolean) -> Unit,
+    onPlaySequence: (com.smaarig.glyphbarcomposer.data.PlaylistWithSteps) -> Unit,
+    onDeletePlaylist: (com.smaarig.glyphbarcomposer.data.Playlist) -> Unit,
+    onTogglePause: () -> Unit,
+    powerScale: Float
 ) {
     Column(
         modifier = Modifier
@@ -33,14 +47,40 @@ fun ComposerLandscape(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         ComposerHeader(
-            uiState = uiState,
-            viewModel = viewModel,
+            useOldVersion = uiState.useOldVersion,
+            hasSteps = uiState.currentSequenceSteps.isNotEmpty(),
+            isPlaying = playbackState.isPlaying,
+            onToggleVersion = onToggleVersion,
+            onClearSequence = onClearSequence,
             powerScale = powerScale,
-            onPowerClick = onPowerClick
+            onPowerClick = onTurnOffAll
         )
 
         if (uiState.useOldVersion) {
-            ComposerScreenOldLandscape(uiState, viewModel, redViewModel)
+            ComposerScreenOldLandscape(
+                glyphIntensities = uiState.glyphIntensities,
+                currentSequenceSteps = uiState.currentSequenceSteps,
+                durationMs = uiState.durationMs,
+                isPlaying = playbackState.isPlaying,
+                isPaused = playbackState.isPaused,
+                selectedChannelIndex = uiState.selectedChannelIndex,
+                activePlaylistId = uiState.activePlaylistId,
+                activePresetName = uiState.activePresetName,
+                onIntensityChange = onIntensityChange,
+                onDurationChange = onDurationChange,
+                onAddStep = onAddStep,
+                onRemoveStep = onRemoveStep,
+                onClearSequence = onClearSequence,
+                onLoadStep = onLoadStep,
+                onStartPlayback = onStartPlayback,
+                onStopPlayback = onStopPlayback,
+                onTogglePause = onTogglePause,
+                onSavePlaylist = onSavePlaylist,
+                onPlaySequence = onPlaySequence,
+                onDeletePlaylist = onDeletePlaylist,
+                onChannelSelect = onChannelSelect,
+                onRedToggle = onRedToggle
+            )
         } else {
             Row(
                 modifier = Modifier.fillMaxSize(),
@@ -53,14 +93,33 @@ fun ComposerLandscape(
                         .fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    LandscapeGlyphsRow(uiState, viewModel, Modifier.weight(1f))
-                    LandscapeControlsRow(uiState, viewModel)
+                    LandscapeGlyphsRow(
+                        selectedChannelIndex = uiState.selectedChannelIndex,
+                        glyphIntensities = uiState.glyphIntensities,
+                        playbackIntensities = playbackState.intensities,
+                        isPlaying = playbackState.isPlaying,
+                        onIntensityChange = onIntensityChange,
+                        onChannelSelect = onChannelSelect,
+                        modifier = Modifier.weight(1f)
+                    )
+                    LandscapeControlsRow(
+                        durationMs = uiState.durationMs,
+                        isPlaying = playbackState.isPlaying,
+                        onDurationChange = onDurationChange,
+                        onAddStep = onAddStep
+                    )
                 }
 
                 // Right Panel: Timeline
                 DraggableTimeline(
-                    uiState = uiState,
-                    viewModel = viewModel,
+                    steps = uiState.currentSequenceSteps,
+                    isPlaying = playbackState.isPlaying,
+                    onRemoveStep = onRemoveStep,
+                    onReorderSteps = onReorderSteps,
+                    onLoadStep = onLoadStep,
+                    onStartPlayback = onStartPlayback,
+                    onStopPlayback = onStopPlayback,
+                    onSave = onSavePlaylist,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()

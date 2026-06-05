@@ -11,13 +11,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioUiState
-import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioViewModel
 
 @Composable
 fun TimelineCard(
     uiState: MusicStudioUiState,
     audioPositionMs: Int,
-    viewModel: MusicStudioViewModel
+    onSelectEvent: (com.smaarig.glyphbarcomposer.data.MusicStudioEvent?) -> Unit,
+    onMoveEvent: (com.smaarig.glyphbarcomposer.data.MusicStudioEvent, Long) -> Unit,
+    onResizeEvent: (com.smaarig.glyphbarcomposer.data.MusicStudioEvent, Long, Int) -> Unit,
+    onDeleteEvent: (com.smaarig.glyphbarcomposer.data.MusicStudioEvent) -> Unit,
+    onSeekMusic: (Float) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
@@ -30,11 +33,11 @@ fun TimelineCard(
         StudioTimelineEditor(
             uiState = uiState,
             audioPositionMs = audioPositionMs,
-            onSelectEvent = viewModel::selectEvent,
-            onMoveEvent = viewModel::updateEventPosition,
-            onResizeEvent = viewModel::updateEventStartAndDuration,
-            onDeleteEvent = viewModel::deleteMusicEvent,
-            onSeekMusic = viewModel::seekMusic,
+            onSelectEvent = onSelectEvent,
+            onMoveEvent = onMoveEvent,
+            onResizeEvent = onResizeEvent,
+            onDeleteEvent = onDeleteEvent,
+            onSeekMusic = onSeekMusic,
             modifier = Modifier.height(280.dp)
         )
     }

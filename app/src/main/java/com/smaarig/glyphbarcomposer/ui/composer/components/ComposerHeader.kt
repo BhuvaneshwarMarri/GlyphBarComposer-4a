@@ -24,13 +24,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smaarig.glyphbarcomposer.ui.ScreenHeader
-import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
-import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
 
 @Composable
 fun ComposerHeader(
-    uiState: ComposerUiState,
-    viewModel: ComposerViewModel,
+    useOldVersion: Boolean,
+    hasSteps: Boolean,
+    isPlaying: Boolean,
+    onToggleVersion: (Boolean) -> Unit,
+    onClearSequence: () -> Unit,
     powerScale: Float,
     onPowerClick: () -> Unit
 ) {
@@ -48,7 +49,7 @@ fun ComposerHeader(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     listOf("V2" to false, "V1" to true).forEach { (label, isV1) ->
-                        val selected = uiState.useOldVersion == isV1
+                        val selected = useOldVersion == isV1
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
@@ -57,7 +58,7 @@ fun ComposerHeader(
                                         if (isV1) Color(0xFFFFEB3B) else Color(0xFFFFC1CC)
                                     } else Color.Transparent
                                 )
-                                .clickable { viewModel.toggleVersion(isV1) }
+                                .clickable { onToggleVersion(isV1) }
                                 .padding(horizontal = 10.dp, vertical = 4.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -74,11 +75,15 @@ fun ComposerHeader(
                 }
             }
 
-            if (uiState.currentSequenceSteps.isNotEmpty()) {
-                IconButton(onClick = viewModel::clearSequence, modifier = Modifier.size(32.dp)) {
+            if (hasSteps) {
+                IconButton(
+                    onClick = onClearSequence,
+                    modifier = Modifier.size(32.dp),
+                    enabled = !isPlaying
+                ) {
                     Icon(
                         Icons.Default.DeleteSweep, "Clear",
-                        tint = Color(0xFFFF5252),
+                        tint = if (isPlaying) Color.Gray else Color(0xFFFF5252),
                         modifier = Modifier.size(20.dp)
                     )
                 }

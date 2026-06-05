@@ -2,6 +2,7 @@ package com.smaarig.glyphbarcomposer.ui.viewmodel
 
 import android.app.Application
 import android.content.Intent
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nothing.ketchum.Glyph
@@ -19,23 +20,30 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+@Stable
 data class ComposerUiState(
     val glyphIntensities: List<Int> = listOf(0, 0, 0, 0, 0, 0, 0),
     val durationMs: Float = 1000f,
     val currentSequenceSteps: List<GlyphSequence> = emptyList(),
     val sequenceName: String = "",
-    val isPlaying: Boolean = false,
-    val isPaused: Boolean = false,
     val activePlaylistId: Long? = null,
     val activePresetName: String? = null,
     val editingPlaylistId: Long? = null,
     val selectedChannelIndex: Int = 0,
     val useOldVersion: Boolean = true
+)
+
+@Stable
+data class PlaybackState(
+    val isPlaying: Boolean = false,
+    val isPaused: Boolean = false,
+    val intensities: List<Int> = List(7) { 0 }
 )
 
 class ComposerViewModel(
@@ -47,22 +55,18 @@ class ComposerViewModel(
 
     private val _uiState =
         MutableStateFlow(ComposerUiState(useOldVersion = prefManager.useOldVersion))
-    val uiState: StateFlow<ComposerUiState> = combine(
-        _uiState,
-        glyphController.currentIntensities,
+    val uiState: StateFlow<ComposerUiState> = _uiState.asStateFlow()
+
+    val playbackState: StateFlow<PlaybackState> = combine(
         glyphController.isPlaying,
-        glyphController.isPaused
-    ) { state, controllerIntensities, playing, paused ->
-        state.copy(
-            // Use controller intensities only when playing to avoid overwriting user edits
-            glyphIntensities = if (playing) controllerIntensities else state.glyphIntensities,
-            isPlaying = playing,
-            isPaused = paused
-        )
+        glyphController.isPaused,
+        glyphController.currentIntensities
+    ) { playing, paused, intensities ->
+        PlaybackState(playing, paused, intensities)
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
-        ComposerUiState(useOldVersion = prefManager.useOldVersion)
+        PlaybackState()
     )
 
     val allPlaylists = repository.allPlaylists

@@ -37,23 +37,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import com.smaarig.glyphbarcomposer.ui.getChannelForIndex
 import com.smaarig.glyphbarcomposer.ui.intensityColor
-import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
-import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
 
 @Composable
 fun DraggableTimelineHorizontal(
-    uiState: ComposerUiState,
-    viewModel: ComposerViewModel,
+    steps: List<GlyphSequence>,
+    isPlaying: Boolean,
+    isPaused: Boolean,
+    activePlaylistId: Long?,
+    activePresetName: String?,
+    onRemoveStep: (Int) -> Unit,
+    onLoadStep: (Int) -> Unit,
+    onStartPlayback: () -> Unit,
+    onStopPlayback: () -> Unit,
     onSaveRequest: () -> Unit = {}
 ) {
     val listState = rememberLazyListState()
 
     // Auto-scroll to end when a new step is added
-    LaunchedEffect(uiState.currentSequenceSteps.size) {
-        if (uiState.currentSequenceSteps.isNotEmpty()) {
-            listState.animateScrollToItem(uiState.currentSequenceSteps.size - 1)
+    LaunchedEffect(steps.size) {
+        if (steps.isNotEmpty()) {
+            listState.animateScrollToItem(steps.size - 1)
         }
     }
 
@@ -71,7 +77,7 @@ fun DraggableTimelineHorizontal(
                 .fillMaxWidth()
                 .height(90.dp)
         ) {
-            if (uiState.currentSequenceSteps.isEmpty()) {
+            if (steps.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
@@ -95,7 +101,7 @@ fun DraggableTimelineHorizontal(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    itemsIndexed(uiState.currentSequenceSteps) { index, step ->
+                    itemsIndexed(steps) { index, step ->
                         Box(
                             modifier = Modifier
                                 .width(80.dp)
@@ -103,7 +109,7 @@ fun DraggableTimelineHorizontal(
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(Color(0xFF161616))
                                 .border(1.dp, Color(0xFF222222), RoundedCornerShape(12.dp))
-                                .clickable(enabled = !uiState.isPlaying) { viewModel.loadStep(index) },
+                                .clickable(enabled = !isPlaying) { onLoadStep(index) },
                             contentAlignment = Alignment.Center
                         ) {
                             Column(
@@ -139,9 +145,9 @@ fun DraggableTimelineHorizontal(
                                 }
                                 Spacer(Modifier.height(2.dp))
                                 IconButton(
-                                    onClick = { viewModel.removeStep(index) },
+                                    onClick = { onRemoveStep(index) },
                                     modifier = Modifier.size(20.dp),
-                                    enabled = !uiState.isPlaying
+                                    enabled = !isPlaying
                                 ) {
                                     Icon(
                                         Icons.Default.Delete,
@@ -159,7 +165,7 @@ fun DraggableTimelineHorizontal(
 
         Spacer(Modifier.height(4.dp))
 
-        if (uiState.currentSequenceSteps.isNotEmpty()) {
+        if (steps.isNotEmpty()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -168,19 +174,19 @@ fun DraggableTimelineHorizontal(
             ) {
                 IconButton(
                     onClick = {
-                        if (uiState.isPlaying) viewModel.stopPlayback()
-                        else viewModel.startPlayback(uiState.currentSequenceSteps)
+                        if (isPlaying) onStopPlayback()
+                        else onStartPlayback()
                     },
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
                         .background(
-                            if (uiState.isPlaying) Color(0xFF00E676) else Color.White,
+                            if (isPlaying) Color(0xFF00E676) else Color.White,
                             RoundedCornerShape(10.dp)
                         )
                 ) {
                     Icon(
-                        if (uiState.isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                        if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
                         null,
                         tint = Color.Black,
                         modifier = Modifier.size(18.dp)

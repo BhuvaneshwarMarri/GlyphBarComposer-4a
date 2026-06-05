@@ -22,6 +22,7 @@ fun ComposerScreen(
     redViewModel: RedGlyphViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
 
     var isPowerOffAnimating by remember { mutableStateOf(false) }
     val powerScale by animateFloatAsState(
@@ -40,26 +41,56 @@ fun ComposerScreen(
     if (isLandscape) {
         ComposerLandscape(
             uiState = uiState,
-            viewModel = viewModel,
-            redViewModel = redViewModel,
-            powerScale = powerScale,
-            onPowerClick = {
+            playbackState = playbackState,
+            onToggleVersion = viewModel::toggleVersion,
+            onClearSequence = viewModel::clearSequence,
+            onTurnOffAll = {
                 isPowerOffAnimating = true
                 viewModel.turnOffAllGlyphs()
                 redViewModel.setRed(false)
-            }
+            },
+            onIntensityChange = viewModel::onIntensityChange,
+            onChannelSelect = viewModel::setSelectedChannel,
+            onDurationChange = viewModel::onDurationChange,
+            onAddStep = viewModel::addStep,
+            onRemoveStep = viewModel::removeStep,
+            onReorderSteps = viewModel::reorderSteps,
+            onLoadStep = viewModel::loadStep,
+            onStartPlayback = { viewModel.startPlayback(uiState.currentSequenceSteps) },
+            onStopPlayback = viewModel::stopPlayback,
+            onSavePlaylist = viewModel::savePlaylist,
+            onRedToggle = { redViewModel.setRed(it) },
+            onPlaySequence = viewModel::playSequence,
+            onDeletePlaylist = viewModel::deletePlaylist,
+            onTogglePause = viewModel::togglePause,
+            powerScale = powerScale
         )
     } else {
         ComposerPortrait(
             uiState = uiState,
-            viewModel = viewModel,
-            redViewModel = redViewModel,
-            powerScale = powerScale,
-            onPowerClick = {
+            playbackState = playbackState,
+            onToggleVersion = viewModel::toggleVersion,
+            onClearSequence = viewModel::clearSequence,
+            onTurnOffAll = {
                 isPowerOffAnimating = true
                 viewModel.turnOffAllGlyphs()
                 redViewModel.setRed(false)
-            }
+            },
+            onIntensityChange = viewModel::onIntensityChange,
+            onChannelSelect = viewModel::setSelectedChannel,
+            onDurationChange = viewModel::onDurationChange,
+            onAddStep = viewModel::addStep,
+            onRemoveStep = viewModel::removeStep,
+            onReorderSteps = viewModel::reorderSteps,
+            onLoadStep = viewModel::loadStep,
+            onStartPlayback = { viewModel.startPlayback(uiState.currentSequenceSteps) },
+            onStopPlayback = viewModel::stopPlayback,
+            onSavePlaylist = viewModel::savePlaylist,
+            onRedToggle = { redViewModel.setRed(it) },
+            onPlaySequence = viewModel::playSequence,
+            onDeletePlaylist = viewModel::deletePlaylist,
+            onTogglePause = viewModel::togglePause,
+            powerScale = powerScale
         )
     }
 }
