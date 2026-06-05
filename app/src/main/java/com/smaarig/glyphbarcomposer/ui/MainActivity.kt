@@ -393,8 +393,9 @@ fun NavHostContainer(
 @Composable
 fun SplashScreen(onTimeout: () -> Unit) {
     val squareCount = 7
+    val transition = rememberInfiniteTransition(label = "splash_bar")
     val animationStates = List(squareCount) { index ->
-        rememberInfiniteTransition(label = "square_$index").animateFloat(
+        transition.animateFloat(
             initialValue = 0.2f,
             targetValue = 1f,
             animationSpec = infiniteRepeatable(

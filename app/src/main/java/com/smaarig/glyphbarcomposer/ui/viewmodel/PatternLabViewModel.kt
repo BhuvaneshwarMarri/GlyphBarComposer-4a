@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Random
+import kotlin.random.Random
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -164,21 +164,20 @@ class PatternLabViewModel(
     }
 
     fun randomize() {
-        val random = Random()
         _uiState.update { state ->
             state.copy(
-                speedMultiplierA = 0.5f + (random.nextFloat() * 1.5f),
-                speedMultiplierB = 0.5f + (random.nextFloat() * 1.5f),
-                isInvertedA = random.nextBoolean(),
-                isInvertedB = random.nextBoolean(),
-                isMirroredA = random.nextBoolean(),
-                isMirroredB = random.nextBoolean(),
-                isReversedA = random.nextBoolean(),
-                isReversedB = random.nextBoolean(),
-                isPingPongA = random.nextBoolean(),
-                isPingPongB = random.nextBoolean(),
-                offsetB = if (state.isLayered) random.nextInt(1001) else 0,
-                blendMode = LabBlendMode.values().let { it[random.nextInt(it.size)] }
+                speedMultiplierA = 0.5f + (Random.nextFloat() * 1.5f),
+                speedMultiplierB = 0.5f + (Random.nextFloat() * 1.5f),
+                isInvertedA = Random.nextBoolean(),
+                isInvertedB = Random.nextBoolean(),
+                isMirroredA = Random.nextBoolean(),
+                isMirroredB = Random.nextBoolean(),
+                isReversedA = Random.nextBoolean(),
+                isReversedB = Random.nextBoolean(),
+                isPingPongA = Random.nextBoolean(),
+                isPingPongB = Random.nextBoolean(),
+                offsetB = if (state.isLayered) Random.nextInt(1001) else 0,
+                blendMode = LabBlendMode.entries.random()
             )
         }
         updatePreview()

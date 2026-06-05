@@ -127,7 +127,7 @@ class MusicStudioViewModel(
     val composerIntensities: StateFlow<List<Int>> = _composerIntensities.asStateFlow()
 
     val liveGlyphIntensities: StateFlow<List<Int>> = glyphController.currentIntensities
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf(0, 0, 0, 0, 0, 0, 0))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(500), listOf(0, 0, 0, 0, 0, 0, 0))
 
     private var musicStudioJob: Job? = null
     private var analysisJob: Job? = null

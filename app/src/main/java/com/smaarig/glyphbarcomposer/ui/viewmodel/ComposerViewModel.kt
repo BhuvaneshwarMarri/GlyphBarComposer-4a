@@ -65,7 +65,7 @@ class ComposerViewModel(
         PlaybackState(playing, paused, intensities)
     }.stateIn(
         viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
+        SharingStarted.WhileSubscribed(500),
         PlaybackState()
     )
 

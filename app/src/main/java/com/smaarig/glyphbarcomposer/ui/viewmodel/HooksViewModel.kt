@@ -48,10 +48,10 @@ class HooksViewModel(
 ) : AndroidViewModel(application) {
 
     val allHooks: StateFlow<List<NotificationHookWithPlaylist>> = repository.allNotificationHooks
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(500), emptyList())
 
     val allPlaylists: StateFlow<List<PlaylistWithSteps>> = repository.allPlaylists
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(500), emptyList())
 
     private val _installedApps = MutableStateFlow<List<AppInfo>>(emptyList())
     val installedApps: StateFlow<List<AppInfo>> = _installedApps.asStateFlow()
