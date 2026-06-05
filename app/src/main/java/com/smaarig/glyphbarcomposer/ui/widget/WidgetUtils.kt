@@ -13,8 +13,12 @@ import androidx.glance.appwidget.updateAll
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.service.GlyphPlaybackService
-import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+
+import kotlinx.coroutines.sync.withLock
 
 // ─── Shared preference key ──────────────────────────────────────────────────
 val INTENSITIES_KEY = stringPreferencesKey("intensities")
@@ -26,115 +30,44 @@ object WidgetKeys {
 }
 
 // ─── Intensity colour palette ───────────────────────────────────────────────
-fun getIntensityColor(intensity: Int): Color = when (intensity) {
-    0 -> Color(0xFF1C1C1C) // OFF (Matches CommonUi.kt)
-    1 -> Color(0xFF686868) // LOW white
-    2 -> Color(0xFFCDCDCD) // MED white
-    3 -> Color(0xFFFFFFFF) // HIGH white
-    4 -> Color(0xFFC62828) // LOW red
-    5 -> Color(0xFFEF5350) // MED red
-    6 -> Color(0xFFFF1744) // HIGH red
-    else -> Color(0xFF1C1C1C)
+fun getIntensityColor(intensity: Int, isRed: Boolean = false): Color {
+    // Standardise on 0-3 scale for hardware, map to red palette for UI if index 6
+    val finalIntensity = if (isRed && intensity > 0 && intensity < 4) 6 else intensity
+    return when (finalIntensity) {
+        0 -> Color(0xFF1C1C1C) // OFF
+        1 -> Color(0xFF686868) // LOW white
+        2 -> Color(0xFFCDCDCD) // MED white
+        3 -> Color(0xFFFFFFFF) // HIGH white
+        4 -> Color(0xFFC62828) // LOW red
+        5 -> Color(0xFFEF5350) // MED red
+        6 -> Color(0xFFFF1744) // HIGH red
+        else -> Color(0xFF1C1C1C)
+    }
 }
 
 // ─── Cycle intensity states ──────────────────────────────────────────────────
 fun cycleIntensity(current: Int, isRed: Boolean): Int {
-    // Binary toggle: OFF -> HIGH -> OFF
-    return if (isRed) {
-        if (current == 0) 6 else 0
-    } else {
-        if (current == 0) 3 else 0
-    }
+    // Binary toggle: OFF -> HIGH (3) -> OFF
+    // Note: Always use 0-3 for hardware compatibility (GlyphController scale)
+    return if (current == 0) 3 else 0
 }
 
-// ─── Shared tap action ───────────────────────────────────────────────────────
-/**
- * Fired when any glyph button in the widget is tapped.
- *
- * FIX 1 – Race condition:
- *   The original code fired applyGlyphStateWithIntensities() with a 300 ms
- *   durationMs, then immediately called updateAll(). This meant the hardware
- *   pulse ended before the widget had finished redrawing, producing a visible
- *   flicker where the glyph lit up, cut off, and then the UI updated.
- *
- *   Fix: use a longer持続 duration (800 ms) so the hardware stays lit through
- *   the full UI redraw cycle (~200-400 ms on most launchers). The widget still
- *   redraws immediately (updateAll is async), but the glyph stays lit until
- *   the launcher has rendered the new state.
- *
- * FIX 2 – Channel/index mismatch for the red glyph:
- *   The channels list used in IndividualCycleAction is now delegated to the
- *   controller via GlyphConstants.PHONE_4A_CHANNELS. This ensures that the
- *   correct channel codes are used across both the app and the widget.
- *
- *   To make this explicit and safe (so a future refactor can't silently break
- *   it), the action now delegates ALL channel knowledge to the controller via
- *   a new index-based helper, and never constructs a channel map itself.
- *
- * FIX 3 – Widget redraw ordering:
- *   updateAll() is now called AFTER applyGlyphStateWithIntensities() returns
- *   (it was already the case, but made explicit with a comment to prevent
- *   future reordering).
- */
-class IndividualCycleAction : ActionCallback {
+// ─── BUG-5 FIX: Singleton application-level coroutine scope and Mutex ────────
+// The old code allowed concurrent DataStore writes to race each other.
+// A single SupervisorJob scope and a Mutex serialise widget updates.
+private val widgetUpdateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+private val widgetMutex = kotlinx.coroutines.sync.Mutex()
 
-    override suspend fun onAction(
-        context: Context,
-        glanceId: GlanceId,
-        parameters: ActionParameters
-    ) {
-        val glyphIndex = parameters[WidgetKeys.GlyphIndexKey] ?: return
-        val isRed = glyphIndex == 6
-
-        val glyphController = GlyphController.getInstance(context)
-        val currentIntensities = glyphController.currentIntensities.value.toMutableList()
-
-        // 1. Cycle the intensity for the specific glyph
-        currentIntensities[glyphIndex] = cycleIntensity(currentIntensities[glyphIndex], isRed)
-
-        // 2. Build the channel→intensity map
-        val intensityMap = glyphController.channels.mapIndexed { i, ch ->
-            ch to currentIntensities.getOrElse(i) { 0 }
-        }.toMap()
-
-        // 3. Fire the physical glyph hardware and update global state.
-        //    The controller will automatically sync this to the widget DataStore.
-        glyphController.applyGlyphStateWithIntensities(intensityMap, durationMs = 800)
-    }
-}
-
-/**
- * Master Kill Switch: Turns off all glyphs, stops sequence playback,
- * and resets all widget visuals.
- */
-class PowerOffAction : ActionCallback {
-    override suspend fun onAction(
-        context: Context,
-        glanceId: GlanceId,
-        parameters: ActionParameters
-    ) {
-        // 1. Stop playback service
-        context.stopService(Intent(context, GlyphPlaybackService::class.java))
-
-        // 2. Kill hardware lights
-        GlyphController.getInstance(context).turnOffGlyphs()
-
-        // 3. Reset all Sequence Player widgets' playback state
-        val manager = GlanceAppWidgetManager(context)
-        val playerGlanceIds = manager.getGlanceIds(GlyphSequencePlayerWidget::class.java)
-        playerGlanceIds.forEach { id ->
-            updateAppWidgetState(context, PreferencesGlanceStateDefinition, id) { prefs ->
-                prefs.toMutablePreferences().apply {
-                    this[GlyphSequencePlayerWidget.IS_PLAYING] = false
-                }
-            }
-        }
-        GlyphSequencePlayerWidget().updateAll(context)
-    }
-}
+// ─── Cache to avoid redundant updates ──────────────────────────────────────
+private var lastIntensitiesStr: String? = null
+private var lastIsPlaying: Boolean? = null
+private var lastPlaylistId: Long? = null
 
 /**
  * Unified helper to sync ALL app widgets with the current global state.
+ *
+ * Latency Fix: Uses state diffing to skip redundant DataStore writes and
+ * UI refreshes. Critical for high-frequency playback sync.
  */
 fun updateAllWidgets(
     context: Context,
@@ -146,46 +79,115 @@ fun updateAllWidgets(
     val intensityStr = intensities?.joinToString(",")
     val manager = GlanceAppWidgetManager(context)
 
-    MainScope().launch {
-        // 1. Update Intensity Widgets (Horizontal & Vertical)
-        listOf(
-            GlyphComposerHorizontalWidget::class.java,
-            GlyphComposerVerticalWidget::class.java
-        ).forEach { widgetClass ->
-            val glanceIds = manager.getGlanceIds(widgetClass)
-            glanceIds.forEach { glanceId ->
-                updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
-                    prefs.toMutablePreferences().apply {
-                        if (intensityStr != null) {
-                            this[INTENSITIES_KEY] = intensityStr
+    // Quick-check before launching a job
+    if (intensityStr == lastIntensitiesStr && 
+        isPlaying == lastIsPlaying && 
+        playlistId == lastPlaylistId) {
+        return
+    }
+
+    widgetUpdateScope.launch {
+        widgetMutex.withLock {
+            // Re-check inside lock for race conditions
+            if (intensityStr == lastIntensitiesStr && 
+                isPlaying == lastIsPlaying && 
+                playlistId == lastPlaylistId) {
+                return@withLock
+            }
+
+            var intensityUpdated = false
+            var playerStateUpdated = false
+
+            // 1. Update Intensity Widgets (Horizontal & Vertical)
+            if (intensityStr != null && intensityStr != lastIntensitiesStr) {
+                listOf(
+                    GlyphComposerHorizontalWidget::class.java,
+                    GlyphComposerVerticalWidget::class.java
+                ).forEach { widgetClass ->
+                    val glanceIds = manager.getGlanceIds(widgetClass)
+                    glanceIds.forEach { glanceId ->
+                        updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+                            prefs.toMutablePreferences().apply {
+                                this[INTENSITIES_KEY] = intensityStr
+                            }
                         }
                     }
                 }
+                intensityUpdated = true
+                lastIntensitiesStr = intensityStr
             }
-        }
-        GlyphComposerHorizontalWidget().updateAll(context)
-        GlyphComposerVerticalWidget().updateAll(context)
 
-        // 2. Update Sequence Player Widget
-        val playerGlanceIds = manager.getGlanceIds(GlyphSequencePlayerWidget::class.java)
-        playerGlanceIds.forEach { glanceId ->
-            updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
-                prefs.toMutablePreferences().apply {
-                    if (isPlaying != null) {
-                        this[GlyphSequencePlayerWidget.IS_PLAYING] = isPlaying
-                    }
-                    if (intensityStr != null) {
-                        this[INTENSITIES_KEY] = intensityStr
-                    }
-                    if (playlistId != null) {
-                        this[GlyphSequencePlayerWidget.SELECTED_SEQUENCE_ID] = playlistId
-                    }
-                    if (playlistName != null) {
-                        this[GlyphSequencePlayerWidget.SELECTED_SEQUENCE_NAME] = playlistName
+            // 2. Update Sequence Player Widget
+            val hasPlayerChanges = (isPlaying != null && isPlaying != lastIsPlaying) ||
+                                 (intensityStr != null && intensityStr != lastIntensitiesStr) ||
+                                 (playlistId != null && playlistId != lastPlaylistId)
+
+            if (hasPlayerChanges) {
+                val playerGlanceIds = manager.getGlanceIds(GlyphSequencePlayerWidget::class.java)
+                playerGlanceIds.forEach { glanceId ->
+                    updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+                        prefs.toMutablePreferences().apply {
+                            if (isPlaying != null) this[GlyphSequencePlayerWidget.IS_PLAYING] = isPlaying
+                            if (intensityStr != null) this[INTENSITIES_KEY] = intensityStr
+                            if (playlistId != null) this[GlyphSequencePlayerWidget.SELECTED_SEQUENCE_ID] = playlistId
+                            if (playlistName != null) this[GlyphSequencePlayerWidget.SELECTED_SEQUENCE_NAME] = playlistName
+                        }
                     }
                 }
+                playerStateUpdated = true
+            }
+            
+            // Update cache after processing both widget types
+            if (intensityStr != null) lastIntensitiesStr = intensityStr
+            if (isPlaying != null) lastIsPlaying = isPlaying
+            if (playlistId != null) lastPlaylistId = playlistId
+
+            // 3. Trigger visual refresh ONLY for widgets that changed
+            if (intensityUpdated) {
+                GlyphComposerHorizontalWidget().updateAll(context)
+                GlyphComposerVerticalWidget().updateAll(context)
+            }
+            if (playerStateUpdated) {
+                GlyphSequencePlayerWidget().updateAll(context)
             }
         }
-        GlyphSequencePlayerWidget().updateAll(context)
+    }
+}
+
+/**
+ * Action to toggle a single glyph's intensity from the widget.
+ * Updates hardware immediately and syncs all widget instances.
+ */
+class IndividualCycleAction : ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters
+    ) {
+        val index = parameters[WidgetKeys.GlyphIndexKey] ?: return
+
+        updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+            val currentStr = prefs[INTENSITIES_KEY] ?: DEFAULT_INTENSITIES
+            val intensities = currentStr.split(",").map { it.toIntOrNull() ?: 0 }.toMutableList()
+
+            if (index in intensities.indices) {
+                // 1. Calculate new state
+                val isRed = (index == 6)
+                intensities[index] = cycleIntensity(intensities[index], isRed)
+                
+                // 2. Hardware: Update immediately
+                GlyphController.getInstance(context).applyGlyphState(intensities, 0)
+
+                // 3. UI: Sync all other widget types
+                updateAllWidgets(context, intensities = intensities)
+
+                // 4. Update this widget's local state
+                prefs.toMutablePreferences().apply {
+                    this[INTENSITIES_KEY] = intensities.joinToString(",")
+                }
+            } else {
+                prefs
+            }
+        }
     }
 }

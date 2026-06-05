@@ -68,23 +68,34 @@ class GlyphPlaybackService : Service() {
             // Update widget state to PLAYING
             updateAllWidgets(this@GlyphPlaybackService, isPlaying = true, playlistId = playlistId, playlistName = playlist.playlist.name)
 
+            // BUG-3 FIX: Sort steps by stepIndex. Room @Relation does not guarantee ordering,
+            // so without sorting the sequence can play in a scrambled order.
+            val sortedSteps = playlist.steps.sortedBy { it.stepIndex }
+
             try {
+                // BUG-2 FIX: Use a drift-correcting timing loop (same approach as
+                // GlyphController.playSequence). The old `delay(durationMs + 50)` added
+                // 50 ms of extra delay per step — a 100-step sequence drifted by 5 seconds.
+                var expectedTimeMs = android.os.SystemClock.elapsedRealtime()
+
                 while (isActive) {
-                    for (step in playlist.steps) {
+                    for (step in sortedSteps) {
                         if (!isActive) break
 
+                        // BUG-4 FIX: Pass GlyphOwner.STUDIO so this call is never rejected
+                        // by the ownership guard when a screen holds transient control.
                         glyphController.applyGlyphStateWithIntensities(
                             step.channelIntensities,
-                            step.durationMs
+                            step.durationMs,
+                            GlyphController.GlyphOwner.STUDIO
                         )
 
-                        // Update widget visualization (mini glyph bar)
-                        val intensities = glyphController.channels.map {
-                            step.channelIntensities[it] ?: 0
-                        }
-                        updateAllWidgets(this@GlyphPlaybackService, intensities = intensities)
-
-                        delay(step.durationMs.toLong() + 50)
+                        // Update widget visualization (mini glyph bar).
+                        // applyGlyphStateWithIntensities already calls maybeUpdateWidgets
+                        // internally (now throttled to 250ms).
+                        expectedTimeMs += step.durationMs.toLong()
+                        val remaining = expectedTimeMs - android.os.SystemClock.elapsedRealtime()
+                        if (remaining > 0) delay(remaining)
                     }
                 }
             } finally {

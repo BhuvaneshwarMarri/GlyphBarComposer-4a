@@ -22,10 +22,13 @@ object SequenceImportManager {
         val mimeType = contentResolver.getType(uri)
 
         return when {
-            fileName?.endsWith(".gbseq.json") == true || mimeType == "application/vnd.glyphbar.sequence+json" -> {
+            // BUG-9 FIX: Use ignoreCase=true — some email clients uppercase file extensions
+            // (e.g. .GBSEQ.JSON), which caused the extension check to fail and fall through
+            // to the slower content-sniffing path (or fail outright on MIME mismatch).
+            fileName?.endsWith(".gbseq.json", ignoreCase = true) == true || mimeType == "application/vnd.glyphbar.sequence+json" -> {
                 contentResolver.openInputStream(uri)?.use { JsonSequenceImporter.parse(it) }
             }
-            fileName?.endsWith(".gbseq.csv") == true || mimeType == "text/csv" -> {
+            fileName?.endsWith(".gbseq.csv", ignoreCase = true) == true || mimeType == "text/csv" -> {
                 contentResolver.openInputStream(uri)?.use { CsvSequenceImporter.parse(it) }
             }
             else -> {
@@ -53,7 +56,7 @@ object SequenceImportManager {
                 val buffer = ByteArray(1024)
                 val bytesRead = inputStream.read(buffer)
                 if (bytesRead == -1) return null
-                
+
                 val sniffed = String(buffer, 0, bytesRead, Charsets.UTF_8).trim()
                 val isJson = sniffed.startsWith("{") || sniffed.startsWith("\uFEFF{")
                 val isCsv = sniffed.startsWith("# GlyphBar") || sniffed.startsWith("\uFEFF# GlyphBar")

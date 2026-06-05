@@ -183,7 +183,9 @@ class GlyphController private constructor() {
         forceUpdate: Boolean = false
     ) {
         val now = android.os.SystemClock.elapsedRealtime()
-        if (forceUpdate || now - lastWidgetUpdateMs > 1000L) {
+        // Reduced throttle to 250ms for better perceived sync.
+        // Always force update if isPlaying state is changing.
+        if (forceUpdate || isPlaying != null || now - lastWidgetUpdateMs > 250L) {
             updateAllWidgets(
                 context,
                 intensities = intensities,
@@ -269,9 +271,11 @@ class GlyphController private constructor() {
         if (mGlyphManager == null) {
             mGlyphManager = GlyphManager.getInstance(context)
             mGlyphManager?.init(mCallback)
+            // BUG-6 FIX: Only sync widgets once on first init, not on every getInstance() call.
+            // Moving this inside the null-check ensures it runs only when the manager is
+            // freshly created, preventing unnecessary widget blasts on subsequent calls.
+            updateAllWidgets(context.applicationContext, intensities = _currentIntensities.value)
         }
-        // Initial sync to ensure widgets match app state on startup
-        updateAllWidgets(context.applicationContext, intensities = _currentIntensities.value)
     }
 
     fun turnOffGlyphs() {
@@ -313,12 +317,12 @@ class GlyphController private constructor() {
         try {
             val sdkIntensity = stateToSdkIntensity(state)
 
-            // Using the undocumented API suggested by user for red glyph hardware sync
-            // We pass all current intensities to keep them in sync
-            val intensities = _currentIntensities.value
+            // BUG-8 FIX: Renamed inner variable from `intensities` to `currentSnapshot`
+            // to avoid shadowing the outer mutable list and make the intent explicit.
+            val currentSnapshot = _currentIntensities.value
             val frameColors = IntArray(7) { i ->
                 if (i == 6) sdkIntensity
-                else if (i < intensities.size) stateToSdkIntensity(intensities[i])
+                else if (i < currentSnapshot.size) stateToSdkIntensity(currentSnapshot[i])
                 else 0
             }
             mGlyphManager?.setFrameColors(frameColors)
@@ -394,10 +398,10 @@ class GlyphController private constructor() {
     fun playSequence(steps: List<GlyphSequence>, loop: Boolean = false, name: String? = null, id: Long? = null, owner: GlyphOwner = GlyphOwner.NONE) {
         if (isDeinitialized) return
         if (steps.isEmpty()) return
-        
+
         // Ownership check
         if (_activeOwner.value != GlyphOwner.NONE && _activeOwner.value != owner) return
-        
+
         stopPlayback()
 
         _isPlaying.value = true
@@ -498,16 +502,18 @@ class GlyphController private constructor() {
             }
         }
 
-        // Update Global State for Preview (approximate intensities for preview 0-3)
-        val previewList = channels.map { ch ->
-            val raw = intensities[ch] ?: 0
-            if (raw == 0) 0 else if (raw < 1365) 1 else if (raw < 2730) 2 else 3
-        }.toMutableList()
-        // Keep red glyph state from current intensities
-        if (_currentIntensities.value.size >= 7) {
-            previewList.add(_currentIntensities.value[6])
-        } else {
-            previewList.add(0)
+        // Update Global State for Preview (approximate intensities for preview 0-3).
+        // channels has 7 elements [A1..A6, RED]. The smooth-progress intensities map only
+        //populates A1..A6; RED is absent, so `intensities[redCh] ?: 0` = 0.
+        // We preserve the existing RED state rather than zeroing it.
+        val redState = if (_currentIntensities.value.size >= 7) _currentIntensities.value[6] else 0
+        val previewList = channels.mapIndexed { idx, ch ->
+            if (idx == 6) {
+                redState
+            } else {
+                val raw = intensities[ch] ?: 0
+                if (raw == 0) 0 else if (raw < 1365) 1 else if (raw < 2730) 2 else 3
+            }
         }
         _currentIntensities.value = previewList
 
@@ -518,10 +524,8 @@ class GlyphController private constructor() {
                     val ch = channels[i]
                     intensities[ch] ?: 0
                 } else {
-                    // Red glyph sync
-                    val state =
-                        if (_currentIntensities.value.size >= 7) _currentIntensities.value[6] else 0
-                    stateToSdkIntensity(state)
+                    // Red glyph sync (7th channel, index 6)
+                    stateToSdkIntensity(redState)
                 }
             }
             mGlyphManager?.setFrameColors(frameColors)

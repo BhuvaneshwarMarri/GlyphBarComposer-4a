@@ -43,6 +43,7 @@ import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.smaarig.glyphbarcomposer.R
+import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.service.GlyphPlaybackService
 
 class GlyphSequencePlayerWidget : GlanceAppWidget() {
@@ -211,6 +212,31 @@ class TogglePlaybackAction : ActionCallback {
 
         // Explicitly update this specific widget instance to reflect the toggled state
         GlyphSequencePlayerWidget().update(context, glanceId)
+    }
+}
+
+class PowerOffAction : ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters
+    ) {
+        // 1. Stop Service
+        val intent = Intent(context, GlyphPlaybackService::class.java).apply {
+            action = GlyphPlaybackService.ACTION_STOP
+        }
+        context.stopService(intent)
+
+        // 2. Hardware: Turn Off
+        GlyphController.getInstance(context).turnOffGlyphs()
+
+        // 3. UI: Sync all widgets to OFF state
+        val offIntensities = listOf(0, 0, 0, 0, 0, 0, 0)
+        updateAllWidgets(
+            context = context,
+            intensities = offIntensities,
+            isPlaying = false
+        )
     }
 }
 

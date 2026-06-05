@@ -106,6 +106,7 @@ fun ComposerPortrait(
                     isPlaying = playbackState.isPlaying,
                     onIntensityChange = onIntensityChange,
                     onChannelSelect = onChannelSelect,
+                    onRedToggle = onRedToggle,
                     modifier = Modifier.width(88.dp)
                 )
                 DraggableTimeline(

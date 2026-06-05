@@ -1,6 +1,7 @@
 package com.smaarig.glyphbarcomposer.ui.library.components
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -47,7 +49,7 @@ fun ImportResultDialog(
                     color = Color.Gray,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
-                
+
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -55,7 +57,11 @@ fun ImportResultDialog(
                 ) {
                     items(result.errors) { error ->
                         Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            // BUG-10 FIX: now using the properly imported Row from
+                            // androidx.compose.foundation.layout (added to imports above).
+                            // The old private wrapper exposed only verticalAlignment and hid
+                            // modifier, horizontalArrangement, and other Row parameters.
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     "[${error.code}]",
                                     color = Color(0xFFFF5252),
@@ -92,16 +98,5 @@ fun ImportResultDialog(
         containerColor = Color(0xFF1A1A1A),
         titleContentColor = Color.White,
         textContentColor = Color.White
-    )
-}
-
-@Composable
-private fun Row(
-    verticalAlignment: androidx.compose.ui.Alignment.Vertical,
-    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
-) {
-    androidx.compose.foundation.layout.Row(
-        verticalAlignment = verticalAlignment,
-        content = content
     )
 }

@@ -102,7 +102,7 @@ class GlyphComposerHorizontalWidget : GlanceAppWidget() {
         val indicatorSize = if (isActive) 35.dp else 32.dp
         val cornerRadius = 8.dp
         val backgroundColor = if (isActive) {
-            getIntensityColor(intensity)
+            getIntensityColor(intensity, isRed)
         } else {
             // Restore dark color for visibility when OFF
             Color(0xFF1A1A1A)

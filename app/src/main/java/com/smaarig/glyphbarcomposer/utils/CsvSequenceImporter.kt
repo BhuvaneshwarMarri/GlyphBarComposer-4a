@@ -32,21 +32,21 @@ object CsvSequenceImporter {
     fun parse(inputStream: InputStream): ImportResult {
         val reader = BufferedReader(InputStreamReader(inputStream))
         val errors = mutableListOf<ImportError>()
-        
+
         var name = ""
         var formatVersion = ""
         var device = ""
         val steps = mutableListOf<GlyphSequence>()
-        
+
         var lineNum = 0
         var headerFound = false
-        
+
         try {
             reader.forEachLine { line ->
                 lineNum++
                 val trimmed = line.trim()
                 if (trimmed.isEmpty()) return@forEachLine
-                
+
                 if (trimmed.startsWith("#")) {
                     if (lineNum == 1) {
                         if (trimmed != "# GlyphBar Sequence") {
@@ -54,7 +54,7 @@ object CsvSequenceImporter {
                         }
                         return@forEachLine
                     }
-                    
+
                     val parts = trimmed.substring(1).split(":", limit = 2)
                     if (parts.size == 2) {
                         val key = parts[0].trim()
@@ -80,11 +80,19 @@ object CsvSequenceImporter {
                         try {
                             val stepIndex = cols[0].trim().toInt()
                             val duration = cols[1].trim().toInt()
-                            
+
+                            // BUG-7 FIX: Validate stepIndex is sequential, matching the JSON importer.
+                            // The old code parsed stepIndex but silently discarded it, so duplicate
+                            // or missing indices (e.g. 0,1,1,3) were accepted without error.
+                            val expectedIndex = steps.size
+                            if (stepIndex != expectedIndex) {
+                                errors.add(ImportError("CSV_STEP_INDEX_GAP", "Step index mismatch at line $lineNum: expected $expectedIndex, got $stepIndex.", lineNum))
+                            }
+
                             if (duration < 50 || duration > 30000) {
                                 errors.add(ImportError("CSV_STEP_DURATION_RANGE", "Duration must be 50-30000 ms.", lineNum))
                             }
-                            
+
                             val intensities = mutableMapOf<Int, Int>()
                             val labels = listOf("A1", "A2", "A3", "A4", "A5", "A6", "RED")
                             labels.forEachIndexed { i, label ->
@@ -110,7 +118,7 @@ object CsvSequenceImporter {
         if (formatVersion != "1.0") errors.add(ImportError("CSV_MISSING_HEADER_META", "Invalid or missing format_version: 1.0"))
         if (device != "phone_4a") errors.add(ImportError("CSV_MISSING_HEADER_META", "Invalid or missing device: phone_4a"))
         if (name.isBlank()) errors.add(ImportError("CSV_MISSING_HEADER_META", "Sequence name is required."))
-        
+
         if (steps.isEmpty()) {
             errors.add(ImportError("CSV_NO_STEPS", "No data rows found."))
         } else if (steps.size > 500) {
@@ -134,7 +142,7 @@ object CsvSequenceImporter {
         sb.append("# name: ${playlistWithSteps.playlist.name}\n")
         sb.append("# device: phone_4a\n")
         sb.append("step_index,duration_ms,A1,A2,A3,A4,A5,A6,RED\n")
-        
+
         val labels = listOf("A1", "A2", "A3", "A4", "A5", "A6", "RED")
         playlistWithSteps.steps.sortedBy { it.stepIndex }.forEachIndexed { index, step ->
             sb.append(index).append(",")
@@ -146,7 +154,7 @@ object CsvSequenceImporter {
             }
             sb.append("\n")
         }
-        
+
         return sb.toString()
     }
 }

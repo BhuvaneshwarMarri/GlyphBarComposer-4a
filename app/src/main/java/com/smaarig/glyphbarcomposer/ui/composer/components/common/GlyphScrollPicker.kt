@@ -35,7 +35,7 @@ fun GlyphScrollPicker(
     isRed: Boolean = false,
     enabled: Boolean = true
 ) {
-    val states = if (isRed) listOf(0, 6) else listOf(0, 1, 2, 3)
+    val states = if (isRed) listOf(0, 3) else listOf(0, 1, 2, 3)
     val infiniteCount = 10000
     val startOffset = (infiniteCount / 2)
     val initialIdx = startOffset + states.indexOf(intensity).coerceAtLeast(0)
@@ -134,6 +134,7 @@ fun GlyphScrollPicker(
             ) {
                 items(infiniteCount) { idx ->
                     val level = states[idx % states.size]
+                    val colorIdx = if (isRed && level > 0) 6 else level
 
                     Box(
                         modifier = Modifier
@@ -144,7 +145,7 @@ fun GlyphScrollPicker(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(intensityColor[level])
+                                .background(intensityColor[colorIdx])
                         )
                     }
                 }

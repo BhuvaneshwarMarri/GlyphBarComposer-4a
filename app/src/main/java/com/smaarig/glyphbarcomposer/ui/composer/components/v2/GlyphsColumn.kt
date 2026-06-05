@@ -34,6 +34,7 @@ fun GlyphsColumn(
     isPlaying: Boolean,
     onIntensityChange: (Int, Int) -> Unit,
     onChannelSelect: (Int) -> Unit,
+    onRedToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -105,6 +106,7 @@ fun GlyphsColumn(
                     onIntensityChange = { newVal ->
                         onIntensityChange(index, newVal)
                         onChannelSelect(index)
+                        if (isRed) onRedToggle(newVal > 0)
                     },
                     modifier = Modifier.testTag("glyph_picker_$index"),
                     isRed = isRed,

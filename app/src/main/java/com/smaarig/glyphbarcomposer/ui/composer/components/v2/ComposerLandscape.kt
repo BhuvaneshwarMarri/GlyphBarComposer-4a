@@ -100,6 +100,7 @@ fun ComposerLandscape(
                         isPlaying = playbackState.isPlaying,
                         onIntensityChange = onIntensityChange,
                         onChannelSelect = onChannelSelect,
+                        onRedToggle = onRedToggle,
                         modifier = Modifier.weight(1f)
                     )
                     LandscapeControlsRow(
