@@ -58,20 +58,22 @@ fun LandscapeControlsRow(
                 Text(
                     "${durationMs.toInt()}ms",
                     color = Color.White,
-                    fontSize = 9.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Black
                 )
             }
+            
             Slider(
-                value = durationMs,
+                value = durationMs.coerceIn(100f, 2000f),
                 onValueChange = onDurationChange,
                 valueRange = 100f..2000f,
-                steps = 18,
+                steps = 37,
                 colors = SliderDefaults.colors(
                     thumbColor = Color.White,
                     activeTrackColor = Color.White,
                     inactiveTrackColor = Color(0xFF222222)
-                )
+                ),
+                modifier = Modifier.fillMaxWidth()
             )
         }
 

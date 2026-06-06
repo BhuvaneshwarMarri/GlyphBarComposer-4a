@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 
 @Composable
 fun ControlsColumn(
@@ -45,7 +46,7 @@ fun ControlsColumn(
 ) {
     Column(
         modifier = modifier
-            .fillMaxHeight(0.8f)
+            .fillMaxHeight()
             .clip(RoundedCornerShape(24.dp))
             .background(
                 brush = Brush.verticalGradient(
@@ -83,9 +84,12 @@ fun ControlsColumn(
             ) {
                 Slider(
                     value = durationMs,
-                    onValueChange = onDurationChange,
-                    valueRange = 100f..2000f,
-                    steps = 18,
+                    onValueChange = { newValue ->
+                        val snappedValue = ((newValue / 50f).roundToInt() * 50f)
+                        onDurationChange(snappedValue)
+                    },
+                    valueRange = 50f..2000f,
+                    steps = 38,
                     colors = SliderDefaults.colors(
                         thumbColor = Color.White,
                         activeTrackColor = Color.White,
@@ -93,7 +97,7 @@ fun ControlsColumn(
                     ),
                     modifier = Modifier
                         .graphicsLayer { rotationZ = -90f }
-                        .requiredWidth(340.dp)
+                        .requiredWidth(450.dp)
                         .testTag("duration_slider")
                 )
             }

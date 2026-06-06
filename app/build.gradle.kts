@@ -70,6 +70,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.localbroadcastmanager)
     implementation(libs.androidx.compose.foundation)
     implementation(files("libs/glyph-matrix-sdk-2.0.aar"))
     implementation(libs.androidx.material.icons.extended)

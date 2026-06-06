@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -18,7 +19,9 @@ import com.smaarig.glyphbarcomposer.ui.composer.components.ComposerHeader
 import com.smaarig.glyphbarcomposer.ui.composer.components.v1.ComposerScreenOld
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerUiState
 import com.smaarig.glyphbarcomposer.ui.viewmodel.PlaybackState
+import kotlinx.coroutines.FlowPreview
 
+@OptIn(FlowPreview::class)
 @Composable
 fun ComposerPortrait(
     uiState: ComposerUiState,
@@ -48,7 +51,7 @@ fun ComposerPortrait(
             .background(Color.Black)
             .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 0.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         ComposerHeader(
             useOldVersion = uiState.useOldVersion,
@@ -89,7 +92,8 @@ fun ComposerPortrait(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .weight(1f)
+                    .padding(bottom = 140.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 ControlsColumn(
@@ -97,7 +101,9 @@ fun ComposerPortrait(
                     isPlaying = playbackState.isPlaying,
                     onDurationChange = onDurationChange,
                     onAddStep = onAddStep,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
                 )
                 GlyphsColumn(
                     selectedChannelIndex = uiState.selectedChannelIndex,
@@ -106,7 +112,9 @@ fun ComposerPortrait(
                     isPlaying = playbackState.isPlaying,
                     onIntensityChange = onIntensityChange,
                     onChannelSelect = onChannelSelect,
-                    modifier = Modifier.width(88.dp)
+                    modifier = Modifier
+                        .width(100.dp)
+                        .fillMaxHeight()
                 )
                 DraggableTimeline(
                     steps = uiState.currentSequenceSteps,
@@ -118,8 +126,8 @@ fun ComposerPortrait(
                     onStopPlayback = onStopPlayback,
                     onSave = onSavePlaylist,
                     modifier = Modifier
-                        .weight(1.2f)
-                        .fillMaxHeight(0.8f)
+                        .weight(1f)
+                        .fillMaxHeight()
                 )
             }
         }

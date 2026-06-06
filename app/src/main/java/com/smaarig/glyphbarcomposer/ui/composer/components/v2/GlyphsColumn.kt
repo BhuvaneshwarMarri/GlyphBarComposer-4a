@@ -1,30 +1,23 @@
 package com.smaarig.glyphbarcomposer.ui.composer.components.v2
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.unit.sp
-import com.smaarig.glyphbarcomposer.ui.composer.components.common.GlyphScrollPicker
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
 
 @Composable
 fun GlyphsColumn(
@@ -47,16 +40,13 @@ fun GlyphsColumn(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Invisible spacer to match the selection dot width (6dp) and alignment
-            Spacer(Modifier.size(6.dp))
-
             Text(
-                "<- GLYPH ->",
+                "GLYPHS",
                 color = Color(0xFF666666),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 1.sp,
-                modifier = Modifier.width(70.dp), // Matches GlyphScrollPicker width
+                modifier = Modifier.width(70.dp),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
@@ -68,51 +58,22 @@ fun GlyphsColumn(
             val isSelected = selectedChannelIndex == index
             val intensity = if (isPlaying) playbackIntensities[index] else glyphIntensities[index]
 
-            if (isRed) {
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Spacer(Modifier.width(4.dp))
-                    HorizontalDivider(
-                        modifier = Modifier.width(60.dp),
-                        thickness = 1.dp,
-                        color = Color(0xFF333333)
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(if (isSelected) Color.White else Color.Transparent)
-                        .border(
-                            1.dp,
-                            if (isSelected) Color.White.copy(0.2f) else Color.Transparent,
-                            CircleShape
-                        )
-                )
-
-                GlyphScrollPicker(
-                    intensity = intensity,
-                    onIntensityChange = { newVal ->
-                        onIntensityChange(index, newVal)
-                        onChannelSelect(index)
-                    },
-                    modifier = Modifier.testTag("glyph_picker_$index"),
-                    isRed = isRed,
-                    enabled = !isPlaying
-                )
-            }
-
-            if (!isRed) Spacer(Modifier.height(10.dp))
+            GlyphSquareButton(
+                index = index,
+                intensity = intensity,
+                isSelected = isSelected,
+                isRed = isRed,
+                onIntensityChange = { newVal ->
+                    onIntensityChange(index, newVal)
+                    onChannelSelect(index)
+                },
+                onSelect = { onChannelSelect(index) },
+                enabled = !isPlaying,
+                modifier = Modifier
+                    .size(56.dp)
+                    .testTag("glyph_button_$index")
+            )
+            Spacer(Modifier.height(2.dp))
         }
     }
 }

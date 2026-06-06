@@ -13,9 +13,6 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.smaarig.glyphbarcomposer.GlyphApplication
 import com.smaarig.glyphbarcomposer.R
 import com.smaarig.glyphbarcomposer.controller.GlyphController
-import com.smaarig.glyphbarcomposer.ui.widget.DEFAULT_INTENSITIES
-import com.smaarig.glyphbarcomposer.ui.widget.GlyphSequencePlayerWidget
-import com.smaarig.glyphbarcomposer.ui.widget.INTENSITIES_KEY
 import com.smaarig.glyphbarcomposer.ui.widget.updateAllWidgets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

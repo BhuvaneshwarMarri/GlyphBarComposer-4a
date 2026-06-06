@@ -89,7 +89,7 @@ fun ComposerLandscape(
                 // Left Panel: Horizontal Glyphs & Horizontal Controls
                 Column(
                     modifier = Modifier
-                        .weight(1.3f)
+                        .weight(1f)
                         .fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
