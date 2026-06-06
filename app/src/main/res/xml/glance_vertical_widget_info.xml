@@ -4,6 +4,8 @@
     android:label="@string/widget_name_vertical"
     android:description="@string/widget_vertical_description"
     android:minWidth="56dp"
+    android:resizeMode="vertical"
+    android:minResizeHeight="160dp"
     android:minHeight="260dp"
     android:targetCellWidth="1"
     android:targetCellHeight="4"

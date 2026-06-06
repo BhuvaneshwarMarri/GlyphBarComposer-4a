@@ -5,9 +5,11 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.smaarig.glyphbarcomposer.GlyphApplication
 import com.smaarig.glyphbarcomposer.R
 import com.smaarig.glyphbarcomposer.controller.GlyphController
@@ -61,35 +63,62 @@ class GlyphPlaybackService : Service() {
         playbackJob = serviceScope.launch {
             val app = application as GlyphApplication
             val playlist = app.repository.getPlaylistWithSteps(playlistId) ?: return@launch
+            Log.d("GlyphPlaybackService", "Starting playback for playlist: ${playlist.playlist.name}")
+            
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(
+                    NOTIFICATION_ID, 
+                    createNotification(playlist.playlist.name),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, createNotification(playlist.playlist.name))
+            }
 
-            // Show foreground notification
-            startForeground(NOTIFICATION_ID, createNotification(playlist.playlist.name))
+            LocalBroadcastManager.getInstance(this@GlyphPlaybackService).sendBroadcast(
+                Intent(ACTION_PLAYBACK_STATE_CHANGED).apply {
+                    putExtra(EXTRA_IS_PLAYING, true)
+                    putExtra(EXTRA_PLAYLIST_ID, playlistId)
+                }
+            )
 
-            // Update widget state to PLAYING
-            updateAllWidgets(this@GlyphPlaybackService, isPlaying = true, playlistId = playlistId, playlistName = playlist.playlist.name)
+            updateAllWidgets(this@GlyphPlaybackService, isPlaying = true,
+                playlistId = playlistId, playlistName = playlist.playlist.name)
 
             try {
+                // Give GlyphManager a moment to connect during cold-starts
+                delay(300)
+                
                 while (isActive) {
+                    // ── Drift-corrected clock (matches GlyphController.playSequence) ──
+                    var expectedTimeMs = android.os.SystemClock.elapsedRealtime()
+
                     for (step in playlist.steps) {
                         if (!isActive) break
 
                         glyphController.applyGlyphStateWithIntensities(
-                            step.channelIntensities,
-                            step.durationMs
-                        )
+                            step.channelIntensities, step.durationMs, GlyphController.GlyphOwner.WIDGET)
 
-                        // Update widget visualization (mini glyph bar)
+                        // Fire widget update asynchronously — don't let I/O eat into step time
                         val intensities = glyphController.channels.map {
                             step.channelIntensities[it] ?: 0
                         }
-                        updateAllWidgets(this@GlyphPlaybackService, intensities = intensities)
+                        launch { updateAllWidgets(this@GlyphPlaybackService, intensities = intensities) }
 
-                        delay(step.durationMs.toLong() + 50)
+                        // Drift correction: sleep only the remaining time, not a flat delay
+                        expectedTimeMs += step.durationMs.toLong()
+                        val remaining = expectedTimeMs - android.os.SystemClock.elapsedRealtime()
+                        if (remaining > 0) delay(remaining)
                     }
                 }
             } finally {
                 glyphController.turnOffGlyphs()
                 updateAllWidgets(this@GlyphPlaybackService, isPlaying = false)
+                LocalBroadcastManager.getInstance(this@GlyphPlaybackService).sendBroadcast(
+                    Intent(ACTION_PLAYBACK_STATE_CHANGED).apply {
+                        putExtra(EXTRA_IS_PLAYING, false)
+                    }
+                )
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
@@ -136,10 +165,12 @@ class GlyphPlaybackService : Service() {
 
     companion object {
         private const val CHANNEL_ID = "glyph_playback_channel"
-        private const val NOTIFICATION_ID = 1001
+        private const val NOTIFICATION_ID = 1003
 
         const val ACTION_START = "com.smaarig.glyphbarcomposer.action.START_PLAYBACK"
         const val ACTION_STOP = "com.smaarig.glyphbarcomposer.action.STOP_PLAYBACK"
+        const val ACTION_PLAYBACK_STATE_CHANGED = "com.smaarig.glyphbarcomposer.PLAYBACK_STATE"
         const val EXTRA_PLAYLIST_ID = "extra_playlist_id"
+        const val EXTRA_IS_PLAYING = "extra_is_playing"
     }
 }

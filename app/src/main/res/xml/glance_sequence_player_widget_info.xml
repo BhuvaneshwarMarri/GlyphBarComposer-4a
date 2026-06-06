@@ -3,6 +3,8 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:label="@string/widget_sequence_player_name"
     android:description="@string/widget_sequence_player_description"
+    android:resizeMode="horizontal"
+    android:minResizeWidth="160dp"
     android:minWidth="200dp"
     android:minHeight="72dp"
     android:widgetCategory="home_screen"

@@ -31,6 +31,7 @@ import androidx.glance.background
 import androidx.glance.currentState
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -97,33 +98,23 @@ class GlyphComposerVerticalWidget : GlanceAppWidget() {
     @Composable
     private fun GlyphDot(index: Int, intensity: Int, isRed: Boolean) {
         val isActive = intensity > 0
-
-        // Circular Square parameters - Optimized size for fixed widget
-        val indicatorSize = if (isActive) 35.dp else 32.dp
+        val indicatorSize = 33.dp  // ← FIXED size, never changes
         val cornerRadius = 8.dp
-        val backgroundColor = if (isActive) {
-            getIntensityColor(intensity)
-        } else {
-            // Dark color for visibility when OFF
-            Color(0xFF1A1A1A)
-        }
+        val backgroundColor = if (isActive) getIntensityColor(intensity)
+        else Color(0xFF1A1A1A)
 
-        // Outer container slot
         Box(
             modifier = GlanceModifier
-                .fillMaxWidth()
-                .height(36.dp),
+                .fillMaxHeight(),
             contentAlignment = GlanceAlignment.Center
         ) {
-            // Border container
             Box(
                 modifier = GlanceModifier
                     .size(indicatorSize)
                     .cornerRadius(cornerRadius)
-                    .background(Color.White.copy(alpha = 0.15f)),
+                    .background(Color.White.copy(alpha = if (isActive) 0.2f else 0.1f)),
                 contentAlignment = GlanceAlignment.Center
             ) {
-                // Main Indicator
                 Box(
                     modifier = GlanceModifier
                         .size(indicatorSize - 2.dp)

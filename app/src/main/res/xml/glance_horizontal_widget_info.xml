@@ -3,6 +3,8 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:label="@string/widget_name_horizontal"
     android:description="@string/widget_horizontal_description"
+    android:resizeMode="horizontal"
+    android:minResizeWidth="180dp"
     android:minWidth="260dp"
     android:minHeight="56dp"
     android:targetCellWidth="4"

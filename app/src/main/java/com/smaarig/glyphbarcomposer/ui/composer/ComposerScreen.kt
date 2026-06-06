@@ -5,6 +5,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,6 +24,11 @@ fun ComposerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
+
+    // Sync hardware to composer UI when screen is opened or version is toggled
+    LaunchedEffect(uiState.useOldVersion) {
+        viewModel.onEnterComposer()
+    }
 
     var isPowerOffAnimating by remember { mutableStateOf(false) }
     val powerScale by animateFloatAsState(

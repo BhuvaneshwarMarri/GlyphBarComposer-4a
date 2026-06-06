@@ -35,7 +35,6 @@ import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
-import androidx.glance.layout.width
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.compose.ui.Alignment as ComposeAlignment
@@ -94,36 +93,28 @@ class GlyphComposerHorizontalWidget : GlanceAppWidget() {
         }
     }
 
+// In both GlyphComposerHorizontalWidget and GlyphComposerVerticalWidget:
+
     @Composable
     private fun GlyphDot(index: Int, intensity: Int, isRed: Boolean) {
         val isActive = intensity > 0
-
-        // Circular Square parameters - Optimized size for fixed widget
-        val indicatorSize = if (isActive) 35.dp else 32.dp
+        val indicatorSize = 33.dp  // ← FIXED size, never changes
         val cornerRadius = 8.dp
-        val backgroundColor = if (isActive) {
-            getIntensityColor(intensity)
-        } else {
-            // Restore dark color for visibility when OFF
-            Color(0xFF1A1A1A)
-        }
+        val backgroundColor = if (isActive) getIntensityColor(intensity)
+        else Color(0xFF1A1A1A)
 
-        // Outer container slot
         Box(
             modifier = GlanceModifier
-                .fillMaxHeight()
-                .width(36.dp),
+                .fillMaxHeight(),
             contentAlignment = GlanceAlignment.Center
         ) {
-            // Border container
             Box(
                 modifier = GlanceModifier
                     .size(indicatorSize)
                     .cornerRadius(cornerRadius)
-                    .background(Color.White.copy(alpha = 0.15f)),
+                    .background(Color.White.copy(alpha = if (isActive) 0.2f else 0.1f)),
                 contentAlignment = GlanceAlignment.Center
             ) {
-                // Main Indicator
                 Box(
                     modifier = GlanceModifier
                         .size(indicatorSize - 2.dp)

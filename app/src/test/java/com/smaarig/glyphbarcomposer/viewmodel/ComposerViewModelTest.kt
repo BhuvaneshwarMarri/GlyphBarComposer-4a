@@ -3,6 +3,7 @@ package com.smaarig.glyphbarcomposer.viewmodel
 import android.app.Application
 import android.content.Context
 import android.util.Log
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.data.Playlist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
@@ -45,6 +46,10 @@ class ComposerViewModelTest {
         every { Log.w(any<String>(), any<String>()) } returns 0
         every { Log.i(any(), any()) } returns 0
 
+        // Mock application context
+        every { application.applicationContext } returns application
+
+        // Mock GlyphController
         mockkStatic(GlyphController::class)
         every { GlyphController.getInstance(any()) } returns glyphController
         
@@ -52,6 +57,7 @@ class ComposerViewModelTest {
         every { glyphController.isPlaying } returns MutableStateFlow(false)
         every { glyphController.isPaused } returns MutableStateFlow(false)
         every { glyphController.currentIntensities } returns MutableStateFlow(List(7) { 0 })
+        every { glyphController.activeOwner } returns MutableStateFlow(GlyphController.GlyphOwner.NONE)
         
         // Mock SharedPreferences for PreferenceManager inside ViewModel
         val sharedPrefs = mockk<android.content.SharedPreferences>(relaxed = true)

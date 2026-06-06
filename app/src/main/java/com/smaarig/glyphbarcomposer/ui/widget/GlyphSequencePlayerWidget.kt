@@ -56,6 +56,7 @@ class GlyphSequencePlayerWidget : GlanceAppWidget() {
 
     @Composable
     private fun WidgetContent() {
+        val context = LocalContext.current
         val prefs = currentState<Preferences>()
         val sequenceId = prefs[SELECTED_SEQUENCE_ID]
         val sequenceName = prefs[SELECTED_SEQUENCE_NAME] ?: "No Sequence"
@@ -76,7 +77,7 @@ class GlyphSequencePlayerWidget : GlanceAppWidget() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = LocalContext.current.getString(R.string.widget_no_sequence_selected),
+                        text = context.getString(R.string.widget_no_sequence_selected),
                         style = TextStyle(
                             color = ColorProvider(Color.White),
                             fontSize = 12.sp,
@@ -96,22 +97,24 @@ class GlyphSequencePlayerWidget : GlanceAppWidget() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = sequenceName.uppercase(),
+                            text = if (sequenceName == "ERROR_NOT_FOUND") context.getString(R.string.widget_sequence_not_found) else sequenceName.uppercase(),
                             style = TextStyle(
-                                color = ColorProvider(Color.White),
-                                fontSize = 14.sp,
+                                color = ColorProvider(if (sequenceName == "ERROR_NOT_FOUND") Color(0xFFFF5252) else Color.White),
+                                fontSize = if (sequenceName == "ERROR_NOT_FOUND") 12.sp else 14.sp,
                                 fontWeight = FontWeight.Bold
                             ),
                             maxLines = 1
                         )
-                        Text(
-                            text = "GLYPH SEQUENCE",
-                            style = TextStyle(
-                                color = ColorProvider(Color(0xFFB3B3B3)),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Normal
+                        if (sequenceName != "ERROR_NOT_FOUND") {
+                            Text(
+                                text = "GLYPH SEQUENCE",
+                                style = TextStyle(
+                                    color = ColorProvider(Color(0xFFB3B3B3)),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Normal
+                                )
                             )
-                        )
+                        }
                     }
 
                     // 2. Controls (Right)
@@ -146,14 +149,14 @@ class GlyphSequencePlayerWidget : GlanceAppWidget() {
                             modifier = GlanceModifier
                                 .size(48.dp)
                                 .cornerRadius(24.dp)
-                                .background(Color(0xFF1DB954))
+                                .background(if (sequenceName == "ERROR_NOT_FOUND") Color(0xFF333333) else Color(0xFF1DB954))
                                 .clickable(actionRunCallback<TogglePlaybackAction>()),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = if (isPlaying) "■" else "▶",
                                 style = TextStyle(
-                                    color = ColorProvider(Color.Black),
+                                    color = ColorProvider(if (sequenceName == "ERROR_NOT_FOUND") Color.Gray else Color.Black),
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Bold
                                 )

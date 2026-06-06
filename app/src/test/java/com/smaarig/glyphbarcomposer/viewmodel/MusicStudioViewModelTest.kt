@@ -2,12 +2,14 @@ package com.smaarig.glyphbarcomposer.viewmodel
 
 import android.app.Application
 import android.util.Log
+import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.repository.GlyphRepository
 import com.smaarig.glyphbarcomposer.ui.viewmodel.MusicStudioViewModel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.BeatAlgorithm
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -25,6 +27,7 @@ class MusicStudioViewModelTest {
     private lateinit var viewModel: MusicStudioViewModel
     private val application = mockk<Application>(relaxed = true)
     private val repository = mockk<GlyphRepository>(relaxed = true)
+    private val glyphController = mockk<GlyphController>(relaxed = true)
     private val testDispatcher = UnconfinedTestDispatcher()
 
     @Before
@@ -35,6 +38,11 @@ class MusicStudioViewModelTest {
         every { Log.e(any(), any()) } returns 0
         every { Log.w(any<String>(), any<String>()) } returns 0
         every { Log.i(any(), any()) } returns 0
+
+        mockkStatic(GlyphController::class)
+        every { GlyphController.getInstance(any()) } returns glyphController
+        every { glyphController.isPlaying } returns MutableStateFlow(false)
+        every { glyphController.activeOwner } returns MutableStateFlow(GlyphController.GlyphOwner.NONE)
         
         mockkConstructor(MediaPlayer::class)
         every { anyConstructed<MediaPlayer>().setDataSource(any<Application>(), any()) } just Runs

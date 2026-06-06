@@ -13,7 +13,6 @@ import androidx.glance.appwidget.updateAll
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import com.smaarig.glyphbarcomposer.controller.GlyphController
 import com.smaarig.glyphbarcomposer.service.GlyphPlaybackService
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 
 // ─── Shared preference key ──────────────────────────────────────────────────
@@ -86,20 +85,56 @@ class IndividualCycleAction : ActionCallback {
         val glyphIndex = parameters[WidgetKeys.GlyphIndexKey] ?: return
         val isRed = glyphIndex == 6
 
-        val glyphController = GlyphController.getInstance(context)
-        val currentIntensities = glyphController.currentIntensities.value.toMutableList()
+        // 1. UI-FIRST UPDATE (Fastest perceived latency)
+        // Read current state directly from DataStore to avoid waiting for Controller init
+        val state = androidx.glance.appwidget.state.getAppWidgetState(
+            context,
+            PreferencesGlanceStateDefinition,
+            glanceId
+        )
+        
+        val currentStr = state[INTENSITIES_KEY] ?: DEFAULT_INTENSITIES
+        val currentIntensities = currentStr.split(",").map { it.toIntOrNull() ?: 0 }.toMutableList()
 
-        // 1. Cycle the intensity for the specific glyph
+        // Cycle the local state
         currentIntensities[glyphIndex] = cycleIntensity(currentIntensities[glyphIndex], isRed)
+        val newIntensityStr = currentIntensities.joinToString(",")
 
-        // 2. Build the channel→intensity map
+        // Update this widget's UI immediately
+        updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+            prefs.toMutablePreferences().apply {
+                this[INTENSITIES_KEY] = newIntensityStr
+            }
+        }
+        // Trigger immediate redraw for both types to cover whatever widget was clicked
+        GlyphComposerVerticalWidget().update(context, glanceId)
+        GlyphComposerHorizontalWidget().update(context, glanceId)
+
+        // 2. HARDWARE SYNC (Background)
+        // By the time we get here, GlyphApplication.onCreate has likely already started the binding
+        val glyphController = GlyphController.getInstance(context)
+        
+        // If we are interacting with widgets while the app is in Composer screen,
+        // we should ensure the app knows it lost "exclusive" control of the hardware visual state.
+        if (glyphController.activeOwner.value == GlyphController.GlyphOwner.COMPOSER) {
+            glyphController.releaseControl(GlyphController.GlyphOwner.COMPOSER)
+        }
+
+        glyphController.restoreStateFromWidget(currentIntensities)
+
         val intensityMap = glyphController.channels.mapIndexed { i, ch ->
             ch to currentIntensities.getOrElse(i) { 0 }
         }.toMap()
 
-        // 3. Fire the physical glyph hardware and update global state.
-        //    The controller will automatically sync this to the widget DataStore.
-        glyphController.applyGlyphStateWithIntensities(intensityMap, durationMs = 800)
+        // Fire physical lights - Using owner = WIDGET to allow "Preview" behavior
+        glyphController.applyGlyphStateWithIntensities(
+            intensityMap, 
+            durationMs = 800, 
+            owner = GlyphController.GlyphOwner.WIDGET
+        )
+
+        // 3. Sync ALL other widgets (Low priority)
+        updateAllWidgets(context, intensities = currentIntensities)
     }
 }
 
@@ -136,7 +171,7 @@ class PowerOffAction : ActionCallback {
 /**
  * Unified helper to sync ALL app widgets with the current global state.
  */
-fun updateAllWidgets(
+suspend fun updateAllWidgets(
     context: Context,
     intensities: List<Int>? = null,
     isPlaying: Boolean? = null,
@@ -145,47 +180,36 @@ fun updateAllWidgets(
 ) {
     val intensityStr = intensities?.joinToString(",")
     val manager = GlanceAppWidgetManager(context)
-
-    MainScope().launch {
-        // 1. Update Intensity Widgets (Horizontal & Vertical)
-        listOf(
-            GlyphComposerHorizontalWidget::class.java,
-            GlyphComposerVerticalWidget::class.java
-        ).forEach { widgetClass ->
-            val glanceIds = manager.getGlanceIds(widgetClass)
-            glanceIds.forEach { glanceId ->
-                updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
-                    prefs.toMutablePreferences().apply {
-                        if (intensityStr != null) {
-                            this[INTENSITIES_KEY] = intensityStr
-                        }
-                    }
-                }
+    
+    // 1. Write all state first (horizontal)
+    manager.getGlanceIds(GlyphComposerHorizontalWidget::class.java).forEach { glanceId ->
+        updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+            prefs.toMutablePreferences().apply {
+                if (intensityStr != null) this[INTENSITIES_KEY] = intensityStr
             }
         }
-        GlyphComposerHorizontalWidget().updateAll(context)
-        GlyphComposerVerticalWidget().updateAll(context)
-
-        // 2. Update Sequence Player Widget
-        val playerGlanceIds = manager.getGlanceIds(GlyphSequencePlayerWidget::class.java)
-        playerGlanceIds.forEach { glanceId ->
-            updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
-                prefs.toMutablePreferences().apply {
-                    if (isPlaying != null) {
-                        this[GlyphSequencePlayerWidget.IS_PLAYING] = isPlaying
-                    }
-                    if (intensityStr != null) {
-                        this[INTENSITIES_KEY] = intensityStr
-                    }
-                    if (playlistId != null) {
-                        this[GlyphSequencePlayerWidget.SELECTED_SEQUENCE_ID] = playlistId
-                    }
-                    if (playlistName != null) {
-                        this[GlyphSequencePlayerWidget.SELECTED_SEQUENCE_NAME] = playlistName
-                    }
-                }
-            }
-        }
-        GlyphSequencePlayerWidget().updateAll(context)
     }
+    // 2. Write all state (vertical)
+    manager.getGlanceIds(GlyphComposerVerticalWidget::class.java).forEach { glanceId ->
+        updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+            prefs.toMutablePreferences().apply {
+                if (intensityStr != null) this[INTENSITIES_KEY] = intensityStr
+            }
+        }
+    }
+    // 3. Write player state
+    manager.getGlanceIds(GlyphSequencePlayerWidget::class.java).forEach { glanceId ->
+        updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+            prefs.toMutablePreferences().apply {
+                if (isPlaying != null) this[GlyphSequencePlayerWidget.IS_PLAYING] = isPlaying
+                if (intensityStr != null) this[INTENSITIES_KEY] = intensityStr
+                if (playlistId != null) this[GlyphSequencePlayerWidget.SELECTED_SEQUENCE_ID] = playlistId
+                if (playlistName != null) this[GlyphSequencePlayerWidget.SELECTED_SEQUENCE_NAME] = playlistName
+            }
+        }
+    }
+    // 4. Trigger renders ONCE after ALL state is committed
+    GlyphComposerHorizontalWidget().updateAll(context)
+    GlyphComposerVerticalWidget().updateAll(context)
+    GlyphSequencePlayerWidget().updateAll(context)
 }

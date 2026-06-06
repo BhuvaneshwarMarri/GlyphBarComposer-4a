@@ -10,4 +10,5 @@
     <string name="select_sequence_title">Select Sequence</string>
     <string name="no_sequences_found">No sequences found. Create one in the app first.</string>
     <string name="widget_no_sequence_selected">Hold widget to select sequence in settings</string>
+    <string name="widget_sequence_not_found">Sequence not found. Select again.</string>
 </resources>

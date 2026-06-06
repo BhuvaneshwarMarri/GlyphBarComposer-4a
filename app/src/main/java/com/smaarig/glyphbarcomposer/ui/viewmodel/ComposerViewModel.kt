@@ -84,6 +84,11 @@ class ComposerViewModel(
     fun onIntensityChange(index: Int, newIntensity: Int) {
         if (glyphController.isPlaying.value) return
 
+        // Ensure we have control before applying manual changes
+        if (glyphController.activeOwner.value != GlyphController.GlyphOwner.COMPOSER) {
+            glyphController.acquireControl(GlyphController.GlyphOwner.COMPOSER)
+        }
+
         // Update local state immediately for snappy UI
         val newList = _uiState.value.glyphIntensities.toMutableList().apply {
             this[index] = newIntensity
@@ -112,10 +117,16 @@ class ComposerViewModel(
     }
 
     fun onDurationChange(newDuration: Float) {
+        if (glyphController.activeOwner.value != GlyphController.GlyphOwner.COMPOSER) {
+            glyphController.acquireControl(GlyphController.GlyphOwner.COMPOSER)
+        }
         _uiState.update { it.copy(durationMs = newDuration) }
     }
 
     fun addStep() {
+        if (glyphController.activeOwner.value != GlyphController.GlyphOwner.COMPOSER) {
+            glyphController.acquireControl(GlyphController.GlyphOwner.COMPOSER)
+        }
         val state = _uiState.value
         val intensities = getIntensitiesMap()
 
@@ -167,13 +178,38 @@ class ComposerViewModel(
             Intent(getApplication(), GlyphPlaybackService::class.java)
         )
 
-        glyphController.releaseControl(GlyphController.GlyphOwner.COMPOSER)
+        glyphController.stopPlayback()
         glyphController.turnOffGlyphs()
         _uiState.update {
             it.copy(
                 glyphIntensities = listOf(0, 0, 0, 0, 0, 0, 0),
                 activePlaylistId = null,
                 activePresetName = null // Ensure everything is reset
+            )
+        }
+    }
+
+    /**
+     * Called when the Composer screen is entered.
+     * Ensures hardware is clean and then synced to the current UI state.
+     */
+    fun onEnterComposer() {
+        viewModelScope.launch {
+            // 1. Acquire control for stability
+            glyphController.acquireControl(GlyphController.GlyphOwner.COMPOSER)
+            
+            // 2. Kill all hardware lights for a clean slate
+            glyphController.turnOffGlyphs()
+            
+            // 3. Small delay to ensure hardware is ready for next command
+            delay(100)
+            
+            // 4. Read the current UI state and push it to hardware
+            val intensities = getIntensitiesMap()
+            glyphController.applyGlyphStateWithIntensities(
+                intensities, 
+                durationMs = 2000, 
+                owner = GlyphController.GlyphOwner.COMPOSER
             )
         }
     }
