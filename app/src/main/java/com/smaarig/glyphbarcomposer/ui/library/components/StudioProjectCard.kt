@@ -1,5 +1,6 @@
 package com.smaarig.glyphbarcomposer.ui.library.components
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smaarig.glyphbarcomposer.data.MusicProjectWithEvents
+import com.smaarig.glyphbarcomposer.ui.theme.nothingFont
 
 @Composable
 fun StudioProjectCard(
@@ -46,18 +49,17 @@ fun StudioProjectCard(
     onEdit: () -> Unit,
     onShare: () -> Unit
 ) {
+    val accentColor = if (isActive) Color(0xFFFFC1CC) else if (isAudioMissing) Color(0xFFFF5252) else Color(0xFF222222)
+    val cardBg by animateColorAsState(if (isActive) Color(0xFF1A1A1A) else Color(0xFF111111), label = "cardBg")
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
             .clickable { onPlay() },
-        color = Color(0xFF111111),
+        color = cardBg,
         shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(
-            1.dp,
-            if (isActive) Color(0xFF00C853) else if (isAudioMissing) Color(0xFFFF5252).copy(alpha = 0.5f) else Color(
-                0xFF222222
-            )
-        )
+        border = BorderStroke(1.dp, if (isActive || isAudioMissing) accentColor.copy(alpha = 0.5f) else Color(0xFF222222))
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -65,7 +67,7 @@ fun StudioProjectCard(
                     .size(48.dp)
                     .clip(CircleShape)
                     .background(
-                        if (isActive) Color(0xFF00C853)
+                        if (isActive) accentColor.copy(alpha = 0.2f)
                         else if (isAudioMissing) Color(0xFFFF5252).copy(alpha = 0.1f)
                         else Color(0xFF1A1A1A)
                     ),
@@ -78,7 +80,7 @@ fun StudioProjectCard(
                         else -> Icons.Default.PlayArrow
                     },
                     contentDescription = null,
-                    tint = if (isActive) Color.Black else if (isAudioMissing) Color(0xFFFF5252) else Color.Gray
+                    tint = if (isActive) accentColor else if (isAudioMissing) Color(0xFFFF5252) else Color.Gray
                 )
             }
             Spacer(Modifier.width(16.dp))
@@ -88,15 +90,18 @@ fun StudioProjectCard(
                     color = Color.White,
                     fontWeight = FontWeight.Black,
                     fontSize = 16.sp,
+                    fontFamily = nothingFont,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "${project.events.size} sync events",
+                        "${project.events.size} SYNC EVENTS",
                         color = Color.Gray,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = nothingFont,
+                        letterSpacing = 1.sp
                     )
                     if (isAudioMissing) {
                         Spacer(Modifier.width(8.dp))
@@ -104,7 +109,9 @@ fun StudioProjectCard(
                             "• MISSING AUDIO",
                             color = Color(0xFFFF5252),
                             fontSize = 10.sp,
-                            fontWeight = FontWeight.Black
+                            fontWeight = FontWeight.Black,
+                            fontFamily = nothingFont,
+                            letterSpacing = 1.sp
                         )
                     }
                 }
@@ -116,7 +123,7 @@ fun StudioProjectCard(
                 Icon(Icons.Default.Edit, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.DeleteOutline, null, tint = Color.Gray.copy(0.4f))
+                Icon(Icons.Default.DeleteOutline, null, tint = Color.Gray.copy(0.4f), modifier = Modifier.size(20.dp))
             }
         }
     }

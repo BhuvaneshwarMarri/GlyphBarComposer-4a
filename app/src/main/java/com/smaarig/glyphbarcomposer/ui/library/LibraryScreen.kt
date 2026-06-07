@@ -17,7 +17,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -37,6 +39,7 @@ import com.smaarig.glyphbarcomposer.data.MusicProjectWithEvents
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import com.smaarig.glyphbarcomposer.ui.AppOrientation
 import com.smaarig.glyphbarcomposer.ui.Screen
+import com.smaarig.glyphbarcomposer.ui.library.components.ImportConfirmationDialog
 import com.smaarig.glyphbarcomposer.ui.library.components.LibNavItem
 import com.smaarig.glyphbarcomposer.ui.library.components.LibraryHeader
 import com.smaarig.glyphbarcomposer.ui.library.components.SequencesTab
@@ -56,11 +59,15 @@ fun LibraryScreen(
     navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
-    val playlists by viewModel.allPlaylists.collectAsStateWithLifecycle(emptyList())
-    val studioProjects by viewModel.allMusicProjects.collectAsStateWithLifecycle(emptyList())
+    val playlists by viewModel.filteredPlaylists.collectAsStateWithLifecycle()
+    val studioProjects by viewModel.filteredMusicProjects.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val compState by composerViewModel.uiState.collectAsStateWithLifecycle()
     val compPlaybackState by composerViewModel.playbackState.collectAsStateWithLifecycle()
     val studioState by musicStudioViewModel.uiState.collectAsStateWithLifecycle()
+
+    val pendingImport by viewModel.pendingImport.collectAsStateWithLifecycle()
+    val importError by viewModel.importError.collectAsStateWithLifecycle()
 
     val orientation = rememberAppOrientation()
     val context = LocalContext.current
@@ -74,6 +81,8 @@ fun LibraryScreen(
                 onTabSelect = { selectedTab = it },
                 playlists = playlists,
                 studioProjects = studioProjects,
+                searchQuery = searchQuery,
+                onSearchQueryChange = { viewModel.setSearchQuery(it) },
                 compState = compState,
                 compPlaybackState = compPlaybackState,
                 studioState = studioState,
@@ -88,6 +97,8 @@ fun LibraryScreen(
                     navController.navigate(Screen.MusicStudio.route)
                 },
                 onSharePlaylist = { viewModel.exportPlaylist(context, it) },
+                onSharePlaylistCsv = { viewModel.exportPlaylistAsCsv(context, it) },
+                onSharePlaylistJson = { viewModel.exportPlaylistAsJson(context, it) },
                 onShareStudio = { viewModel.exportMusicProject(context, it) }
             )
         } else {
@@ -96,6 +107,8 @@ fun LibraryScreen(
                 onTabSelect = { selectedTab = it },
                 playlists = playlists,
                 studioProjects = studioProjects,
+                searchQuery = searchQuery,
+                onSearchQueryChange = { viewModel.setSearchQuery(it) },
                 compState = compState,
                 compPlaybackState = compPlaybackState,
                 studioState = studioState,
@@ -110,7 +123,32 @@ fun LibraryScreen(
                     navController.navigate(Screen.MusicStudio.route)
                 },
                 onSharePlaylist = { viewModel.exportPlaylist(context, it) },
+                onSharePlaylistCsv = { viewModel.exportPlaylistAsCsv(context, it) },
+                onSharePlaylistJson = { viewModel.exportPlaylistAsJson(context, it) },
                 onShareStudio = { viewModel.exportMusicProject(context, it) }
+            )
+        }
+
+        pendingImport?.let { pending ->
+            ImportConfirmationDialog(
+                steps = pending.steps,
+                initialName = pending.name,
+                onConfirm = { name -> viewModel.confirmImport(name) },
+                onDismiss = { viewModel.cancelImport() }
+            )
+        }
+
+        importError?.let { error ->
+            AlertDialog(
+                onDismissRequest = { viewModel.clearImportError() },
+                title = { Text("Import Error", color = Color.White) },
+                text = { Text(error, color = Color.Gray) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.clearImportError() }) {
+                        Text("OK", color = Color.White)
+                    }
+                },
+                containerColor = Color(0xFF111111)
             )
         }
     }
@@ -122,6 +160,8 @@ fun LibraryPortrait(
     onTabSelect: (Int) -> Unit,
     playlists: List<PlaylistWithSteps>,
     studioProjects: List<MusicProjectWithEvents>,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
     compState: ComposerUiState,
     compPlaybackState: com.smaarig.glyphbarcomposer.ui.viewmodel.PlaybackState,
     studioState: MusicStudioUiState,
@@ -130,6 +170,8 @@ fun LibraryPortrait(
     onEditSequence: (PlaylistWithSteps) -> Unit,
     onEditStudio: (MusicProjectWithEvents) -> Unit,
     onSharePlaylist: (PlaylistWithSteps) -> Unit,
+    onSharePlaylistCsv: (PlaylistWithSteps) -> Unit,
+    onSharePlaylistJson: (PlaylistWithSteps) -> Unit,
     onShareStudio: (MusicProjectWithEvents) -> Unit
 ) {
     Column(
@@ -144,7 +186,9 @@ fun LibraryPortrait(
                 composerViewModel.stopPlayback()
                 if (studioState.isAudioPlaying) musicStudioViewModel.toggleMusicPlayback()
             },
-            isAnyPlaying = compPlaybackState.isPlaying || studioState.isAudioPlaying
+            isAnyPlaying = compPlaybackState.isPlaying || studioState.isAudioPlaying,
+            searchQuery = searchQuery,
+            onSearchQueryChange = onSearchQueryChange
         )
 
         Row(
@@ -191,14 +235,16 @@ fun LibraryPortrait(
         Box(modifier = Modifier.weight(1f)) {
             if (selectedTab == 0) {
                 SequencesTab(
-                    compPlaybackState.isPlaying,
-                    compPlaybackState.isPaused,
-                    compState.activePlaylistId,
-                    compState.activePresetName,
-                    playlists,
-                    composerViewModel,
-                    onEditSequence,
-                    onSharePlaylist
+                    isPlaying = compPlaybackState.isPlaying,
+                    isPaused = compPlaybackState.isPaused,
+                    activeId = compState.activePlaylistId,
+                    activePresetName = compState.activePresetName,
+                    playlists = playlists,
+                    viewModel = composerViewModel,
+                    onEdit = onEditSequence,
+                    onShareGlyph = onSharePlaylist,
+                    onShareCsv = onSharePlaylistCsv,
+                    onShareJson = onSharePlaylistJson
                 )
             } else {
                 StudioTab(
@@ -220,6 +266,8 @@ fun LibraryLandscape(
     onTabSelect: (Int) -> Unit,
     playlists: List<PlaylistWithSteps>,
     studioProjects: List<MusicProjectWithEvents>,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
     compState: ComposerUiState,
     compPlaybackState: com.smaarig.glyphbarcomposer.ui.viewmodel.PlaybackState,
     studioState: MusicStudioUiState,
@@ -228,6 +276,8 @@ fun LibraryLandscape(
     onEditSequence: (PlaylistWithSteps) -> Unit,
     onEditStudio: (MusicProjectWithEvents) -> Unit,
     onSharePlaylist: (PlaylistWithSteps) -> Unit,
+    onSharePlaylistCsv: (PlaylistWithSteps) -> Unit,
+    onSharePlaylistJson: (PlaylistWithSteps) -> Unit,
     onShareStudio: (MusicProjectWithEvents) -> Unit
 ) {
     Row(
@@ -246,7 +296,9 @@ fun LibraryLandscape(
                     composerViewModel.stopPlayback()
                     if (studioState.isAudioPlaying) musicStudioViewModel.toggleMusicPlayback()
                 },
-                isAnyPlaying = compPlaybackState.isPlaying || studioState.isAudioPlaying
+                isAnyPlaying = compPlaybackState.isPlaying || studioState.isAudioPlaying,
+                searchQuery = searchQuery,
+                onSearchQueryChange = onSearchQueryChange
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -268,14 +320,16 @@ fun LibraryLandscape(
             .fillMaxHeight()) {
             if (selectedTab == 0) {
                 SequencesTab(
-                    compPlaybackState.isPlaying,
-                    compPlaybackState.isPaused,
-                    compState.activePlaylistId,
-                    compState.activePresetName,
-                    playlists,
-                    composerViewModel,
-                    onEditSequence,
-                    onSharePlaylist
+                    isPlaying = compPlaybackState.isPlaying,
+                    isPaused = compPlaybackState.isPaused,
+                    activeId = compState.activePlaylistId,
+                    activePresetName = compState.activePresetName,
+                    playlists = playlists,
+                    viewModel = composerViewModel,
+                    onEdit = onEditSequence,
+                    onShareGlyph = onSharePlaylist,
+                    onShareCsv = onSharePlaylistCsv,
+                    onShareJson = onSharePlaylistJson
                 )
             } else {
                 StudioTab(
@@ -290,4 +344,3 @@ fun LibraryLandscape(
         }
     }
 }
-

@@ -143,6 +143,47 @@
                 <data android:scheme="content" android:mimeType="application/json" />
             </intent-filter>
 
+            <!-- CSV Support -->
+            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:mimeType="text/csv" />
+                <data android:scheme="content" android:mimeType="application/csv" />
+                <data android:scheme="content" android:mimeType="text/comma-separated-values" />
+            </intent-filter>
+
+            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/csv" />
+                <data android:mimeType="application/csv" />
+                <data android:mimeType="text/comma-separated-values" />
+            </intent-filter>
+
+            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:host="*" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.csv" />
+            </intent-filter>
+
+            <!-- JSON extension fallback -->
+            <intent-filter android:label="Glyphbar Composer" android:priority="1000">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:host="*" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.json" />
+            </intent-filter>
+
 
         </activity>
 

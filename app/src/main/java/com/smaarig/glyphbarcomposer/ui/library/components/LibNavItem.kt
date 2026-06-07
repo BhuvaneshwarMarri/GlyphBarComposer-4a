@@ -15,11 +15,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.smaarig.glyphbarcomposer.ui.theme.nothingFont
 
 @Composable
 fun LibNavItem(label: String, icon: ImageVector, selected: Boolean, onClick: () -> Unit) {
@@ -31,28 +33,30 @@ fun LibNavItem(label: String, icon: ImageVector, selected: Boolean, onClick: () 
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
+            .clip(RoundedCornerShape(28.dp))
             .clickable { onClick() },
         color = bg,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(28.dp),
         border = if (!selected) BorderStroke(1.dp, Color(0xFF222222)) else null
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Icon(
                 icon,
                 null,
                 tint = if (selected) Color.Black else Color.Gray,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(24.dp)
             )
             Text(
                 label,
                 color = if (selected) Color.Black else Color.Gray,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
+                letterSpacing = 1.sp,
+                fontFamily = nothingFont
             )
         }
     }

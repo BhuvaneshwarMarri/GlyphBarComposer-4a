@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.smaarig.glyphbarcomposer.ui.theme.nothingFont
 
 @Composable
 fun EmptyStateView(icon: ImageVector, title: String, description: String) {
@@ -28,15 +29,25 @@ fun EmptyStateView(icon: ImageVector, title: String, description: String) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(icon, null, tint = Color(0xFF1A1A1A), modifier = Modifier.size(64.dp))
+        Icon(icon, null, tint = Color(0xFF222222), modifier = Modifier.size(80.dp))
         Spacer(Modifier.height(16.dp))
-        Text(title, color = Color.Gray, fontWeight = FontWeight.Black, fontSize = 16.sp)
+        Text(
+            title.uppercase(),
+            color = Color.White,
+            fontWeight = FontWeight.Black,
+            fontSize = 18.sp,
+            fontFamily = nothingFont,
+            letterSpacing = 2.sp
+        )
+        Spacer(Modifier.height(4.dp))
         Text(
             description,
-            color = Color(0xFF333333),
+            color = Color.Gray,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            fontFamily = nothingFont,
+            letterSpacing = 1.sp
         )
     }
 }

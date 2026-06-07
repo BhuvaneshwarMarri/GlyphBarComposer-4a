@@ -27,7 +27,9 @@ fun SequencesTab(
     playlists: List<PlaylistWithSteps>,
     viewModel: ComposerViewModel,
     onEdit: (PlaylistWithSteps) -> Unit,
-    onShare: (PlaylistWithSteps) -> Unit
+    onShareGlyph: (PlaylistWithSteps) -> Unit,
+    onShareCsv: (PlaylistWithSteps) -> Unit,
+    onShareJson: (PlaylistWithSteps) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -71,7 +73,9 @@ fun SequencesTab(
                     onPlay = { viewModel.playSequence(playlist) },
                     onDelete = { viewModel.deletePlaylist(playlist.playlist) },
                     onEdit = { onEdit(playlist) },
-                    onShare = { onShare(playlist) }
+                    onShareGlyph = { onShareGlyph(playlist) },
+                    onShareCsv = { onShareCsv(playlist) },
+                    onShareJson = { onShareJson(playlist) }
                 )
             }
         }

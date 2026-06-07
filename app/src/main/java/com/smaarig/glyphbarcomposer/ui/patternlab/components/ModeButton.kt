@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -20,6 +21,7 @@ fun ModeButton(label: String, selected: Boolean, modifier: Modifier, onClick: ()
     Surface(
         modifier = modifier
             .height(48.dp)
+            .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() },
         color = if (selected) Color.White else Color(0xFF111111),
         shape = RoundedCornerShape(16.dp),
