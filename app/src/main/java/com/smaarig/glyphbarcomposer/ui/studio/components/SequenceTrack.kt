@@ -34,7 +34,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.smaarig.glyphbarcomposer.data.MusicStudioEvent
-import com.smaarig.glyphbarcomposer.ui.getChannelForIndex
+import com.smaarig.glyphbarcomposer.controller.GlyphConstants.getChannelForIndex
 import com.smaarig.glyphbarcomposer.ui.studio.StudioTimelineState
 
 @Composable
