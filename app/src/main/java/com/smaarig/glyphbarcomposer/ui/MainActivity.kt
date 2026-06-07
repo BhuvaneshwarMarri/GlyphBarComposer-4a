@@ -246,7 +246,7 @@ fun MainApp() {
                                 .fillMaxWidth()
                                 .align(Alignment.BottomCenter)
                                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
-                                .padding(horizontal = 24.dp, vertical = 20.dp)
+                                .padding(horizontal = 16.dp, vertical = 20.dp)
                         ) {
                             ModernBottomNavigationBar(navController, screens)
                         }

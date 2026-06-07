@@ -6,11 +6,15 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,8 +41,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -54,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -179,8 +182,8 @@ fun YouTubePlayer(
                 lifecycleOwner.lifecycle.addObserver(this)
 
                 val options = IFramePlayerOptions.Builder(context)
-                    .controls(1) // Show YouTube controls
-                    .fullscreen(0) // Disable fullscreen to prevent crash in dialog
+                    .controls(1)
+                    .fullscreen(0)
                     .build()
 
                 initialize(object : AbstractYouTubePlayerListener() {
@@ -239,9 +242,8 @@ fun GlyphPreviewBar(modifier: Modifier = Modifier) {
                     )
                     Spacer(Modifier.height(16.dp))
 
-                    // Embed YouTube Player directly
                     YouTubePlayer(
-                        videoId = "dQw4w9WgXcQ", // ID from the provided URL
+                        videoId = "dQw4w9WgXcQ",
                         lifecycleOwner = lifecycleOwner
                     )
 
@@ -362,77 +364,111 @@ fun GlyphPreviewBar(modifier: Modifier = Modifier) {
     }
 }
 
+// ─── Nothing-style Bottom Navigation Bar ────────────────────────────────────
+// Selected tab: full-height white pill that visually "hovers" over the dark
+// bar via shadow elevation. Content inside the pill inverts to near-black.
+// Unselected tabs: icon + label in dim gray, no background.
 @Composable
 fun ModernBottomNavigationBar(navController: NavHostController, screens: List<Screen>) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Pure pill — no inset consumption, no outer padding.
-    // The call site (MainActivity bottomBar) owns spacing and insets.
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight(),
-        color = Color(0xFF111111).copy(alpha = 0.92f),
+        color = Color(0xFF111111),
         shape = RoundedCornerShape(36.dp),
-        border = BorderStroke(1.dp, Color(0xFF2A2A2A)),
+        border = BorderStroke(1.dp, Color(0xFF242424)),
         shadowElevation = 24.dp,
         tonalElevation = 0.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
+                // Tight uniform padding so the pill can fill most of the bar height
+                .padding(6.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
             screens.forEach { screen ->
                 val selected = currentRoute == screen.route
-                val animatedScale by animateFloatAsState(
-                    targetValue = if (selected) 1.15f else 1f,
-                    label = "navScale"
+
+                // Pill background: gray when selected, transparent otherwise
+                val pillBg by animateColorAsState(
+                    targetValue = if (selected) Color(0xFFE0E0E0) else Color.Transparent,
+                    animationSpec = spring(stiffness = Spring.StiffnessLow),
+                    label = "pillBg"
                 )
-                val animatedColor by animateColorAsState(
-                    targetValue = if (selected) Color.White else Color.Gray,
-                    label = "navColor"
+                // Content color inverts inside the gray pill for contrast
+                val contentColor by animateColorAsState(
+                    targetValue = if (selected) Color(0xFF111111) else Color(0xFF666666),
+                    animationSpec = spring(stiffness = Spring.StiffnessLow),
+                    label = "contentColor"
+                )
+                // Animate elevation so the pill smoothly "lifts" into view
+                val pillElevation by animateDpAsState(
+                    targetValue = if (selected) 10.dp else 0.dp,
+                    animationSpec = spring(stiffness = Spring.StiffnessLow),
+                    label = "pillElevation"
                 )
 
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                Box(
                     modifier = Modifier
-                        .clip(CircleShape)
-                        .clickable {
+                        .height(52.dp)
+                        .weight(1f)
+                        .padding(horizontal = 3.dp)
+                        // Draw shadow outside the clip so it bleeds onto the dark bar
+                        .shadow(
+                            elevation = pillElevation,
+                            shape = RoundedCornerShape(26.dp),
+                            clip = false,
+                            ambientColor = Color.White.copy(alpha = 0.08f),
+                            spotColor = Color.White.copy(alpha = 0.15f)
+                        )
+                        .clip(RoundedCornerShape(26.dp))
+                        .background(pillBg)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
                             if (currentRoute != screen.route) {
                                 navController.navigate(screen.route) {
                                     popUpTo(navController.graph.startDestinationId)
                                     launchSingleTop = true
                                 }
                             }
-                        }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = screen.icon,
-                        contentDescription = null,
-                        tint = animatedColor,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .scale(animatedScale)
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = screen.label.uppercase(),
-                        color = animatedColor,
-                        fontSize = 8.sp,
-                        fontWeight = if (selected) FontWeight.Black else FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = screen.icon,
+                            contentDescription = null,
+                            tint = contentColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = screen.label.uppercase(),
+                            color = contentColor,
+                            fontSize = 7.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp,
+                            fontFamily = nothingFont
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+// ─── Nothing-style Navigation Rail ──────────────────────────────────────────
+// Same pill treatment as the bottom bar but oriented vertically.
 @Composable
 fun ModernNavigationRail(navController: NavHostController, screens: List<Screen>) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -465,54 +501,87 @@ fun ModernNavigationRail(navController: NavHostController, screens: List<Screen>
                 Spacer(Modifier.height(16.dp))
             }
         },
-        // No windowInsetsPadding here – avoids double-consuming insets on rotation
         modifier = Modifier
             .fillMaxHeight()
-            .width(72.dp)
+            .width(90.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxHeight()
-                .padding(bottom = 16.dp)
+                .padding(horizontal = 8.dp, vertical = 8.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             screens.forEach { screen ->
                 val selected = currentRoute == screen.route
-                val animatedScale by animateFloatAsState(
-                    targetValue = if (selected) 1.2f else 1f,
-                    label = "railScale"
+
+                val pillBg by animateColorAsState(
+                    targetValue = if (selected) Color(0xFFE0E0E0) else Color.Transparent,
+                    animationSpec = spring(stiffness = Spring.StiffnessLow),
+                    label = "railPillBg"
+                )
+                val contentColor by animateColorAsState(
+                    targetValue = if (selected) Color(0xFF111111) else Color(0xFF666666),
+                    animationSpec = spring(stiffness = Spring.StiffnessLow),
+                    label = "railContentColor"
+                )
+                val pillElevation by animateDpAsState(
+                    targetValue = if (selected) 10.dp else 0.dp,
+                    animationSpec = spring(stiffness = Spring.StiffnessLow),
+                    label = "railPillElevation"
                 )
 
-                NavigationRailItem(
-                    selected = selected,
-                    onClick = {
-                        if (currentRoute != screen.route) {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.startDestinationId)
-                                launchSingleTop = true
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                        .padding(vertical = 2.dp)
+                        .shadow(
+                            elevation = pillElevation,
+                            shape = RoundedCornerShape(27.dp),
+                            clip = false,
+                            ambientColor = Color.White.copy(alpha = 0.08f),
+                            spotColor = Color.White.copy(alpha = 0.15f)
+                        )
+                        .clip(RoundedCornerShape(27.dp))
+                        .background(pillBg)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            if (currentRoute != screen.route) {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.startDestinationId)
+                                    launchSingleTop = true
+                                }
                             }
-                        }
-                    },
-                    icon = {
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
                         Icon(
                             imageVector = screen.icon,
-                            contentDescription = screen.label,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .scale(animatedScale)
+                            contentDescription = null,
+                            tint = contentColor,
+                            modifier = Modifier.size(22.dp)
                         )
-                    },
-                    label = null,
-                    alwaysShowLabel = false,
-                    colors = NavigationRailItemDefaults.colors(
-                        selectedIconColor = Color.White,
-                        unselectedIconColor = Color.Gray,
-                        indicatorColor = Color.White.copy(0.12f)
-                    )
-                )
-                Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = screen.label.uppercase(),
+                            color = contentColor,
+                            fontSize = 7.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp,
+                            fontFamily = nothingFont
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(4.dp))
             }
         }
     }
