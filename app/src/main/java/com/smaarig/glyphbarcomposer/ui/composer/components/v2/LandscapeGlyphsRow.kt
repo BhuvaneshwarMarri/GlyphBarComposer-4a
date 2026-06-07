@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,20 +40,13 @@ fun LandscapeGlyphsRow(
             .border(1.dp, Color(0xFF222222), RoundedCornerShape(20.dp))
             .padding(12.dp)
             .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {
         repeat(7) { index ->
             val isRed = index == 6
             val isSelected = selectedChannelIndex == index
             val intensity = if (isPlaying) playbackIntensities[index] else glyphIntensities[index]
-
-            if (isRed) {
-                Box(modifier = Modifier
-                    .width(1.dp)
-                    .height(62.dp)
-                    .background(Color(0xFF2A2A2A)))
-            }
 
             GlyphSquareButton(
                 index = index,
@@ -65,7 +59,9 @@ fun LandscapeGlyphsRow(
                 },
                 onSelect = { onChannelSelect(index) },
                 enabled = !isPlaying,
-                modifier = Modifier.testTag("glyph_button_landscape_$index")
+                modifier = Modifier
+                    .size(60.dp)
+                    .testTag("glyph_button_landscape_$index")
             )
         }
     }

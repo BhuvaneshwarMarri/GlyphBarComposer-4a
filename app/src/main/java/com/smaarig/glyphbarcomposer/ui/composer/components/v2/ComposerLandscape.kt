@@ -89,7 +89,7 @@ fun ComposerLandscape(
                 // Left Panel: Horizontal Glyphs & Horizontal Controls
                 Column(
                     modifier = Modifier
-                        .weight(1f)
+                        .weight(1.2f)
                         .fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -121,7 +121,7 @@ fun ComposerLandscape(
                     onStopPlayback = onStopPlayback,
                     onSave = onSavePlaylist,
                     modifier = Modifier
-                        .weight(1f)
+                        .weight(0.8f)
                         .fillMaxHeight()
                 )
             }
