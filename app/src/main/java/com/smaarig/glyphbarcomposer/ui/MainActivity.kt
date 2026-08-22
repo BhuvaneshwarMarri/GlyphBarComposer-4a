@@ -71,6 +71,9 @@ import com.smaarig.glyphbarcomposer.ui.hooks.HooksScreen
 import com.smaarig.glyphbarcomposer.ui.library.LibraryScreen
 import com.smaarig.glyphbarcomposer.ui.patternlab.PatternLabScreen
 import com.smaarig.glyphbarcomposer.ui.studio.MusicStudioScreen
+import com.smaarig.glyphbarcomposer.ui.components.ModernNavigationRail
+import com.smaarig.glyphbarcomposer.ui.components.ModernBottomNavigationBar
+import com.smaarig.glyphbarcomposer.ui.components.GlyphPreviewBar
 import com.smaarig.glyphbarcomposer.ui.theme.GlyphBarComposerTheme
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.GlyphViewModelFactory
@@ -246,7 +249,7 @@ fun MainApp() {
                                 .fillMaxWidth()
                                 .align(Alignment.BottomCenter)
                                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
-                                .padding(horizontal = 24.dp, vertical = 20.dp)
+                                .padding(horizontal = 16.dp, vertical = 20.dp)
                         ) {
                             ModernBottomNavigationBar(navController, screens)
                         }
@@ -295,17 +298,17 @@ fun NavHostContainer(
                     // Slide to left (moving forward in list)
                     slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(400, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(400))
+                        animationSpec = tween(500, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(500))
                 } else {
                     // Slide to right (moving backward in list)
                     slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(400, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(400))
+                        animationSpec = tween(500, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(500))
                 }
             } else {
-                fadeIn(animationSpec = tween(400))
+                fadeIn(animationSpec = tween(500))
             }
         },
         exitTransition = {
@@ -319,17 +322,29 @@ fun NavHostContainer(
                 if (targetIdx > initialIdx) {
                     slideOutOfContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(400, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(400))
+                        animationSpec = tween(500, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(500))
                 } else {
                     slideOutOfContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(400, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(400))
+                        animationSpec = tween(500, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(500))
                 }
             } else {
-                fadeOut(animationSpec = tween(400))
+                fadeOut(animationSpec = tween(500))
             }
+        },
+        popEnterTransition = {
+            slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(500, easing = FastOutSlowInEasing)
+            ) + fadeIn(animationSpec = tween(500))
+        },
+        popExitTransition = {
+            slideOutOfContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(500, easing = FastOutSlowInEasing)
+            ) + fadeOut(animationSpec = tween(500))
         }
     ) {
         composable(Screen.SplashScreen.route) {

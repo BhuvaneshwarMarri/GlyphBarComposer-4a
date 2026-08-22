@@ -15,7 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
-import com.smaarig.glyphbarcomposer.ui.SectionLabel
+import com.smaarig.glyphbarcomposer.ui.components.SectionLabel
 import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
 
 @Composable

@@ -25,7 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.smaarig.glyphbarcomposer.ui.intensityColor
+import com.smaarig.glyphbarcomposer.ui.theme.intensityColor
 
 @Composable
 fun GlyphScrollPicker(
