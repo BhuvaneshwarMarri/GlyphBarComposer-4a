@@ -1,0 +1,9 @@
+com.nothing.cardsdk.glyph-matrix-sdk-pngs-0 /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/core/glyph-matrix-sdk/build/generated/res/pngs/debug
+com.nothing.cardsdk.glyph-matrix-sdk-updated_navigation_xml-1 /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/core/glyph-matrix-sdk/build/generated/updated_navigation_xml/debug
+com.nothing.cardsdk.glyph-matrix-sdk-mergeDebugResources-2 /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/core/glyph-matrix-sdk/build/intermediates/incremental/debug/mergeDebugResources/merged.dir
+com.nothing.cardsdk.glyph-matrix-sdk-mergeDebugResources-3 /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/core/glyph-matrix-sdk/build/intermediates/incremental/debug/mergeDebugResources/stripped.dir
+com.nothing.cardsdk.glyph-matrix-sdk-debug-4 /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/core/glyph-matrix-sdk/build/intermediates/merged_res/debug/mergeDebugResources
+com.nothing.cardsdk.glyph-matrix-sdk-debug-5 /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/core/glyph-matrix-sdk/build/intermediates/packaged_res/debug/packageDebugResources
+com.nothing.cardsdk.glyph-matrix-sdk-debug-6 /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/core/glyph-matrix-sdk/src/debug/res
+com.nothing.cardsdk.glyph-matrix-sdk-main-7 /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/core/glyph-matrix-sdk/src/main/res
+gradleHome-0 /home/marribhuvaneshwar/.gradle

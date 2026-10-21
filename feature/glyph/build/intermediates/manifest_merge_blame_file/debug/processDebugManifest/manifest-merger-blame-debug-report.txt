@@ -1,0 +1,83 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    xmlns:tools="http://schemas.android.com/tools"
+4    package="com.smaarig.glyphbarcomposer.feature.glyph" >
+5
+6    <uses-sdk android:minSdkVersion="33" />
+6-->INJECTED
+6-->INJECTED
+7
+8    <uses-permission android:name="com.nothing.ketchum.permission.ENABLE" />
+8-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:5:5-77
+8-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:5:22-74
+9    <uses-permission
+9-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:6:5-129
+10        android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+10-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:6:22-90
+11        tools:ignore="ProtectedPermissions" />
+11-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:6:91-126
+12    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+12-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:7:5-77
+12-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:7:22-74
+13
+14    <application>
+14-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:9:5-41:19
+15        <service
+15-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:10:9-17:19
+16            android:name="com.smaarig.glyphbarcomposer.service.GlyphPlaybackService"
+16-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:11:13-85
+17            android:exported="false"
+17-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:13:13-37
+18            android:foregroundServiceType="specialUse" >
+18-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:12:13-55
+19            <property
+19-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:14:13-16:63
+20                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+20-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:15:17-76
+21                android:value="Playback of glyph sequences" />
+21-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:16:17-60
+22        </service>
+23        <service
+23-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:19:9-26:19
+24            android:name="com.smaarig.glyphbarcomposer.service.BatteryService"
+24-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:20:13-79
+25            android:exported="false"
+25-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:22:13-37
+26            android:foregroundServiceType="specialUse" >
+26-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:21:13-55
+27            <property
+27-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:14:13-16:63
+28                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+28-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:15:17-76
+29                android:value="Battery monitoring for Glyph lights" />
+29-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:16:17-60
+30        </service>
+31        <service
+31-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:28:9-40:19
+32            android:name="com.smaarig.glyphbarcomposer.service.GlyphNotificationListenerService"
+32-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:29:13-97
+33            android:exported="true"
+33-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:33:13-36
+34            android:foregroundServiceType="specialUse"
+34-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:32:13-55
+35            android:label="Glyph Composer Notification Sync"
+35-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:30:13-61
+36            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" >
+36-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:31:13-87
+37            <intent-filter>
+37-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:34:13-36:29
+38                <action android:name="android.service.notification.NotificationListenerService" />
+38-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:35:17-99
+38-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:35:25-96
+39            </intent-filter>
+40
+41            <property
+41-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:14:13-16:63
+42                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+42-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:15:17-76
+43                android:value="Notification synchronization for Glyph lights" />
+43-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:16:17-60
+44        </service>
+45    </application>
+46
+47</manifest>

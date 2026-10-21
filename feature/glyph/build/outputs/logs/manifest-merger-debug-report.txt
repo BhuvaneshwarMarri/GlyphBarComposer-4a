@@ -1,0 +1,74 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:2:1-43:12
+INJECTED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:2:1-43:12
+	package
+		INJECTED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml
+	xmlns:tools
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:3:5-51
+	xmlns:android
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:2:11-69
+uses-permission#com.nothing.ketchum.permission.ENABLE
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:5:5-77
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:5:22-74
+uses-permission#android.permission.BIND_NOTIFICATION_LISTENER_SERVICE
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:6:5-129
+	tools:ignore
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:6:91-126
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:6:22-90
+uses-permission#android.permission.POST_NOTIFICATIONS
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:7:5-77
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:7:22-74
+application
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:9:5-41:19
+service#com.smaarig.glyphbarcomposer.service.GlyphPlaybackService
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:10:9-17:19
+	android:exported
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:13:13-37
+	android:foregroundServiceType
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:12:13-55
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:11:13-85
+property#android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:14:13-16:63
+	android:value
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:16:17-60
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:15:17-76
+service#com.smaarig.glyphbarcomposer.service.BatteryService
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:19:9-26:19
+	android:exported
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:22:13-37
+	android:foregroundServiceType
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:21:13-55
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:20:13-79
+service#com.smaarig.glyphbarcomposer.service.GlyphNotificationListenerService
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:28:9-40:19
+	android:label
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:30:13-61
+	android:exported
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:33:13-36
+	android:permission
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:31:13-87
+	android:foregroundServiceType
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:32:13-55
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:29:13-97
+intent-filter#action:name:android.service.notification.NotificationListenerService
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:34:13-36:29
+action#android.service.notification.NotificationListenerService
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:35:17-99
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml:35:25-96
+uses-sdk
+INJECTED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml
+INJECTED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/glyph/src/main/AndroidManifest.xml

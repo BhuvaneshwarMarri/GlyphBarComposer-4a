@@ -1,0 +1,1 @@
+com.smaarig.glyphbarcomposer.feature.glyph

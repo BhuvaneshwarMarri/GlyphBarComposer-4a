@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <activity
+            android:name="com.smaarig.glyphbarcomposer.ui.widget.SequencePlayerConfigActivity"
+            android:exported="true"
+            android:label="@string/select_sequence_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name="com.smaarig.glyphbarcomposer.ui.widget.WidgetUpdateReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.smaarig.glyphbarcomposer.ACTION_UPDATE_WIDGETS" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name="com.smaarig.glyphbarcomposer.ui.widget.GlyphSequencePlayerWidgetReceiver"
+            android:label="@string/widget_sequence_player_name"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/glance_sequence_player_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name="com.smaarig.glyphbarcomposer.ui.widget.WidgetUpdateReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.smaarig.glyphbarcomposer.ACTION_UPDATE_WIDGETS" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name="com.smaarig.glyphbarcomposer.ui.widget.GlyphComposerHorizontalWidgetReceiver"
+            android:label="@string/widget_name_horizontal"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/glance_horizontal_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name="com.smaarig.glyphbarcomposer.ui.widget.WidgetUpdateReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.smaarig.glyphbarcomposer.ACTION_UPDATE_WIDGETS" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name="com.smaarig.glyphbarcomposer.ui.widget.GlyphComposerVerticalWidgetReceiver"
+            android:label="@string/widget_name_vertical"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/glance_vertical_widget_info" />
+        </receiver>
+    </application>
+
+</manifest>

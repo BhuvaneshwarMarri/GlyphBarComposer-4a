@@ -1,0 +1,134 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.smaarig.glyphbarcomposer.feature.widgets" >
+4
+5    <uses-sdk android:minSdkVersion="33" />
+5-->INJECTED
+5-->INJECTED
+6
+7    <application>
+7-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:4:5-73:19
+8        <activity
+8-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:5:9-12:20
+9            android:name="com.smaarig.glyphbarcomposer.ui.widget.SequencePlayerConfigActivity"
+9-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:6:13-95
+10            android:exported="true"
+10-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:7:13-36
+11            android:label="@string/select_sequence_title" >
+11-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:8:13-58
+12            <intent-filter>
+12-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:9:13-11:29
+13                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+13-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:10:17-87
+13-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:10:25-84
+14            </intent-filter>
+15        </activity>
+16
+17        <receiver
+17-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:14:9-20:20
+18            android:name="com.smaarig.glyphbarcomposer.ui.widget.WidgetUpdateReceiver"
+18-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:15:13-87
+19            android:exported="false" >
+19-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:16:13-37
+20            <intent-filter>
+20-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:17:13-19:29
+21                <action android:name="com.smaarig.glyphbarcomposer.ACTION_UPDATE_WIDGETS" />
+21-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:18:17-93
+21-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:18:25-90
+22            </intent-filter>
+23        </receiver>
+24        <receiver
+24-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:22:9-32:20
+25            android:name="com.smaarig.glyphbarcomposer.ui.widget.GlyphSequencePlayerWidgetReceiver"
+25-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:23:13-100
+26            android:exported="true"
+26-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:25:13-36
+27            android:label="@string/widget_sequence_player_name" >
+27-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:24:13-64
+28            <intent-filter>
+28-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:26:13-28:29
+29                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+29-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:27:17-84
+29-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:27:25-81
+30            </intent-filter>
+31
+32            <meta-data
+32-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:29:13-31:78
+33                android:name="android.appwidget.provider"
+33-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:30:17-58
+34                android:resource="@xml/glance_sequence_player_widget_info" />
+34-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:31:17-75
+35        </receiver>
+36        <receiver
+36-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:14:9-20:20
+37            android:name="com.smaarig.glyphbarcomposer.ui.widget.WidgetUpdateReceiver"
+37-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:15:13-87
+38            android:exported="false" >
+38-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:16:13-37
+39            <intent-filter>
+39-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:17:13-19:29
+40                <action android:name="com.smaarig.glyphbarcomposer.ACTION_UPDATE_WIDGETS" />
+40-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:18:17-93
+40-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:18:25-90
+41            </intent-filter>
+42        </receiver>
+43        <receiver
+43-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:42:9-52:20
+44            android:name="com.smaarig.glyphbarcomposer.ui.widget.GlyphComposerHorizontalWidgetReceiver"
+44-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:43:13-104
+45            android:exported="true"
+45-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:45:13-36
+46            android:label="@string/widget_name_horizontal" >
+46-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:44:13-59
+47            <intent-filter>
+47-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:26:13-28:29
+48                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+48-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:27:17-84
+48-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:27:25-81
+49            </intent-filter>
+50
+51            <meta-data
+51-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:29:13-31:78
+52                android:name="android.appwidget.provider"
+52-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:30:17-58
+53                android:resource="@xml/glance_horizontal_widget_info" />
+53-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:31:17-75
+54        </receiver>
+55        <receiver
+55-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:14:9-20:20
+56            android:name="com.smaarig.glyphbarcomposer.ui.widget.WidgetUpdateReceiver"
+56-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:15:13-87
+57            android:exported="false" >
+57-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:16:13-37
+58            <intent-filter>
+58-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:17:13-19:29
+59                <action android:name="com.smaarig.glyphbarcomposer.ACTION_UPDATE_WIDGETS" />
+59-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:18:17-93
+59-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:18:25-90
+60            </intent-filter>
+61        </receiver>
+62        <receiver
+62-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:62:9-72:20
+63            android:name="com.smaarig.glyphbarcomposer.ui.widget.GlyphComposerVerticalWidgetReceiver"
+63-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:63:13-102
+64            android:exported="true"
+64-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:65:13-36
+65            android:label="@string/widget_name_vertical" >
+65-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:64:13-57
+66            <intent-filter>
+66-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:26:13-28:29
+67                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+67-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:27:17-84
+67-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:27:25-81
+68            </intent-filter>
+69
+70            <meta-data
+70-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:29:13-31:78
+71                android:name="android.appwidget.provider"
+71-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:30:17-58
+72                android:resource="@xml/glance_vertical_widget_info" />
+72-->/home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:31:17-75
+73        </receiver>
+74    </application>
+75
+76</manifest>

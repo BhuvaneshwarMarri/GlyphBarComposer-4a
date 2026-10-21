@@ -1,0 +1,23 @@
+com.smaarig.glyphbarcomposer.core.ui
+color black
+color purple_200
+color purple_500
+color purple_700
+color teal_200
+color teal_700
+color white
+drawable ic_launcher_foreground
+drawable ic_power_off
+font nothing_font
+string app_name
+string no_sequences_found
+string select_sequence_title
+string widget_description_quick
+string widget_horizontal_description
+string widget_name_horizontal
+string widget_name_vertical
+string widget_no_sequence_selected
+string widget_sequence_player_description
+string widget_sequence_player_name
+string widget_vertical_description
+style Theme_GlyphBarComposer

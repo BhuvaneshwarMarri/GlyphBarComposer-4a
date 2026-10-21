@@ -1,0 +1,80 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:2:1-75:12
+INJECTED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:2:1-75:12
+	package
+		INJECTED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:2:11-69
+application
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:4:5-73:19
+activity#com.smaarig.glyphbarcomposer.ui.widget.SequencePlayerConfigActivity
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:5:9-12:20
+	android:label
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:8:13-58
+	android:exported
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:7:13-36
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:6:13-95
+intent-filter#action:name:android.appwidget.action.APPWIDGET_CONFIGURE
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:9:13-11:29
+action#android.appwidget.action.APPWIDGET_CONFIGURE
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:10:17-87
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:10:25-84
+receiver#com.smaarig.glyphbarcomposer.ui.widget.WidgetUpdateReceiver
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:14:9-20:20
+	android:exported
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:16:13-37
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:15:13-87
+intent-filter#action:name:com.smaarig.glyphbarcomposer.ACTION_UPDATE_WIDGETS
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:17:13-19:29
+action#com.smaarig.glyphbarcomposer.ACTION_UPDATE_WIDGETS
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:18:17-93
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:18:25-90
+receiver#com.smaarig.glyphbarcomposer.ui.widget.GlyphSequencePlayerWidgetReceiver
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:22:9-32:20
+	android:label
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:24:13-64
+	android:exported
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:25:13-36
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:23:13-100
+intent-filter#action:name:android.appwidget.action.APPWIDGET_UPDATE
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:26:13-28:29
+action#android.appwidget.action.APPWIDGET_UPDATE
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:27:17-84
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:27:25-81
+meta-data#android.appwidget.provider
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:29:13-31:78
+	android:resource
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:31:17-75
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:30:17-58
+receiver#com.smaarig.glyphbarcomposer.ui.widget.GlyphComposerHorizontalWidgetReceiver
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:42:9-52:20
+	android:label
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:44:13-59
+	android:exported
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:45:13-36
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:43:13-104
+receiver#com.smaarig.glyphbarcomposer.ui.widget.GlyphComposerVerticalWidgetReceiver
+ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:62:9-72:20
+	android:label
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:64:13-57
+	android:exported
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:65:13-36
+	android:name
+		ADDED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml:63:13-102
+uses-sdk
+INJECTED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml
+INJECTED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /home/marribhuvaneshwar/Projects/Projects/GlyphBarComposer4a/feature/widgets/src/main/AndroidManifest.xml

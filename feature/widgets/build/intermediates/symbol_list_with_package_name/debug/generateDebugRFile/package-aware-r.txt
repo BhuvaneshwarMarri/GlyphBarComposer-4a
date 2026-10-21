@@ -1,0 +1,15 @@
+com.smaarig.glyphbarcomposer.feature.widgets
+string app_name
+string no_sequences_found
+string select_sequence_title
+string widget_description_quick
+string widget_horizontal_description
+string widget_name_horizontal
+string widget_name_vertical
+string widget_no_sequence_selected
+string widget_sequence_player_description
+string widget_sequence_player_name
+string widget_vertical_description
+xml glance_horizontal_widget_info
+xml glance_sequence_player_widget_info
+xml glance_vertical_widget_info
