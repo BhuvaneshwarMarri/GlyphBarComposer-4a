@@ -39,8 +39,10 @@ class MusicStudioViewModelTest {
         every { Log.w(any<String>(), any<String>()) } returns 0
         every { Log.i(any(), any()) } returns 0
 
+        mockkObject(GlyphController.Companion)
         mockkStatic(GlyphController::class)
         every { GlyphController.getInstance(any()) } returns glyphController
+        every { GlyphController.Companion.getInstance(any()) } returns glyphController
         every { glyphController.isPlaying } returns MutableStateFlow(false)
         every { glyphController.activeOwner } returns MutableStateFlow(GlyphController.GlyphOwner.NONE)
         

@@ -3,10 +3,12 @@ package com.smaarig.glyphbarcomposer.ui.viewmodel
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.provider.OpenableColumns
 import android.util.Log
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.smaarig.glyphbarcomposer.controller.toNormalizedChannelMap
 import com.smaarig.glyphbarcomposer.data.MusicProjectWithEvents
 import com.smaarig.glyphbarcomposer.data.MusicStudioEvent
 import com.smaarig.glyphbarcomposer.data.MusicStudioProject
@@ -122,7 +124,8 @@ class LibraryViewModel(
                     steps.put(JSONObject().apply {
                         put("duration", step.durationMs)
                         val intensities = JSONObject()
-                        step.channelIntensities.forEach { (ch, intensity) ->
+                        val normalizedMap = step.channelIntensities.toNormalizedChannelMap()
+                        normalizedMap.forEach { (ch, intensity) ->
                             intensities.put(ch.toString(), intensity)
                         }
                         put("channels", intensities)
@@ -165,7 +168,8 @@ class LibraryViewModel(
                         put("timestamp", event.timestampMs)
                         put("duration", event.durationMs)
                         val intensities = JSONObject()
-                        event.channelIntensities.forEach { (ch, intensity) ->
+                        val normalizedMap = event.channelIntensities.toNormalizedChannelMap()
+                        normalizedMap.forEach { (ch, intensity) ->
                             intensities.put(ch.toString(), intensity)
                         }
                         put("channels", intensities)
@@ -252,48 +256,80 @@ class LibraryViewModel(
                     return@launch
                 }
 
-                // 1. Try CSV
-                if (!content.trimStart().startsWith("{") && !content.trimStart().startsWith("[")) {
+                val fileDisplayName = getFileNameFromUri(context, uri)
+
+                // 1. Try JSON parsing first if content looks like JSON
+                val trimmed = content.trimStart()
+                if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+                    if (trimmed.startsWith("{")) {
+                        try {
+                            val json = JSONObject(content)
+                            val type = json.optString("type")
+
+                            if (type == "sequence") {
+                                val name = json.optString("name")
+                                    .ifBlank { fileDisplayName ?: "Imported Sequence" }
+                                val steps = parseLegacySequence(json)
+                                _pendingImport.value = PendingImport(name, steps)
+                                return@launch
+                            } else if (type == "studio") {
+                                val name = json.optString("name")
+                                    .ifBlank { fileDisplayName ?: "Imported Studio" }
+                                importStudio(json, name, null)
+                                return@launch
+                            }
+                        } catch (e: Exception) {
+                            Log.d(TAG, "JSONObject parse failed, trying GlyphSequenceImporter: ${e.message}")
+                        }
+                    }
+
+                    // Try Custom JSON (GlyphJsonFormat or List<List<Int>>)
                     try {
-                        val steps = GlyphSequenceImporter.importFromCsv(content)
-                        _pendingImport.value = PendingImport("Imported CSV", steps)
+                        val steps = GlyphSequenceImporter.importFromJson(content)
+                        val name = fileDisplayName ?: "Imported Sequence"
+                        _pendingImport.value = PendingImport(name, steps)
                         return@launch
                     } catch (e: Exception) {
-                        Log.d(TAG, "CSV import failed: ${e.message}")
+                        Log.d(TAG, "GlyphSequenceImporter JSON import failed: ${e.message}")
                     }
                 }
 
-                // 2. Try Custom JSON
+                // 2. Try CSV Import
                 try {
-                    val steps = GlyphSequenceImporter.importFromJson(content)
-                    _pendingImport.value = PendingImport("Imported JSON", steps)
+                    val steps = GlyphSequenceImporter.importFromCsv(content)
+                    val name = fileDisplayName ?: "Imported CSV"
+                    _pendingImport.value = PendingImport(name, steps)
                     return@launch
                 } catch (e: Exception) {
-                    Log.d(TAG, "Custom JSON import failed: ${e.message}")
+                    Log.d(TAG, "CSV import failed: ${e.message}")
                 }
 
-                // 3. Try Legacy JSON
-                try {
-                    val json = JSONObject(content)
-                    val type = json.optString("type")
-                    val name = json.optString("name", "Imported")
-
-                    when (type) {
-                        "sequence" -> {
-                            val steps = parseLegacySequence(json)
-                            _pendingImport.value = PendingImport(name, steps)
-                        }
-                        "studio" -> importStudio(json, name, null)
-                        else -> _importError.value = "Unknown file type: $type"
-                    }
-                } catch (e: Exception) {
-                    _importError.value = "Invalid file format"
-                }
+                _importError.value = "Invalid or unsupported file format"
 
             } catch (e: Exception) {
                 Log.e(TAG, "importItem failed", e)
                 _importError.value = "Import failed: ${e.message}"
             }
+        }
+    }
+
+    private fun getFileNameFromUri(context: Context, uri: android.net.Uri): String? {
+        return try {
+            var name: String? = null
+            if (uri.scheme == "content") {
+                context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        if (idx != -1) name = cursor.getString(idx)
+                    }
+                }
+            }
+            if (name == null) {
+                name = uri.path?.let { File(it).name }
+            }
+            name?.substringBeforeLast(".")
+        } catch (e: Exception) {
+            null
         }
     }
 
@@ -307,7 +343,8 @@ class LibraryViewModel(
             val audioFile = extracted.find { it.name == "audio.mp3" }
 
             val json = JSONObject(jsonFile.readText(Charsets.UTF_8))
-            val name = json.optString("name", "Imported Project")
+            val defaultName = getFileNameFromUri(context, uri) ?: "Imported Project"
+            val name = json.optString("name", defaultName)
 
             var finalAudioPath: String? = null
             if (audioFile != null && audioFile.exists()) {
@@ -335,15 +372,15 @@ class LibraryViewModel(
 
         for (i in 0 until stepsJson.length()) {
             val s = stepsJson.getJSONObject(i)
-            val channels = mutableMapOf<Int, Int>()
+            val channelsMap = mutableMapOf<Int, Int>()
             val chJson = s.getJSONObject("channels")
-            chJson.keys().forEach { ch -> channels[ch.toInt()] = chJson.getInt(ch) }
+            chJson.keys().forEach { ch -> channelsMap[ch.toInt()] = chJson.getInt(ch) }
             steps.add(
                 SequenceStep(
                     stepId = 0,
                     playlistId = 0,
                     stepIndex = i,
-                    channelIntensities = channels,
+                    channelIntensities = channelsMap.toNormalizedChannelMap(),
                     durationMs = s.getInt("duration")
                 )
             )
@@ -357,15 +394,15 @@ class LibraryViewModel(
 
         for (i in 0 until eventsJson.length()) {
             val e = eventsJson.getJSONObject(i)
-            val channels = mutableMapOf<Int, Int>()
+            val channelsMap = mutableMapOf<Int, Int>()
             val chJson = e.getJSONObject("channels")
-            chJson.keys().forEach { ch -> channels[ch.toInt()] = chJson.getInt(ch) }
+            chJson.keys().forEach { ch -> channelsMap[ch.toInt()] = chJson.getInt(ch) }
             events.add(
                 MusicStudioEvent(
                     id = 0,
                     projectId = 0,
                     timestampMs = e.getLong("timestamp"),
-                    channelIntensities = channels,
+                    channelIntensities = channelsMap.toNormalizedChannelMap(),
                     durationMs = e.getInt("duration")
                 )
             )
@@ -373,7 +410,7 @@ class LibraryViewModel(
 
         val project = MusicStudioProject(
             id = 0,
-            name = "$name (Imported)",
+            name = if (name.contains("(Imported)")) name else "$name (Imported)",
             localAudioPath = audioPath ?: "",
             localGlyphPath = null
         )

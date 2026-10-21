@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.nothing.ketchum.Glyph
 import com.smaarig.glyphbarcomposer.controller.GlyphConstants
 import com.smaarig.glyphbarcomposer.controller.GlyphController
+import com.smaarig.glyphbarcomposer.controller.getIntensityForIndex
 import com.smaarig.glyphbarcomposer.data.Playlist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import com.smaarig.glyphbarcomposer.data.SequenceStep
@@ -357,7 +358,7 @@ class PatternLabViewModel(
                 while (true) {
                     for (step in steps) {
                         _uiState.update { state ->
-                            val newList = channels.map { ch -> step.channelIntensities[ch] ?: 0 }
+                            val newList = channels.mapIndexed { i, _ -> step.channelIntensities.getIntensityForIndex(i) }
                             state.copy(currentPreviewIntensities = newList)
                         }
                         glyphController.applyGlyphStateWithIntensities(

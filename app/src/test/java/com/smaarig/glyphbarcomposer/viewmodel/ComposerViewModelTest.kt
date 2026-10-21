@@ -13,6 +13,7 @@ import com.smaarig.glyphbarcomposer.ui.viewmodel.ComposerViewModel
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
@@ -50,8 +51,10 @@ class ComposerViewModelTest {
         every { application.applicationContext } returns application
 
         // Mock GlyphController
+        mockkObject(GlyphController.Companion)
         mockkStatic(GlyphController::class)
         every { GlyphController.getInstance(any()) } returns glyphController
+        every { GlyphController.Companion.getInstance(any()) } returns glyphController
         
         // Mock StateFlows in GlyphController
         every { glyphController.isPlaying } returns MutableStateFlow(false)

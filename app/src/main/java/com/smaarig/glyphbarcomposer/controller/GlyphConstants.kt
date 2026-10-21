@@ -29,3 +29,38 @@ object GlyphConstants {
         else -> 0
     }
 }
+
+/**
+ * Extension on Map<Int, Int> representing channel intensities.
+ * Safely looks up intensity (0..3) for channel at 0-based index (0..6).
+ * Handles maps keyed by either GlyphConstants.PHONE_4A_CHANNELS[index] or 0-based index (0..6).
+ */
+fun Map<Int, Int>.getIntensityForIndex(index: Int): Int {
+    val ch = GlyphConstants.getChannelForIndex(index)
+    return this[ch] ?: this[index] ?: 0
+}
+
+/**
+ * Extension on Map<Int, Int> representing channel intensities.
+ * Safely looks up intensity (0..3) for the given channel code constant.
+ * Handles maps keyed by either channel code or 0-based index.
+ */
+fun Map<Int, Int>.getIntensityForChannel(channelCode: Int): Int {
+    val idx = GlyphConstants.PHONE_4A_CHANNELS.indexOf(channelCode)
+    return this[channelCode] ?: (if (idx >= 0) this[idx] else null) ?: 0
+}
+
+/**
+ * Converts any channel intensity map (whether keyed by 0..6 or channel codes)
+ * into a standardized map where keys are always GlyphConstants.PHONE_4A_CHANNELS[i].
+ */
+fun Map<Int, Int>.toNormalizedChannelMap(): Map<Int, Int> {
+    val result = mutableMapOf<Int, Int>()
+    for (i in 0..6) {
+        val intensity = getIntensityForIndex(i)
+        if (intensity > 0) {
+            result[GlyphConstants.getChannelForIndex(i)] = intensity
+        }
+    }
+    return result
+}

@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.nothing.ketchum.Glyph
 import com.smaarig.glyphbarcomposer.controller.GlyphConstants
 import com.smaarig.glyphbarcomposer.controller.GlyphController
+import com.smaarig.glyphbarcomposer.controller.getIntensityForIndex
 import com.smaarig.glyphbarcomposer.data.Playlist
 import com.smaarig.glyphbarcomposer.data.PlaylistWithSteps
 import com.smaarig.glyphbarcomposer.data.SequenceStep
@@ -155,7 +156,9 @@ class ComposerViewModel(
 
         _uiState.update {
             it.copy(
-                glyphIntensities = channels.map { ch -> step.channelIntensities[ch] ?: 0 },
+                glyphIntensities = channels.mapIndexed { i, _ ->
+                    step.channelIntensities.getIntensityForIndex(i)
+                },
                 durationMs = step.durationMs.toFloat()
             )
         }

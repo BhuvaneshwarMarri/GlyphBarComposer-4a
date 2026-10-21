@@ -120,6 +120,7 @@ fun ComposerLandscape(
                     onStartPlayback = onStartPlayback,
                     onStopPlayback = onStopPlayback,
                     onSave = onSavePlaylist,
+                    initialName = uiState.sequenceName,
                     modifier = Modifier
                         .weight(0.8f)
                         .fillMaxHeight()

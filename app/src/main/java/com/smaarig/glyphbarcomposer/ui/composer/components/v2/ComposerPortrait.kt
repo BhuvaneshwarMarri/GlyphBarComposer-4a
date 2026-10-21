@@ -125,6 +125,7 @@ fun ComposerPortrait(
                     onStartPlayback = onStartPlayback,
                     onStopPlayback = onStopPlayback,
                     onSave = onSavePlaylist,
+                    initialName = uiState.sequenceName,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()

@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.smaarig.glyphbarcomposer.data.MusicStudioEvent
 import com.smaarig.glyphbarcomposer.controller.GlyphConstants.getChannelForIndex
+import com.smaarig.glyphbarcomposer.controller.getIntensityForIndex
 import com.smaarig.glyphbarcomposer.ui.studio.StudioTimelineState
 
 @Composable
@@ -271,8 +272,7 @@ fun SequenceBlock(
 
 @Composable
 fun PatternDot(event: MusicStudioEvent, index: Int) {
-    val ch = getChannelForIndex(index)
-    val intensity = event.channelIntensities[ch] ?: 0
+    val intensity = event.channelIntensities.getIntensityForIndex(index)
     val isRed = index == 6
     Box(
         modifier = Modifier

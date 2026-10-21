@@ -19,11 +19,11 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,7 +52,8 @@ fun LibraryHeader(
     onStopAll: () -> Unit,
     isAnyPlaying: Boolean,
     searchQuery: String,
-    onSearchQueryChange: (String) -> Unit
+    onSearchQueryChange: (String) -> Unit,
+    onImportClick: () -> Unit = {}
 ) {
     var isSearchVisible by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
@@ -111,6 +112,15 @@ fun LibraryHeader(
                             })
                         )
                     }
+                }
+
+                IconButton(onClick = onImportClick) {
+                    Icon(
+                        Icons.Default.FileDownload,
+                        "Import File",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
 
                 IconButton(onClick = {

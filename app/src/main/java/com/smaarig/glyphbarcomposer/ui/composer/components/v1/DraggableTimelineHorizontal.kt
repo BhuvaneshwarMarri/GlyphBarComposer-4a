@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import com.smaarig.glyphbarcomposer.controller.GlyphConstants.getChannelForIndex
+import com.smaarig.glyphbarcomposer.controller.getIntensityForIndex
 import com.smaarig.glyphbarcomposer.ui.theme.intensityColor
 
 @Composable
@@ -132,7 +133,7 @@ fun DraggableTimelineHorizontal(
                                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                                     repeat(7) { i ->
                                         val intensityVal =
-                                            step.channelIntensities[getChannelForIndex(i)] ?: 0
+                                            step.channelIntensities.getIntensityForIndex(i)
                                         val finalIntensity =
                                             if (i == 6 && intensityVal > 0) 6 else intensityVal
                                         Box(

@@ -68,7 +68,8 @@ fun DraggableTimeline(
     onStartPlayback: () -> Unit,
     onStopPlayback: () -> Unit,
     onSave: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    initialName: String = ""
 ) {
     var draggingIndex by remember { mutableStateOf<Int?>(null) }
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
@@ -79,7 +80,7 @@ fun DraggableTimeline(
     val itemHeightPx = remember(density) { with(density) { 94.dp.toPx() } } // 88dp + 6dp spacing
 
     var showSaveDialog by remember { mutableStateOf(false) }
-    var fileName by remember { mutableStateOf("") }
+    var fileName by remember(showSaveDialog) { mutableStateOf(if (showSaveDialog) initialName else "") }
 
     // Sync hardware when scrolling manually
     LaunchedEffect(listState) {

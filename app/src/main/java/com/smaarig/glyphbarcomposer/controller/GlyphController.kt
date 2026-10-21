@@ -384,7 +384,7 @@ class GlyphController private constructor() {
         if (active != GlyphOwner.NONE && active != owner && owner != GlyphOwner.WIDGET) return
 
         // 2. Hardware Trigger (Highest Priority for latency)
-        val newIntensities = channels.map { ch -> channelIntensities[ch] ?: 0 }
+        val newIntensities = channels.map { ch -> channelIntensities.getIntensityForChannel(ch) }
         mGlyphManager?.let { manager ->
             try {
                 val frameColors = IntArray(7) { i ->

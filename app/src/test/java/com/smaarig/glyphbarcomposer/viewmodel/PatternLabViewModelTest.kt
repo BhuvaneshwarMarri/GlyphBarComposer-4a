@@ -37,8 +37,10 @@ class PatternLabViewModelTest {
         every { Log.e(any(), any()) } returns 0
         every { repository.allPlaylists } returns flowOf(emptyList())
 
+        mockkObject(GlyphController.Companion)
         mockkStatic(GlyphController::class)
         every { GlyphController.getInstance(any()) } returns glyphController
+        every { GlyphController.Companion.getInstance(any()) } returns glyphController
         every { glyphController.isPlaying } returns MutableStateFlow(false)
         every { glyphController.activeOwner } returns MutableStateFlow(GlyphController.GlyphOwner.NONE)
         

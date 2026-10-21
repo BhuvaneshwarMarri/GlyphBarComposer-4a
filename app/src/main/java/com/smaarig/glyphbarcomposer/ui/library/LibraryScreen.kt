@@ -1,5 +1,7 @@
 package com.smaarig.glyphbarcomposer.ui.library
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -72,6 +74,12 @@ fun LibraryScreen(
     val orientation = rememberAppOrientation()
     val context = LocalContext.current
 
+    val filePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { viewModel.importItem(context, it) }
+    }
+
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -99,7 +107,8 @@ fun LibraryScreen(
                 onSharePlaylist = { viewModel.exportPlaylist(context, it) },
                 onSharePlaylistCsv = { viewModel.exportPlaylistAsCsv(context, it) },
                 onSharePlaylistJson = { viewModel.exportPlaylistAsJson(context, it) },
-                onShareStudio = { viewModel.exportMusicProject(context, it) }
+                onShareStudio = { viewModel.exportMusicProject(context, it) },
+                onImportClick = { filePicker.launch("*/*") }
             )
         } else {
             LibraryPortrait(
@@ -125,7 +134,8 @@ fun LibraryScreen(
                 onSharePlaylist = { viewModel.exportPlaylist(context, it) },
                 onSharePlaylistCsv = { viewModel.exportPlaylistAsCsv(context, it) },
                 onSharePlaylistJson = { viewModel.exportPlaylistAsJson(context, it) },
-                onShareStudio = { viewModel.exportMusicProject(context, it) }
+                onShareStudio = { viewModel.exportMusicProject(context, it) },
+                onImportClick = { filePicker.launch("*/*") }
             )
         }
 
@@ -172,7 +182,8 @@ fun LibraryPortrait(
     onSharePlaylist: (PlaylistWithSteps) -> Unit,
     onSharePlaylistCsv: (PlaylistWithSteps) -> Unit,
     onSharePlaylistJson: (PlaylistWithSteps) -> Unit,
-    onShareStudio: (MusicProjectWithEvents) -> Unit
+    onShareStudio: (MusicProjectWithEvents) -> Unit,
+    onImportClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -188,7 +199,8 @@ fun LibraryPortrait(
             },
             isAnyPlaying = compPlaybackState.isPlaying || studioState.isAudioPlaying,
             searchQuery = searchQuery,
-            onSearchQueryChange = onSearchQueryChange
+            onSearchQueryChange = onSearchQueryChange,
+            onImportClick = onImportClick
         )
 
         Row(
@@ -278,7 +290,8 @@ fun LibraryLandscape(
     onSharePlaylist: (PlaylistWithSteps) -> Unit,
     onSharePlaylistCsv: (PlaylistWithSteps) -> Unit,
     onSharePlaylistJson: (PlaylistWithSteps) -> Unit,
-    onShareStudio: (MusicProjectWithEvents) -> Unit
+    onShareStudio: (MusicProjectWithEvents) -> Unit,
+    onImportClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -298,7 +311,8 @@ fun LibraryLandscape(
                 },
                 isAnyPlaying = compPlaybackState.isPlaying || studioState.isAudioPlaying,
                 searchQuery = searchQuery,
-                onSearchQueryChange = onSearchQueryChange
+                onSearchQueryChange = onSearchQueryChange,
+                onImportClick = onImportClick
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

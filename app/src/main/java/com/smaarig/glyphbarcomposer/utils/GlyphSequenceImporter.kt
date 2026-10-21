@@ -1,5 +1,6 @@
 package com.smaarig.glyphbarcomposer.utils
 
+import com.smaarig.glyphbarcomposer.controller.GlyphConstants
 import com.smaarig.glyphbarcomposer.data.SequenceStep
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -91,10 +92,16 @@ object GlyphSequenceImporter {
             if (duration % 50 != 0) throw IllegalArgumentException("Step ${stepIdx + 1}: Duration must be a multiple of 50ms (got $duration)")
 
             val intensities = mutableMapOf<Int, Int>()
-            x1to6.forEachIndexed { i, v -> if (v > 0) intensities[i] = v }
-            // Spec says x7 is 0-1, but our internal intensity is 0 or 3 (for red)
-            // Actually, if x7 is 1, we map it to intensity 3 for index 6.
-            if (x7 > 0) intensities[6] = 3
+            x1to6.forEachIndexed { i, v ->
+                if (v > 0) {
+                    intensities[i] = v
+                    intensities[GlyphConstants.getChannelForIndex(i)] = v
+                }
+            }
+            if (x7 > 0) {
+                intensities[6] = 3
+                intensities[GlyphConstants.getChannelForIndex(6)] = 3
+            }
 
             SequenceStep(
                 playlistId = 0,
