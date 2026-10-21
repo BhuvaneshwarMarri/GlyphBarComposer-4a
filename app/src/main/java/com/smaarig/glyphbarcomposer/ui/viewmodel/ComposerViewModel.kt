@@ -77,6 +77,18 @@ class ComposerViewModel(
 
     private val channels = GlyphConstants.PHONE_4A_CHANNELS
 
+    init {
+        viewModelScope.launch {
+            glyphController.activeOwner.collect { owner ->
+                if (owner != GlyphController.GlyphOwner.COMPOSER && owner != GlyphController.GlyphOwner.NONE) {
+                    if (_uiState.value.activePlaylistId != null || _uiState.value.activePresetName != null) {
+                        _uiState.update { it.copy(activePlaylistId = null, activePresetName = null) }
+                    }
+                }
+            }
+        }
+    }
+
     fun toggleVersion(isOld: Boolean) {
         prefManager.useOldVersion = isOld
         _uiState.update { it.copy(useOldVersion = isOld) }

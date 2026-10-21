@@ -77,6 +77,18 @@ class PatternLabViewModel(
         Glyph.Code_25111.A_6 to Glyph.Code_25111.A_1
     )
 
+    init {
+        viewModelScope.launch {
+            glyphController.activeOwner.collect { owner ->
+                if (owner != GlyphController.GlyphOwner.PATTERN_LAB && owner != GlyphController.GlyphOwner.NONE) {
+                    if (_uiState.value.isPlaying) {
+                        stopPreview()
+                    }
+                }
+            }
+        }
+    }
+
     fun selectPlaylistA(playlist: PlaylistWithSteps?) {
         _uiState.update { it.copy(selectedPlaylistA = playlist) }
         updatePreview()

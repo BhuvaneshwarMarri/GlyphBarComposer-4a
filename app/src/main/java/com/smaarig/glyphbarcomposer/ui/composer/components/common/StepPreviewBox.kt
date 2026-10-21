@@ -36,9 +36,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.smaarig.glyphbarcomposer.model.GlyphSequence
-import com.smaarig.glyphbarcomposer.controller.GlyphConstants.getChannelForIndex
 import com.smaarig.glyphbarcomposer.controller.getIntensityForIndex
+import com.smaarig.glyphbarcomposer.model.GlyphSequence
 import com.smaarig.glyphbarcomposer.ui.theme.intensityColor
 
 @Composable

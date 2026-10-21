@@ -423,26 +423,30 @@ class GlyphNotificationListenerService : NotificationListenerService() {
     }
 
     internal suspend fun playSteps(steps: List<GlyphSequence>) {
+        glyphController?.acquireControl(GlyphController.GlyphOwner.SERVICE)
         val rawTotalDuration = steps.sumOf { it.durationMs.toLong() }
         val allowedDuration = if (rawTotalDuration > 1500) 1000L else rawTotalDuration
 
         Log.d(TAG, "Playing sequence: raw=${rawTotalDuration}ms, allowed=${allowedDuration}ms")
 
         var elapsed = 0L
-        for (step in steps) {
-            yield()
-            val remaining = allowedDuration - elapsed
-            if (remaining <= 0) break
-            val durationToPlay = minOf(step.durationMs.toLong(), remaining)
-            glyphController?.applyGlyphStateWithIntensities(
-                step.channelIntensities,
-                durationToPlay.toInt()
-            )
-            delay(durationToPlay)
-            elapsed += durationToPlay
+        try {
+            for (step in steps) {
+                yield()
+                val remaining = allowedDuration - elapsed
+                if (remaining <= 0) break
+                val durationToPlay = minOf(step.durationMs.toLong(), remaining)
+                glyphController?.applyGlyphStateWithIntensities(
+                    step.channelIntensities,
+                    durationToPlay.toInt(),
+                    GlyphController.GlyphOwner.SERVICE
+                )
+                delay(durationToPlay)
+                elapsed += durationToPlay
+            }
+        } finally {
+            restoreProgressOrTurnOff()
         }
-
-        restoreProgressOrTurnOff()
     }
 
     private fun restoreProgressOrTurnOff() {

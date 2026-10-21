@@ -149,6 +149,20 @@ class MusicStudioViewModel(
         viewModelScope.launch(Dispatchers.Default) {
             for (fft in fftChannel) analyzeFft(fft)
         }
+        viewModelScope.launch {
+            glyphController.activeOwner.collect { owner ->
+                if (owner != GlyphController.GlyphOwner.STUDIO && owner != GlyphController.GlyphOwner.NONE) {
+                    if (_uiState.value.isAudioPlaying) {
+                        try {
+                            mediaPlayer?.pause()
+                        } catch (_: Exception) {}
+                        releaseVisualizer()
+                        _uiState.update { it.copy(isAudioPlaying = false) }
+                        stopMusicStudio()
+                    }
+                }
+            }
+        }
     }
 
     // ── Actions ───────────────────────────────────────────────────────────────

@@ -30,7 +30,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class GlyphController private constructor() {
-    enum class GlyphOwner { NONE, COMPOSER, STUDIO, PATTERN_LAB, BATTERY, WIDGET }
+    enum class GlyphOwner { NONE, COMPOSER, STUDIO, PATTERN_LAB, BATTERY, SERVICE, WIDGET }
 
     private val _activeOwner = MutableStateFlow(GlyphOwner.NONE)
     val activeOwner = _activeOwner.asStateFlow()
@@ -168,16 +168,23 @@ class GlyphController private constructor() {
     }
 
     fun acquireControl(owner: GlyphOwner) {
-        if (_activeOwner.value != GlyphOwner.NONE && _activeOwner.value != owner) {
+        if (_activeOwner.value != owner) {
             stopPlayback() // gracefully stop previous owner
+            _activeOwner.value = owner
         }
-        _activeOwner.value = owner
     }
 
     fun releaseControl(owner: GlyphOwner) {
         if (_activeOwner.value == owner) {
+            stopPlayback()
             _activeOwner.value = GlyphOwner.NONE
         }
+    }
+
+    fun stopAllPlayback() {
+        stopPlayback()
+        _activeOwner.value = GlyphOwner.NONE
+        turnOffGlyphs()
     }
 
     private fun maybeUpdateWidgets(
@@ -428,9 +435,10 @@ class GlyphController private constructor() {
         stopPlayback()
 
         _isPlaying.value = true
+        _isPaused.value = false
         _isHardwareBusy.value = true
 
-        playbackJob = controllerScope.launch {
+        val currentJob = controllerScope.launch {
             try {
                 // Sync start of playback to widgets
                 mContext?.let { context ->
@@ -455,11 +463,12 @@ class GlyphController private constructor() {
                     }
                 } while (loop && isActive)
             } finally {
-                if (!loop || !isActive) {
+                if (playbackJob === coroutineContext[Job]) {
                     stopPlayback()
                 }
             }
         }
+        playbackJob = currentJob
     }
 
     fun stopPlayback() {

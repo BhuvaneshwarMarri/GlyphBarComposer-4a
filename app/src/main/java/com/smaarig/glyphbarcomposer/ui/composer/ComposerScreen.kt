@@ -30,6 +30,14 @@ fun ComposerScreen(
         viewModel.onEnterComposer()
     }
 
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            if (playbackState.isPlaying) {
+                viewModel.stopPlayback()
+            }
+        }
+    }
+
     var isPowerOffAnimating by remember { mutableStateOf(false) }
     val powerScale by animateFloatAsState(
         targetValue = if (isPowerOffAnimating) 1.4f else 1f,

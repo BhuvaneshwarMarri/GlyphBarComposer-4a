@@ -50,6 +50,14 @@ fun PatternLabScreen(viewModel: PatternLabViewModel) {
     var showDialogB by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
 
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            if (uiState.isPlaying) {
+                viewModel.stopPreview()
+            }
+        }
+    }
+
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 

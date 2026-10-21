@@ -58,6 +58,14 @@ fun MusicStudioScreen(
     val composerIntensities by viewModel.composerIntensities.collectAsStateWithLifecycle()
     val liveGlyphIntensities by viewModel.liveGlyphIntensities.collectAsStateWithLifecycle()
 
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            if (viewModel.uiState.value.isAudioPlaying) {
+                viewModel.toggleMusicPlayback()
+            }
+        }
+    }
+
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 

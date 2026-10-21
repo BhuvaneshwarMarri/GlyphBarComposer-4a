@@ -58,6 +58,7 @@ class GlyphPlaybackService : Service() {
     private fun startPlayback(playlistId: Long) {
         playbackJob?.cancel()
         playbackJob = serviceScope.launch {
+            glyphController.acquireControl(GlyphController.GlyphOwner.SERVICE)
             val app = application as GlyphApplication
             val playlist = app.repository.getPlaylistWithSteps(playlistId) ?: return@launch
             Log.d("GlyphPlaybackService", "Starting playback for playlist: ${playlist.playlist.name}")
@@ -94,7 +95,7 @@ class GlyphPlaybackService : Service() {
                         if (!isActive) break
 
                         glyphController.applyGlyphStateWithIntensities(
-                            step.channelIntensities, step.durationMs, GlyphController.GlyphOwner.WIDGET)
+                            step.channelIntensities, step.durationMs, GlyphController.GlyphOwner.SERVICE)
 
                         // Fire widget update asynchronously — don't let I/O eat into step time
                         val intensities = glyphController.channels.map {
@@ -109,6 +110,7 @@ class GlyphPlaybackService : Service() {
                     }
                 }
             } finally {
+                glyphController.releaseControl(GlyphController.GlyphOwner.SERVICE)
                 glyphController.turnOffGlyphs()
                 updateAllWidgets(this@GlyphPlaybackService, isPlaying = false)
                 LocalBroadcastManager.getInstance(this@GlyphPlaybackService).sendBroadcast(

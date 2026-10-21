@@ -185,6 +185,7 @@ fun LibraryPortrait(
     onShareStudio: (MusicProjectWithEvents) -> Unit,
     onImportClick: () -> Unit
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -194,6 +195,7 @@ fun LibraryPortrait(
     ) {
         LibraryHeader(
             onStopAll = {
+                com.smaarig.glyphbarcomposer.controller.GlyphController.getInstance(context).stopAllPlayback()
                 composerViewModel.stopPlayback()
                 if (studioState.isAudioPlaying) musicStudioViewModel.toggleMusicPlayback()
             },
@@ -293,6 +295,7 @@ fun LibraryLandscape(
     onShareStudio: (MusicProjectWithEvents) -> Unit,
     onImportClick: () -> Unit
 ) {
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxSize()
@@ -306,6 +309,7 @@ fun LibraryLandscape(
         ) {
             LibraryHeader(
                 onStopAll = {
+                    com.smaarig.glyphbarcomposer.controller.GlyphController.getInstance(context).stopAllPlayback()
                     composerViewModel.stopPlayback()
                     if (studioState.isAudioPlaying) musicStudioViewModel.toggleMusicPlayback()
                 },
