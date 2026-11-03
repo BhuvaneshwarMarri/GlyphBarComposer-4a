@@ -16,7 +16,7 @@ A powerful, modular Android application designed for Nothing Phone users to comp
 The project follows a strict **MVVM (Model-View-ViewModel)** architecture and is modularized by feature.
 
 ```text
-app/src/main/java/com/smaarig/glyphbarcomposer/
+app/src/main/java/com/maari/glyphbarcomposer/
 ├── controller/          # Hardware Interface (Glyph SDK wrappers)
 ├── data/                # Data Layer (Room Database, DAOs, Entities)
 ├── model/               # Domain Models (GlyphSequence logic)

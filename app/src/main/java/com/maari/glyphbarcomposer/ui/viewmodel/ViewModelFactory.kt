@@ -1,0 +1,41 @@
+package com.maari.glyphbarcomposer.ui.viewmodel
+
+import android.app.Application
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.maari.glyphbarcomposer.repository.GlyphRepository
+
+class GlyphViewModelFactory(
+    private val application: Application,
+    private val repository: GlyphRepository
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        return when {
+            modelClass.isAssignableFrom(ComposerViewModel::class.java) -> {
+                ComposerViewModel(application, repository) as T
+            }
+
+            modelClass.isAssignableFrom(MusicStudioViewModel::class.java) -> {
+                MusicStudioViewModel(application, repository) as T
+            }
+
+            modelClass.isAssignableFrom(LibraryViewModel::class.java) -> {
+                LibraryViewModel(application, repository) as T
+            }
+
+            modelClass.isAssignableFrom(PatternLabViewModel::class.java) -> {
+                PatternLabViewModel(application, repository) as T
+            }
+
+            modelClass.isAssignableFrom(RedGlyphViewModel::class.java) -> {
+                RedGlyphViewModel(application) as T
+            }
+
+            modelClass.isAssignableFrom(HooksViewModel::class.java) -> {
+                HooksViewModel(application, repository) as T
+            }
+
+            else -> throw IllegalArgumentException("Unknown ViewModel class")
+        }
+    }
+}

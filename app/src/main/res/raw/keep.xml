@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@xml/glance_*,@drawable/ic_*,@drawable/preview_*,@layout/glance_*,@string/widget_*"
+    tools:shrinkMode="safe" />

@@ -1,0 +1,181 @@
+package com.maari.glyphbarcomposer.ui.studio.components
+
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+@Composable
+fun StudioPlayerCard(
+    audioName: String?,
+    audioDurationMs: Int,
+    audioPositionMs: Int,
+    isAudioPlaying: Boolean,
+    isAnalysisComplete: Boolean,
+    onPlayPause: () -> Unit,
+    onSeek: (Float) -> Unit,
+    onChangeAudio: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color(0xFF111111),
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, Color(0xFF222222))
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Rotating Vinyl
+                val infiniteTransition = rememberInfiniteTransition(label = "rotation")
+                val rotation by infiniteTransition.animateFloat(
+                    initialValue = 0f, targetValue = 360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(4000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart
+                    ), label = "rotation"
+                )
+
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .graphicsLayer { if (isAudioPlaying) rotationZ = rotation }
+                        .clip(CircleShape)
+                        .background(Color(0xFF080808))
+                        .border(1.5.dp, Color(0xFF333333), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.size(40.dp)) {
+                        val r = size.minDimension / 2
+                        drawCircle(
+                            Color(0xFF1A1A1A),
+                            radius = r,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx())
+                        )
+                        drawCircle(
+                            Color(0xFF1A1A1A),
+                            radius = r * 0.6f,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx())
+                        )
+                    }
+                    Icon(
+                        Icons.Default.MusicNote, null,
+                        tint = if (isAudioPlaying) Color(0xFF00C853) else Color(0xFF555555),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Spacer(Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        audioName ?: "Select a Track",
+                        color = Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        "${formatTime(audioPositionMs)} / ${formatTime(audioDurationMs)}",
+                        color = Color.Gray, fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                IconButton(
+                    onClick = onChangeAudio,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF1A1A1A))
+                ) {
+                    Icon(
+                        Icons.Default.FolderOpen,
+                        null,
+                        tint = Color.LightGray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Slider(
+                    value = audioPositionMs.toFloat(),
+                    onValueChange = onSeek,
+                    valueRange = 0f..audioDurationMs.toFloat().coerceAtLeast(1f),
+                    enabled = isAnalysisComplete,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color.White,
+                        activeTrackColor = Color.White,
+                        inactiveTrackColor = Color(0xFF222222)
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(24.dp)
+                )
+
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isAnalysisComplete) Color.White else Color(
+                                0xFF1A1A1A
+                            )
+                        )
+                        .clickable(enabled = isAnalysisComplete) { onPlayPause() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        if (isAudioPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        null,
+                        tint = if (isAnalysisComplete) Color.Black else Color(0xFF333333),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+        }
+    }
+}
