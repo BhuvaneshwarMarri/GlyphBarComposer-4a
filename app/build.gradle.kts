@@ -18,8 +18,8 @@ android {
         applicationId = "com.maari.glyphbarcomposer"
         minSdk = 33
         targetSdk = 36
-        versionCode = 6
-        versionName = "2.4"
+        versionCode = 7
+        versionName = "2.4.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

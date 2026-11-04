@@ -3,8 +3,8 @@
 # min_api: 33
 # common_typos_disable
 # {"id":"com.android.tools.r8.mapping","version":"2.2"}
-# pg_map_id: a3f0717304c3629ec7462b1e0857e39a3c25ba3b59c721dffea89181cb28e210
-# pg_map_hash: SHA-256 c00b4e6cfd8a0ab1e1f18a64e6f682cf3ccad099bee6fb96e30f8e3bb4b8fc01
+# pg_map_id: 4cb50979993f2ba0666c82c43269a6dcde50095a3f36cadf8ce62f3af827f0f0
+# pg_map_hash: SHA-256 bf9dc0a50665486e5dd0a3684381cc2b4a71f4ac15f18faf193c0a58f1b36dec
 _COROUTINE.ArtificialStackFrames -> R8$$REMOVED$$CLASS$$0:
 # {"id":"sourceFile","fileName":"CoroutineDebugging.kt"}
 _COROUTINE.ArtificialStackFramesUnsafe -> xf:
@@ -312829,19 +312829,17 @@ com.maari.glyphbarcomposer.GlyphApplication -> com.maari.glyphbarcomposer.GlyphA
       # {"id":"com.android.tools.r8.residualsignature","signature":"Lrt2;"}
     int $r8$clinit -> d
       # {"id":"com.android.tools.r8.synthesized"}
-    1:3:void <init>():8:8 -> <init>
-    4:14:void <init>():9:9 -> <init>
+    1:3:void <init>():7:7 -> <init>
+    4:14:void <init>():8:8 -> <init>
     15:19:kotlin.Lazy kotlin.LazyKt__LazyJVMKt.lazy(kotlin.jvm.functions.Function0):26:26 -> <init>
-    15:19:void <init>():9 -> <init>
-    20:21:void <init>():9:9 -> <init>
-    22:32:void <init>():10:10 -> <init>
+    15:19:void <init>():8 -> <init>
+    20:21:void <init>():8:8 -> <init>
+    22:32:void <init>():9:9 -> <init>
     33:37:kotlin.Lazy kotlin.LazyKt__LazyJVMKt.lazy(kotlin.jvm.functions.Function0):26:26 -> <init>
-    33:37:void <init>():10 -> <init>
-    38:40:void <init>():10:10 -> <init>
-    1:9:com.maari.glyphbarcomposer.repository.GlyphRepository getRepository():10:10 -> a
+    33:37:void <init>():9 -> <init>
+    38:40:void <init>():9:9 -> <init>
+    1:9:com.maari.glyphbarcomposer.repository.GlyphRepository getRepository():9:9 -> a
       # {"id":"com.android.tools.r8.residualsignature","signature":"()Lno0;"}
-    1:3:void onCreate():13:13 -> onCreate
-    4:9:void onCreate():16:16 -> onCreate
 com.maari.glyphbarcomposer.GlyphApplication$$ExternalSyntheticLambda0 -> ln0:
 # {"id":"sourceFile","fileName":"R8$$SyntheticClass"}
 # {"id":"com.android.tools.r8.synthesized"}
@@ -312851,43 +312849,43 @@ com.maari.glyphbarcomposer.GlyphApplication$$ExternalSyntheticLambda0 -> ln0:
       # {"id":"com.android.tools.r8.synthesized"}
     1:6:void GlyphApplication$$ExternalSyntheticLambda0.<init>(byte):0:0 -> <init>
       # {"id":"com.android.tools.r8.synthesized"}
-    8:9:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):10:10 -> invoke
+    8:9:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):9:9 -> invoke
     8:9:java.lang.Object GlyphApplication$$ExternalSyntheticLambda0.invoke():0 -> invoke
       # {"id":"com.android.tools.r8.synthesized"}
-    10:11:com.maari.glyphbarcomposer.data.AppDatabase com.maari.glyphbarcomposer.GlyphApplication.getDatabase():9:9 -> invoke
-    10:11:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):10 -> invoke
+    10:11:com.maari.glyphbarcomposer.data.AppDatabase com.maari.glyphbarcomposer.GlyphApplication.getDatabase():8:8 -> invoke
+    10:11:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):9 -> invoke
       # {"id":"com.android.tools.r8.rewriteFrame","conditions":["throws(Ljava/lang/NullPointerException;)"],"actions":["removeInnerFrames(1)"]}
     10:11:java.lang.Object GlyphApplication$$ExternalSyntheticLambda0.invoke():0 -> invoke
-    12:17:com.maari.glyphbarcomposer.data.AppDatabase com.maari.glyphbarcomposer.GlyphApplication.getDatabase():9:9 -> invoke
-    12:17:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):10 -> invoke
+    12:17:com.maari.glyphbarcomposer.data.AppDatabase com.maari.glyphbarcomposer.GlyphApplication.getDatabase():8:8 -> invoke
+    12:17:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):9 -> invoke
     12:17:java.lang.Object GlyphApplication$$ExternalSyntheticLambda0.invoke():0 -> invoke
-    18:21:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):10:10 -> invoke
+    18:21:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):9:9 -> invoke
     18:21:java.lang.Object GlyphApplication$$ExternalSyntheticLambda0.invoke():0 -> invoke
     22:24:void com.maari.glyphbarcomposer.repository.GlyphRepository.<init>(com.maari.glyphbarcomposer.data.PlaylistDao):0:0 -> invoke
-    22:24:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):10 -> invoke
+    22:24:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):9 -> invoke
     22:24:java.lang.Object GlyphApplication$$ExternalSyntheticLambda0.invoke():0 -> invoke
     25:29:void com.maari.glyphbarcomposer.repository.GlyphRepository.<init>(com.maari.glyphbarcomposer.data.PlaylistDao):19:19 -> invoke
-    25:29:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):10 -> invoke
+    25:29:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):9 -> invoke
     25:29:java.lang.Object GlyphApplication$$ExternalSyntheticLambda0.invoke():0 -> invoke
     30:35:void com.maari.glyphbarcomposer.repository.GlyphRepository.<init>(com.maari.glyphbarcomposer.data.PlaylistDao):22:22 -> invoke
-    30:35:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):10 -> invoke
+    30:35:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):9 -> invoke
     30:35:java.lang.Object GlyphApplication$$ExternalSyntheticLambda0.invoke():0 -> invoke
     36:41:void com.maari.glyphbarcomposer.repository.GlyphRepository.<init>(com.maari.glyphbarcomposer.data.PlaylistDao):23:23 -> invoke
-    36:41:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):10 -> invoke
+    36:41:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):9 -> invoke
     36:41:java.lang.Object GlyphApplication$$ExternalSyntheticLambda0.invoke():0 -> invoke
     42:44:void com.maari.glyphbarcomposer.repository.GlyphRepository.<init>(com.maari.glyphbarcomposer.data.PlaylistDao):24:24 -> invoke
-    42:44:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):10 -> invoke
+    42:44:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):9 -> invoke
     42:44:java.lang.Object GlyphApplication$$ExternalSyntheticLambda0.invoke():0 -> invoke
     45:47:void com.maari.glyphbarcomposer.repository.GlyphRepository.<init>(com.maari.glyphbarcomposer.data.PlaylistDao):26:26 -> invoke
-    45:47:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):10 -> invoke
+    45:47:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):9 -> invoke
     45:47:java.lang.Object GlyphApplication$$ExternalSyntheticLambda0.invoke():0 -> invoke
     48:53:void com.maari.glyphbarcomposer.repository.GlyphRepository.<init>(com.maari.glyphbarcomposer.data.PlaylistDao):28:28 -> invoke
-    48:53:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):10 -> invoke
+    48:53:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):9 -> invoke
     48:53:java.lang.Object GlyphApplication$$ExternalSyntheticLambda0.invoke():0 -> invoke
-    54:57:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):10:10 -> invoke
+    54:57:com.maari.glyphbarcomposer.repository.GlyphRepository com.maari.glyphbarcomposer.GlyphApplication.repository_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):9:9 -> invoke
     54:57:java.lang.Object GlyphApplication$$ExternalSyntheticLambda0.invoke():0 -> invoke
     58:59:java.lang.Object GlyphApplication$$ExternalSyntheticLambda0.invoke():0:0 -> invoke
-    60:66:com.maari.glyphbarcomposer.data.AppDatabase com.maari.glyphbarcomposer.GlyphApplication.database_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):9:9 -> invoke
+    60:66:com.maari.glyphbarcomposer.data.AppDatabase com.maari.glyphbarcomposer.GlyphApplication.database_delegate$lambda$0(com.maari.glyphbarcomposer.GlyphApplication):8:8 -> invoke
     60:66:java.lang.Object GlyphApplication$$ExternalSyntheticLambda0.invoke():0 -> invoke
 com.maari.glyphbarcomposer.controller.GlyphConstants -> sn0:
 # {"id":"sourceFile","fileName":"GlyphConstants.kt"}

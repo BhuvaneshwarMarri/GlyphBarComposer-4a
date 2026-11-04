@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider
     xmlns:android="http://schemas.android.com/apk/res/android"
+    android:initialLayout="@layout/glance_default_loading_layout"
     android:label="@string/widget_name_vertical"
     android:description="@string/widget_vertical_description"
     android:minWidth="56dp"
